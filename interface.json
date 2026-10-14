@@ -1,0 +1,37 @@
+{
+    "interface_version": 2,
+    "name": "maa-pzugiri",
+    "label": "MaaPzugiri",
+    "version": "v0.1.0",
+    "description": "MaaPzugiri MaaFW project",
+    "controller": [
+        {
+            "name": "Adb",
+            "label": "Android / Emulator",
+            "type": "Adb",
+            "display_short_side": 720
+        }
+    ],
+    "resource": [
+        {
+            "name": "base",
+            "label": "Base",
+            "path": [
+                "./resource/base"
+            ]
+        }
+    ],
+    "import": [
+        "./tasks/tutorial.json"
+    ],
+    "agent": [
+        {
+            "child_exec": "uv",
+            "child_args": [
+                "run",
+                "python",
+                "agent/main.py"
+            ]
+        }
+    ]
+}

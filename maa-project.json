@@ -1,0 +1,81 @@
+{
+    "addons": {
+        "devTools": {
+            "enabled": true
+        },
+        "vscode": {
+            "enabled": true
+        }
+    },
+    "controller": {
+        "kinds": [
+            "Adb"
+        ]
+    },
+    "features": {
+        "ci": {
+            "enabled": false
+        },
+        "quality": {
+            "enabled": true
+        },
+        "release": {
+            "enabled": false
+        },
+        "vscode": {
+            "enabled": true
+        }
+    },
+    "license": {
+        "spdx": "AGPL-3.0-or-later"
+    },
+    "maafw": {
+        "channel": "stable",
+        "version": ""
+    },
+    "network": {
+        "mode": "auto"
+    },
+    "ocr": {
+        "files": {
+            "README.md": "ppocr_v6/small/README.md",
+            "det.onnx": "ppocr_v6/small/det.onnx",
+            "keys.txt": "ppocr_v6/small/keys.txt",
+            "rec.onnx": "ppocr_v6/small/rec.onnx"
+        },
+        "source": "submodule",
+        "submodulePath": "MaaCommonAssets/OCR"
+    },
+    "project": {
+        "displayName": "MaaPzugiri",
+        "initialTemplate": "agent",
+        "slug": "maa-pzugiri",
+        "version": "0.1.0"
+    },
+    "python": {
+        "devCommand": [
+            "uv",
+            "run",
+            "python",
+            "agent/main.py"
+        ],
+        "recommendedPython": "3.13",
+        "requiresPython": ">=3.13,<3.14"
+    },
+    "resources": [
+        {
+            "enabled": true,
+            "label": "Base",
+            "path": "resource/base",
+            "slug": "base"
+        }
+    ],
+    "runtime": {
+        "mfa": {
+            "channel": "stable",
+            "enabled": false,
+            "version": ""
+        }
+    },
+    "schemaVersion": 2
+}

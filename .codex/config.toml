@@ -1,0 +1,9 @@
+# BEGIN EVERYTHING-MAA MCP
+[mcp_servers.maa-mcp]
+command = "uvx"
+args = ["--from", "maa-mcp==1.2.3", "maa-mcp"]
+
+[mcp_servers.create-maa-project]
+command = "uvx"
+args = ["--upgrade", "--from", "create-maa-project", "create-maa-project", "--mcp"]
+# END EVERYTHING-MAA MCP
