@@ -1,4 +1,4 @@
-# MaaPzugiri
+# MaaPazugiri
 
 由 create-maa-project 生成的 MaaFW Python Agent 项目。
 

@@ -12,7 +12,7 @@
         "node": ">=22.13"
     },
     "license": "AGPL-3.0-or-later",
-    "name": "maa-pzugiri",
+    "name": "maa-pazugiri",
     "packageManager": "pnpm@11.5.1",
     "private": true,
     "scripts": {

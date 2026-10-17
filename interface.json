@@ -1,9 +1,9 @@
 {
     "interface_version": 2,
-    "name": "maa-pzugiri",
-    "label": "MaaPzugiri",
+    "name": "maa-pazugiri",
+    "label": "MaaPazugiri",
     "version": "v0.1.0",
-    "description": "MaaPzugiri MaaFW project",
+    "description": "MaaPazugiri MaaFW project",
     "controller": [
         {
             "name": "Adb",

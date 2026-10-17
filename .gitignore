@@ -8,6 +8,15 @@ dist/
 debug/
 .create-maa-project/
 # END create-maa-project
-# OCR models are copied from the MaaCommonAssets submodule and must not be committed.
-resource/base/model/ocr/
 .codex/.everything-maa.json
+# 本地文档、训练数据、素材归档与调试文件
+docs/
+training/
+素材归档/
+debug/
+# 本机生成的任务计划和项目上下文缓存
+.planning/
+basic_info.md
+# Maa 下载的 OCR 模型和本机界面布局
+resource/base/model/ocr/
+resource/base/mfa_layout.json

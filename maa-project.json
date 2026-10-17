@@ -43,13 +43,13 @@
             "keys.txt": "ppocr_v6/small/keys.txt",
             "rec.onnx": "ppocr_v6/small/rec.onnx"
         },
-        "source": "submodule",
+        "source": "download",
         "submodulePath": "MaaCommonAssets/OCR"
     },
     "project": {
-        "displayName": "MaaPzugiri",
+        "displayName": "MaaPazugiri",
         "initialTemplate": "agent",
-        "slug": "maa-pzugiri",
+        "slug": "maa-pazugiri",
         "version": "0.1.0"
     },
     "python": {
