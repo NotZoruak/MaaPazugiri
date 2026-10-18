@@ -615,6 +615,18 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "repeatable": {
+                    "type": "boolean",
+                    "title": "重复次数控件",
+                    "description": "MFAAvalonia 扩展字段：是否在任务设置中显示重复次数控件",
+                    "default": false
+                },
+                "repeat_count": {
+                    "type": "integer",
+                    "title": "初始重复次数",
+                    "description": "MFAAvalonia 扩展字段：初始重复次数；-1 表示持续执行，直到用户停止任务。仅在 repeatable 为 true 时生效",
+                    "default": 1
                 }
             },
             "required": [
