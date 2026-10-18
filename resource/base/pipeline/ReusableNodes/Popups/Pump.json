@@ -1,0 +1,98 @@
+{
+    "Pump_DailyReport": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [310, 164, 103, 60],
+                "template": "Common/Pump/日报.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [289, 1173, 144, 56]
+            }
+        }
+    },
+    "Pump_ResumeBattle": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [89, 603, 533, 62],
+                "template": "Common/Pump/要继续当前正在进行的战斗吗.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [426, 1174, 172, 59]
+            }
+        },
+        "next": ["Pump_ResumeBattleConfirm"]
+    },
+    "Pump_ResumeBattleConfirm": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [272, 1172, 173, 57],
+                "template": "Common/Pump/确认继续战斗.png"
+            }
+        },
+        "action": {"type": "Click"}
+    },
+    "Pump_TapToContinue": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [220, 1165, 275, 70],
+                "template": "Common/Pump/点击继续.png"
+            }
+        },
+        "action": {"type": "Click"}
+    },
+    "Pump_NoPurchasableProducts": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [40, 573, 638, 107],
+                "template": "Common/Pump/没有可购买的商品.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [302, 1166, 115, 66]
+            }
+        }
+    },
+    "Pump_RewardReceived": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [29, 40, 656, 657],
+                "template": "Common/Pump/获得奖励.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [294, 1168, 131, 63]
+            }
+        }
+    },
+    "Pump_DateChange": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [41, 565, 632, 122],
+                "template": "Common/Pump/日期变化.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [313, 1169, 95, 57]
+            }
+        }
+    }
+}
