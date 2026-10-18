@@ -59,9 +59,6 @@
             "default_case": "No"
         }
     },
-    "global_option": [
-        "轻量识别"
-    ],
     "import": [
         "./tasks/tutorial.json"
     ]
