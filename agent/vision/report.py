@@ -54,6 +54,18 @@ def write_report(image: Image, result: BoardResult, destination: Path, stem: str
             x, y, width, height = map(round, issue["box"])
             cv2.rectangle(annotated, (x, y), (x + width, y + height), (0, 140, 255), 1)
             cv2.putText(annotated, "?", (x, max(12, y)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 140, 255), 2)
+    if result.chain_endpoint is not None:
+        for marker in result.chain_endpoint.markers:
+            x, y, width, height = map(round, marker.box)
+            color = (255, 80, 220)
+            cv2.rectangle(annotated, (x, y), (x + width, y + height), color, 2)
+            center = tuple(map(round, marker.center))
+            cv2.drawMarker(annotated, center, color, cv2.MARKER_DIAMOND, 18, 2)
+            label = "END" if result.chain_endpoint.status == "detected" else "END?"
+            if result.chain_endpoint.object_id is not None:
+                label += f":{result.chain_endpoint.object_id}"
+            cv2.putText(annotated, label, (x, max(16, y - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
+            cv2.putText(annotated, label, (x, max(16, y - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
     destination.mkdir(parents=True, exist_ok=True)
     write_image(destination / f"{stem}.annotated.png", annotated)
     write_text_atomic(

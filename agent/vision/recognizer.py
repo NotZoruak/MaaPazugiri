@@ -15,6 +15,7 @@ from typing import Any, cast
 import cv2
 import numpy as np
 
+from .chain_endpoint import ChainEndpointRecognizer
 from .color_checks import BodyColorSupport, enhanced_color_compatible, prepare_body_color_support
 from .config import Profile, load_json
 from .image_io import Image, read_image
@@ -29,7 +30,16 @@ from .matching import (
     prepare_template,
     rectangle_count,
 )
-from .model import COLORS, EXPECTED_LABELS, LABEL_NAMES, BoardObject, BoardResult, Hit
+from .model import (
+    COLORS,
+    EXPECTED_LABELS,
+    LABEL_NAMES,
+    BoardObject,
+    BoardResult,
+    ChainEndpointResult,
+    ChainMovePositions,
+    Hit,
+)
 from .templates import check_pattern
 
 HSV_RANGES = {
@@ -59,6 +69,8 @@ class BoardRecognizer:
         self.color_prefilter = color_prefilter
         self.profile = Profile.from_dict(load_json(profile_path))
         self.profile_sha256 = hashlib.sha256(profile_path.read_bytes()).hexdigest()
+        endpoint_profile = profile_path.parent.parent / "chain_endpoint" / "profile.json"
+        self.endpoint_recognizer = ChainEndpointRecognizer(endpoint_profile) if endpoint_profile.is_file() else None
         self.patterns: list[tuple[dict[str, Any], Image, Image]] = []
         self.scaled_patterns: list[tuple[dict[str, Any], float, PreparedTemplate]] = []
         self.enhanced_supports: dict[int, tuple[BodyColorSupport, int]] = {}
@@ -101,7 +113,9 @@ class BoardRecognizer:
                             COLORS.index(item["color"]),
                         )
 
-    def analyze(self, image: Image, frame_id: str, *, lightweight: bool = False) -> BoardResult:
+    def analyze(
+        self, image: Image, frame_id: str, *, lightweight: bool = False, chain_move: ChainMovePositions | None = None
+    ) -> BoardResult:
         """识别一帧，并将全部位置还原为输入截图坐标。"""
         started = time.perf_counter()
         height, width = image.shape[:2]
@@ -145,6 +159,7 @@ class BoardRecognizer:
                 ),
                 "frame_preprocessing_shared": True,
                 "positions_reused_from_previous_frame": False,
+                "chain_endpoint_available": self.endpoint_recognizer is not None,
                 "template_workers": self.workers,
                 "parallel_results_in_template_order": True,
                 "standard_object_roi": self.profile.standard_object_roi or self.profile.board_roi,
@@ -168,6 +183,12 @@ class BoardRecognizer:
         if abs((width / height) / (ref_width / ref_height) - 1) > self.profile.aspect_tolerance:
             result.scene_state = "unknown_ui"
             result.issues.append({"code": "unsupported_layout", "message": "输入长宽比与已核对布局不一致"})
+            result.chain_endpoint = ChainEndpointResult(
+                frame_id,
+                "uncertain",
+                issues=["截图布局不受支持，不能确认终点菱形"],
+                move_outcome="unknown" if chain_move is not None else None,
+            )
             result.elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
             return result
         normalized = cast(Image, cv2.resize(image, (ref_width, ref_height), interpolation=cv2.INTER_AREA))
@@ -289,6 +310,15 @@ class BoardRecognizer:
                 {"code": "missing_templates", "labels": missing, "message": "缺少类别模板，尚未验证完整覆盖"}
             )
         result.issues.append({"code": "offline_unverified", "message": "单帧未确认稳定性与触控有效性，禁止自动操作"})
+        if self.endpoint_recognizer is not None:
+            result.chain_endpoint = self.endpoint_recognizer.analyze(image, result, move=chain_move)
+        else:
+            result.chain_endpoint = ChainEndpointResult(
+                frame_id,
+                "unavailable",
+                issues=["未安装终点菱形模板，不能确认当前连线终点"],
+                move_outcome="unknown" if chain_move is not None else None,
+            )
         result.elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
         return result
 

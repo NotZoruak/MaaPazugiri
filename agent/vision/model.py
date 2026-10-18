@@ -71,6 +71,39 @@ class BoardObject:
 
 
 @dataclass
+class ChainEndpointMarker:
+    """保存当前帧终点菱形的视觉位置，外观标签不代表读取了连线数量。"""
+
+    variant: str
+    center: tuple[float, float]
+    box: tuple[float, float, float, float]
+    score: float
+
+
+@dataclass(frozen=True)
+class ChainMovePositions:
+    """本次移动段的起点和鼠标停留点，使用当前截图坐标，每次显式传入。"""
+
+    start: tuple[float, float]
+    end: tuple[float, float]
+
+
+@dataclass
+class ChainEndpointResult:
+    """保存终点标记检测和当前帧对象关联，未命中不能证明连线不存在。"""
+
+    frame_id: str
+    status: str
+    markers: list[ChainEndpointMarker] = field(default_factory=list)
+    object_id: int | None = None
+    association_status: str = "not_checked"
+    issues: list[str] = field(default_factory=list)
+    coverage: dict[str, Any] = field(default_factory=dict)
+    elapsed_ms: float = 0.0
+    move_outcome: str | None = None
+
+
+@dataclass
 class BoardResult:
     """单张截图的识别结果，场景稳定性默认未验证。"""
 
@@ -84,6 +117,7 @@ class BoardResult:
     issues: list[dict[str, Any]] = field(default_factory=list)
     elapsed_ms: float = 0.0
     automatic_action_allowed: bool = False
+    chain_endpoint: ChainEndpointResult | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """返回可直接序列化的诊断数据。"""

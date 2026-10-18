@@ -1,0 +1,172 @@
+{
+    "version": 1,
+    "reference_size": [
+        720,
+        1280
+    ],
+    "aspect_tolerance": 0.03,
+    "scales": [
+        0.9,
+        1.0,
+        1.1
+    ],
+    "brightness_floor": 190,
+    "minimum_core_radius": 7.0,
+    "maximum_core_radius": 24.0,
+    "local_search_radius": 6,
+    "max_candidates": 512,
+    "templates": [
+        {
+            "id": "under_7",
+            "image": "under_7.png",
+            "mask": "under_7.mask.png",
+            "anchor": [
+                34,
+                42
+            ],
+            "threshold": 0.9,
+            "source": {
+                "path": "training/chain_samples/小于7.png",
+                "sha256": "bf5936a1a8b2de16ad1cfb9ce8e15433181a1cc319bba6fd62c2bd88e32a9260",
+                "crop": [
+                    454,
+                    315,
+                    70,
+                    85
+                ],
+                "mask_polygon": [
+                    [
+                        34,
+                        10
+                    ],
+                    [
+                        60,
+                        42
+                    ],
+                    [
+                        34,
+                        74
+                    ],
+                    [
+                        8,
+                        42
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "from_7",
+            "image": "from_7.png",
+            "mask": "from_7.mask.png",
+            "anchor": [
+                35,
+                43
+            ],
+            "threshold": 0.9,
+            "source": {
+                "path": "training/chain_samples/达到7.png",
+                "sha256": "ac4c0efbba9dcb7c0ba43905a1fc0abedf76887e0544699238d3848a6dac78f4",
+                "crop": [
+                    358,
+                    435,
+                    72,
+                    87
+                ],
+                "mask_polygon": [
+                    [
+                        35,
+                        11
+                    ],
+                    [
+                        61,
+                        43
+                    ],
+                    [
+                        35,
+                        75
+                    ],
+                    [
+                        9,
+                        43
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "from_14",
+            "image": "from_14.png",
+            "mask": "from_14.mask.png",
+            "anchor": [
+                36,
+                43
+            ],
+            "threshold": 0.9,
+            "source": {
+                "path": "training/chain_samples/达到14.png",
+                "sha256": "a39b2224eb641cb777263a9a95f7fa3ca0b44a8661eb96cdb4624c6bc2a44b16",
+                "crop": [
+                    179,
+                    634,
+                    74,
+                    87
+                ],
+                "mask_polygon": [
+                    [
+                        36,
+                        11
+                    ],
+                    [
+                        62,
+                        43
+                    ],
+                    [
+                        36,
+                        75
+                    ],
+                    [
+                        10,
+                        43
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "from_25",
+            "image": "from_25.png",
+            "mask": "from_25.mask.png",
+            "anchor": [
+                37,
+                43
+            ],
+            "threshold": 0.9,
+            "source": {
+                "path": "training/chain_samples/达到25.png",
+                "sha256": "25dec9753cc2e4cd8a5de530ff2a22d8bab604db7d8cc6a6a3b8c42751474a0d",
+                "crop": [
+                    558,
+                    386,
+                    76,
+                    88
+                ],
+                "mask_polygon": [
+                    [
+                        37,
+                        11
+                    ],
+                    [
+                        63,
+                        43
+                    ],
+                    [
+                        37,
+                        75
+                    ],
+                    [
+                        11,
+                        43
+                    ]
+                ]
+            }
+        }
+    ]
+}
