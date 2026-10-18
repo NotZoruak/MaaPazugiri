@@ -44,6 +44,17 @@ export default {
         },
         {
             files: [
+                "resource/base/pipeline/**/*.json",
+                "resource/base/pipeline/**/*.jsonc",
+            ],
+            options: {
+                multilineArraysWrapThreshold: -1,
+                printWidth: 1000000,
+                objectWrap: "preserve",
+            },
+        },
+        {
+            files: [
                 "*.mts",
                 "**/*.ts",
             ],
