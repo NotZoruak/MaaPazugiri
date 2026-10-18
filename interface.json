@@ -60,6 +60,6 @@
         }
     },
     "import": [
-        "./tasks/tutorial.json"
+        "./tasks/resident_battle.json"
     ]
 }

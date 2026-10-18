@@ -1,0 +1,13 @@
+{
+    "RestartGame": {
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "RestartGameAction",
+                "custom_action_param": {
+                    "package_name": "com.dmm.games.touken.puzzle"
+                }
+            }
+        }
+    }
+}

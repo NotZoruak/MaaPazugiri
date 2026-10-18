@@ -1,0 +1,839 @@
+{
+    "task": [
+        {
+            "name": "ResidentBattle",
+            "label": "常驻作战",
+            "entry": "ResidentBattle",
+            "option": ["选择章节", "选择部队"],
+            "doc": ["重复次数可在任务设置中调整；选择章节后，可在对应的关卡下拉框中选择目标关卡，并选择目标部队。"],
+            "repeatable": true,
+            "repeat_count": 1
+        }
+    ],
+    "option": {
+        "选择章节": {
+            "type": "select",
+            "label": "选择章节",
+            "description": "选择常驻作战的目标章节。",
+            "cases": [
+                {
+                    "name": "Chapter1",
+                    "label": "第1章",
+                    "option": ["选择关卡_第1章"],
+                    "pipeline_override": {
+                        "RB_SelectTargetChapter": {
+                            "action": {
+                                "param": {
+                                    "target": [295, 921, 54, 41]
+                                }
+                            }
+                        },
+                        "RB_CheckTargetChapter": {
+                            "recognition": {
+                                "param": {"template": "ResidentBattle/第1章桃太郎.png"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Chapter2",
+                    "label": "第2章",
+                    "option": ["选择关卡_第2章"],
+                    "pipeline_override": {
+                        "RB_SelectTargetChapter": {
+                            "action": {
+                                "param": {
+                                    "target": [525, 721, 55, 42]
+                                }
+                            }
+                        },
+                        "RB_CheckTargetChapter": {
+                            "recognition": {
+                                "param": {"template": "ResidentBattle/第2章一寸法师.png"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Chapter3",
+                    "label": "第3章",
+                    "option": ["选择关卡_第3章"],
+                    "pipeline_override": {
+                        "RB_SelectTargetChapter": {
+                            "action": {
+                                "param": {
+                                    "target": [178, 640, 55, 42]
+                                }
+                            }
+                        },
+                        "RB_CheckTargetChapter": {
+                            "recognition": {
+                                "param": {"template": "ResidentBattle/第3章浦岛太郎.png"}
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "Chapter1"
+        },
+        "选择关卡_第1章": {
+            "type": "select",
+            "label": "选择关卡",
+            "description": "选择第1章的常驻作战目标关卡。",
+            "cases": [
+                {
+                    "name": "Stage1_2",
+                    "label": "1-2",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "1-2"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "1章2話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage1_4",
+                    "label": "1-4",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "1-4"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "1章4話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage1_7",
+                    "label": "1-7",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "1-7"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "1章7話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage1_9",
+                    "label": "1-9",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "1-9"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "1章9話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage1_11",
+                    "label": "1-11",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "1-11"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "1章11話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage1_12",
+                    "label": "1-12",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "1-12"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "1章12話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage1_13",
+                    "label": "1-13",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "1-13"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "1章13話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage1_17",
+                    "label": "1-17",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "1-17"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "1章17話"}
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "Stage1_2"
+        },
+        "选择关卡_第2章": {
+            "type": "select",
+            "label": "选择关卡",
+            "description": "选择第2章的常驻作战目标关卡。",
+            "cases": [
+                {
+                    "name": "Stage2_2",
+                    "label": "2-2",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-2"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章2話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_5",
+                    "label": "2-5",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-5"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章5話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_6",
+                    "label": "2-6",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-6"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章6話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_7",
+                    "label": "2-7",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-7"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章7話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_11",
+                    "label": "2-11",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-11"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章11話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_12",
+                    "label": "2-12",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-12"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章12話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_16",
+                    "label": "2-16",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-16"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章16話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_19",
+                    "label": "2-19",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-19"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章19話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_22",
+                    "label": "2-22",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-22"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章22話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_24",
+                    "label": "2-24",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-24"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章24話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_25",
+                    "label": "2-25",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-25"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章25話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_27",
+                    "label": "2-27",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-27"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章27話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage2_29",
+                    "label": "2-29",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "2-29"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "2章29話"}
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "Stage2_2"
+        },
+        "选择关卡_第3章": {
+            "type": "select",
+            "label": "选择关卡",
+            "description": "选择第3章的常驻作战目标关卡。",
+            "cases": [
+                {
+                    "name": "Stage3_2",
+                    "label": "3-2",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-2"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章2話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_4",
+                    "label": "3-4",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-4"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章4話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_7",
+                    "label": "3-7",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-7"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章7話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_9",
+                    "label": "3-9",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-9"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章9話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_12",
+                    "label": "3-12",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-12"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章12話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_14",
+                    "label": "3-14",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-14"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章14話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_17",
+                    "label": "3-17",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-17"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章17話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_19",
+                    "label": "3-19",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-19"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章19話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_21",
+                    "label": "3-21",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-21"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章21話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_24",
+                    "label": "3-24",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-24"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章24話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_26",
+                    "label": "3-26",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-26"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章26話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_29",
+                    "label": "3-29",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-29"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章29話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_31",
+                    "label": "3-31",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-31"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章31話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_33",
+                    "label": "3-33",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-33"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章33話"}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Stage3_35",
+                    "label": "3-35",
+                    "pipeline_override": {
+                        "RB_FindTargetStage": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"target_stage": "3-35"}
+                                }
+                            }
+                        },
+                        "RB_CheckTargetStage": {
+                            "recognition": {
+                                "param": {"expected": "3章35話"}
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "Stage3_2"
+        },
+        "选择部队": {
+            "type": "select",
+            "label": "选择部队",
+            "cases": [
+                {
+                    "name": "Team1",
+                    "label": "部队一",
+                    "pipeline_override": {
+                        "RB_CheckTargetTeam": {
+                            "recognition": {
+                                "param": {"roi": [289, 1088, 3, 3]}
+                            }
+                        },
+                        "RB_SelectTargetTeam": {
+                            "recognition": {
+                                "param": {"roi": [289, 1088, 3, 3]}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Team2",
+                    "label": "部队二",
+                    "pipeline_override": {
+                        "RB_CheckTargetTeam": {
+                            "recognition": {
+                                "param": {"roi": [324, 1088, 3, 3]}
+                            }
+                        },
+                        "RB_SelectTargetTeam": {
+                            "recognition": {
+                                "param": {"roi": [324, 1088, 3, 3]}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Team3",
+                    "label": "部队三",
+                    "pipeline_override": {
+                        "RB_CheckTargetTeam": {
+                            "recognition": {
+                                "param": {"roi": [359, 1088, 3, 3]}
+                            }
+                        },
+                        "RB_SelectTargetTeam": {
+                            "recognition": {
+                                "param": {"roi": [359, 1088, 3, 3]}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Team4",
+                    "label": "部队四",
+                    "pipeline_override": {
+                        "RB_CheckTargetTeam": {
+                            "recognition": {
+                                "param": {"roi": [393, 1088, 3, 3]}
+                            }
+                        },
+                        "RB_SelectTargetTeam": {
+                            "recognition": {
+                                "param": {"roi": [393, 1088, 3, 3]}
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Team5",
+                    "label": "部队五",
+                    "pipeline_override": {
+                        "RB_CheckTargetTeam": {
+                            "recognition": {
+                                "param": {"roi": [428, 1088, 3, 3]}
+                            }
+                        },
+                        "RB_SelectTargetTeam": {
+                            "recognition": {
+                                "param": {"roi": [428, 1088, 3, 3]}
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "Team1"
+        }
+    }
+}

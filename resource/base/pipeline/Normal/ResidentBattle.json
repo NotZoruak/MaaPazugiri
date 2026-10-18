@@ -4,8 +4,27 @@
     },
     "RB_DetectWhereAmI": {
         "timeout": 120000,
-        "next": ["[JumpBack]MainPage_EnterSortie", "RB_CheckTargetChapter", "[JumpBack]ChapterMap_ChangeChapter", "RB_SelectTargetChapter"],
+        "next": [
+            "[JumpBack]MainPage_EnterSortie",
+            "RB_CheckTargetChapter",
+            "[JumpBack]ChapterMap_ChangeChapter",
+            "RB_SelectTargetChapter",
+            "RB_CheckChallengeStagePage"
+        ],
         "on_error": ["[JumpBack]RestartGame"]
+    },
+    "RB_CheckTargetChapter": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [238, 97, 244, 37],
+                "template": "ResidentBattle/第1章桃太郎.png"
+            }
+        },
+        "next": ["RB_FindTargetStage"],
+        "focus": {
+            "Node.Recognition.Succeeded": "已确认位于目标章节。"
+        }
     },
     "RB_SelectTargetChapter": {
         "recognition": {
@@ -22,23 +41,134 @@
             }
         },
         "next": ["RB_SelectTargetChapter", "RB_CheckTargetChapter"],
-        "on_error": ["RB_DetectWhereAmI"]
+        "on_error": ["RB_DetectWhereAmI"],
+        "focus": {
+            "Node.Action.Starting": "正在选择目标章节。"
+        }
     },
-    "RB_CheckTargetChapter": {
+    "RB_FindTargetStage": {
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "FindTargetStageAction",
+                "custom_action_param": {"target_stage": "1-2"}
+            }
+        },
+        "next": ["RB_ClickStageDecision"],
+        "on_error": ["RB_DetectWhereAmI"],
+        "focus": {
+            "Node.Action.Starting": "正在寻找目标关卡。"
+        }
+    },
+    "RB_ClickStageDecision": {
         "recognition": {
             "type": "TemplateMatch",
             "param": {
-                "roi": [238, 97, 244, 37],
-                "template": "ResidentBattle/第1章桃太郎.png"
+                "roi": [263, 1156, 198, 80],
+                "template": "ResidentBattle/关卡准备_决定按钮.png"
             }
         },
-        "next": ["RB_FindTargetStage"]
+        "action": {
+            "type": "Click"
+        },
+        "post_wait_freezes": {
+            "time": 200,
+            "target": [263, 1156, 198, 80]
+        },
+        "next": ["RB_CheckChallengeStagePage", "RB_ClickStageDecision", "RB_DetectWhereAmI"]
     },
-    "RB_FindTargetStage": {
+    "RB_CheckChallengeStagePage": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [296, 1165, 156, 75],
+                "template": "ResidentBattle/关卡准备_战斗按钮.png"
+            }
+        },
+        "next": ["RB_CheckTargetStage", "RB_ExitNonTargetStage"],
+        "on_error": ["RB_DetectWhereAmI"]
+    },
+    "RB_CheckTargetStage": {
         "recognition": {
             "type": "OCR",
-            "param": {"expected": "1-2"}
+            "param": {
+                "roi": [31, 98, 135, 40],
+                "expected": "1章2話"
+            }
         },
-        "action": {"type": "Click"}
+        "next": ["RB_CheckTargetTeam", "RB_SelectTargetTeam"],
+        "on_error": ["RB_DetectWhereAmI"],
+        "focus": {
+            "Node.Recognition.Succeeded": "已确认位于目标关卡准备页面。"
+        }
+    },
+    "RB_CheckTargetTeam": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "roi": [289, 1088, 3, 3],
+                "lower": [133, 165, 10],
+                "upper": [139, 171, 16],
+                "count": 9
+            }
+        },
+        "next": ["RB_EnterBattle"],
+        "on_error": ["RB_DetectWhereAmI"],
+        "focus": {
+            "Node.Recognition.Succeeded": "已选中目标部队,准备进入战斗。"
+        }
+    },
+    "RB_EnterBattle": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "template": "Common/Button/战斗.png"
+            }
+        },
+        "action": {
+            "type": "Click"
+        }
+    },
+    "RB_SelectTargetTeam": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "roi": [289, 1088, 3, 3],
+                "lower": [254, 254, 254],
+                "upper": [254, 254, 254],
+                "count": 9
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [675, 872, 10, 11]
+            }
+        },
+        "post_wait_freezes": {
+            "time": 200,
+            "target": [147, 775, 425, 96]
+        },
+        "next": ["RB_CheckTargetTeam", "RB_SelectTargetTeam"],
+        "on_error": ["RB_DetectWhereAmI"],
+        "focus": {
+            "Node.Action.Starting": "正在切换为目标部队。"
+        }
+    },
+    "RB_ExitNonTargetStage": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [57, 1160, 85, 90],
+                "template": "Common/Button/关闭.png"
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "next": ["RB_DetectWhereAmI"],
+        "focus": {
+            "Node.Action.Starting": "正在离开非目标关卡准备页面。"
+        }
     }
 }

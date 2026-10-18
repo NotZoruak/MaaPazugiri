@@ -15,7 +15,10 @@
             "path": "tools/schema/interface_import.schema.json",
             "upstreamPath": "tools/interface_import.schema.json",
             "url": "https://raw.githubusercontent.com/MaaXYZ/MaaFramework/main/tools/interface_import.schema.json",
-            "sha256": "0cbe6570d8c85f0ac93c023fd6572cce66e2709a412f85b65a973077f87a7f7a"
+            "sha256": "0cbe6570d8c85f0ac93c023fd6572cce66e2709a412f85b65a973077f87a7f7a",
+            "localExtensions": [
+                "MFAAvalonia 任务字段 repeatable 和 repeat_count"
+            ]
         },
         {
             "path": "tools/schema/interface_config.schema.json",
