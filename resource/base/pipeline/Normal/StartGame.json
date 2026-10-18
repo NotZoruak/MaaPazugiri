@@ -1,0 +1,31 @@
+{
+    "StartGame": {
+        "max_hit": 5,
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "RestartGameAction",
+                "custom_action_param": {
+                    "package_name": "com.dmm.games.touken.puzzle",
+                    "strict_stop": true,
+                    "log_success": false
+                }
+            }
+        },
+        "timeout": 120000,
+        "next": ["SG_TitleScreen"],
+        "on_error": ["StartGame"]
+    },
+    "SG_TitleScreen": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [447, 100, 63, 194],
+                "template": "Common/Login/标题界面.png"
+            }
+        },
+        "focus": {
+            "Node.Recognition.Succeeded": "游戏启动成功"
+        }
+    }
+}

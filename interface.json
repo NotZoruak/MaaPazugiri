@@ -60,6 +60,7 @@
         }
     },
     "import": [
+        "./tasks/start_game.json",
         "./tasks/resident_battle.json"
     ]
 }

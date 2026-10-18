@@ -1,0 +1,11 @@
+{
+    "task": [
+        {
+            "name": "StartGame",
+            "label": "启动游戏",
+            "entry": "StartGame",
+            "description": "强制关闭现有游戏后重新启动，识别到标题界面后提示游戏启动成功并结束。",
+            "repeatable": false
+        }
+    ]
+}
