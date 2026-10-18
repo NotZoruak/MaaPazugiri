@@ -1,6 +1,6 @@
 from importlib import import_module
 
-ACTION_MODULES = ("general",)
+ACTION_MODULES = ("general", "restart_game")
 
 
 def register_all() -> None:
