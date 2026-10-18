@@ -18,7 +18,13 @@ DRAW_COLORS = {
     "green": (70, 200, 45),
     "black": (180, 180, 245),
 }
-OBSTACLE_COLORS = {"shell": (180, 210, 255), "rock": (210, 190, 180), "box": (50, 160, 240), "branch": (70, 150, 190)}
+OBSTACLE_COLORS = {
+    "shell": (180, 210, 255),
+    "rock": (210, 190, 180),
+    "box": (50, 160, 240),
+    "branch": (70, 150, 190),
+    "bronze_bell": (220, 80, 230),
+}
 
 
 def write_report(image: Image, result: BoardResult, destination: Path, stem: str) -> dict[str, int]:
@@ -37,8 +43,6 @@ def write_report(image: Image, result: BoardResult, destination: Path, stem: str
             label += ":" + (item.subtype or "obstacle")
         elif item.kind == "special_ghoul":
             label += ":black"
-        elif item.kind == "prop":
-            label += ":bell"
         if item.enhanced:
             label += ":enhanced"
         cv2.putText(annotated, label, (x, max(16, y - 3)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 0, 0), 4)

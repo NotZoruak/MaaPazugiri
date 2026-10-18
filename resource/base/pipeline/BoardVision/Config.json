@@ -1,0 +1,7 @@
+{
+    "Flag_LightweightRecognition": {
+        "desc": "仅保存全局轻量识别开关，不加入执行链。BoardVision 每次调用读取 enabled，开启时跳过所有障碍物（含青铜钟）。",
+        "enabled": false,
+        "recognition": "DirectHit"
+    }
+}

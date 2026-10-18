@@ -30,6 +30,7 @@ def main() -> int:
     analyze.add_argument("--profile", required=True, type=Path)
     analyze.add_argument("--workers", type=int, help="模板并行数1至16；默认不超过8且受可用逻辑处理器数限制，1表示串行")
     analyze.add_argument("--full-search", action="store_true", help="使用全区域精细扫描，供漏检核对与性能对比")
+    analyze.add_argument("--lightweight", action="store_true", help="仅识别所有饿鬼与炸弹，跳过障碍物（含青铜钟）")
     analyze.add_argument("--no-color-prefilter", action="store_true", help="关闭颜色前置筛选，保留模板与帧内预处理缓存")
     analyze.add_argument("--input", nargs="+", required=True, type=Path)
     analyze.add_argument("--output", type=Path, default=ROOT / "debug" / "board-vision")
@@ -52,7 +53,7 @@ def main() -> int:
         summaries: list[dict[str, Any]] = []
         for source in sources:
             image = read_image(source)
-            result = recognizer.analyze(image, source.name)
+            result = recognizer.analyze(image, source.name, lightweight=args.lightweight)
             counts = write_report(image, result, args.output, source.stem)
             summaries.append(
                 {
@@ -61,6 +62,8 @@ def main() -> int:
                     "elapsed_ms": result.elapsed_ms,
                     "issues": len(result.issues),
                     "missing_templates": result.coverage["missing_templates"],
+                    "recognition_mode": result.coverage["recognition_mode"],
+                    "skipped_kinds": result.coverage["skipped_kinds"],
                 }
             )
             print(json.dumps(summaries[-1], ensure_ascii=False))
@@ -68,6 +71,9 @@ def main() -> int:
             "# 离线识别开发报告",
             "",
             "这些结果用于逐个核对，不代表独立评估准确率或可自动操作。",
+            "轻量模式仅识别所有饿鬼与炸弹，障碍物（含青铜钟）未检查；未检查的区域不能视为空地。"
+            if args.lightweight
+            else "完整模式包含障碍物（含青铜钟）。",
             "",
             "诊断图数字对应 JSON 中的对象编号；问号表示证据单一、等级冲突或尚未解释的区域。",
             "延伸至区域边界的残留颜色仅在 JSON 保留，避免将大片背景画成对象候选框。",

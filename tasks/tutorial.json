@@ -2,7 +2,7 @@
     "task": [
         {
             "name": "Tutorial",
-            "entry": "Tutorial.Start"
+            "entry": "Tutorial_Start"
         }
     ]
 }

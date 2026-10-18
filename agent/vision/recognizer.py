@@ -6,21 +6,25 @@ import hashlib
 import math
 import os
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from pathlib import Path
 from typing import Any, cast
 
 import cv2
 import numpy as np
 
+from .color_checks import BodyColorSupport, enhanced_color_compatible, prepare_body_color_support
 from .config import Profile, load_json
 from .image_io import Image, read_image
 from .matching import (
     ColorGate,
     ColorIntegral,
+    PreparedBoard,
     PreparedTemplate,
     color_integral,
-    local_response,
+    local_peaks,
     prepare_board,
     prepare_template,
     rectangle_count,
@@ -57,6 +61,7 @@ class BoardRecognizer:
         self.profile_sha256 = hashlib.sha256(profile_path.read_bytes()).hexdigest()
         self.patterns: list[tuple[dict[str, Any], Image, Image]] = []
         self.scaled_patterns: list[tuple[dict[str, Any], float, PreparedTemplate]] = []
+        self.enhanced_supports: dict[int, tuple[BodyColorSupport, int]] = {}
         for item in self.profile.templates:
             image = read_image(profile_path.parent / item["image"])
             mask_image = read_image(profile_path.parent / item["mask"])
@@ -73,9 +78,30 @@ class BoardRecognizer:
                 support = cv2.resize((mask > 0).astype(np.float32), (tw, th), interpolation=cv2.INTER_LINEAR)
                 resized_mask = np.where(support >= 1.0 - 1e-6, 255, 0).astype(np.uint8)
                 if np.count_nonzero(resized_mask) >= 8:
-                    self.scaled_patterns.append((item, scale, prepare_template(resized, resized_mask)))
+                    search_roi = item.get("search_roi")
+                    if search_roi is None:
+                        regular = item["kind"] == "bomb" or (
+                            item["kind"] == "ghoul" and not item.get("enhanced", False)
+                        )
+                        search_roi = (self.profile.standard_object_roi if regular else None) or self.profile.board_roi
+                    divisor = 2 if item["kind"] == "obstacle" else 4
+                    coarse_shape = (max(2, round(search_roi[3] / divisor)), max(2, round(search_roi[2] / divisor)))
+                    prepared = prepare_template(
+                        resized,
+                        resized_mask,
+                        coarse_color=item["kind"] != "obstacle",
+                        coarse_shape=None if self.full_search else coarse_shape,
+                    )
+                    self.scaled_patterns.append((item, scale, prepared))
+                    if item.get("enhanced", False):
+                        offset = tuple(float(value) * scale for value in item["center_offset"])
+                        body_size = tuple(float(value) * scale for value in item["body_size"])
+                        self.enhanced_supports[id(prepared)] = (
+                            prepare_body_color_support((offset[0], offset[1]), (body_size[0], body_size[1])),
+                            COLORS.index(item["color"]),
+                        )
 
-    def analyze(self, image: Image, frame_id: str) -> BoardResult:
+    def analyze(self, image: Image, frame_id: str, *, lightweight: bool = False) -> BoardResult:
         """识别一帧，并将全部位置还原为输入截图坐标。"""
         started = time.perf_counter()
         height, width = image.shape[:2]
@@ -86,7 +112,8 @@ class BoardRecognizer:
             self._label(item["kind"], item.get("color"), item.get("bomb_level"), item.get("subtype"))
             for item in self.profile.templates
         }
-        missing = sorted(set(EXPECTED_LABELS) - known)
+        skipped_labels = sorted(label for label in EXPECTED_LABELS if lightweight and label.startswith("obstacle_"))
+        missing = sorted(set(EXPECTED_LABELS) - known - set(skipped_labels))
         result = BoardResult(
             frame_id,
             (width, height),
@@ -94,12 +121,28 @@ class BoardRecognizer:
             self.profile.name,
             {
                 "missing_templates": missing,
+                "recognition_mode": "lightweight" if lightweight else "full",
+                "skipped_kinds": ["obstacle"] if lightweight else [],
+                "skipped_labels": skipped_labels,
+                "template_variants_enabled": sum(
+                    1 for spec, _, _ in self.scaled_patterns if not lightweight or spec["kind"] != "obstacle"
+                ),
                 "sample_role": self.profile.role,
                 "profile_sha256": self.profile_sha256,
                 "independent_evaluation_completed": False,
                 "search_mode": "full" if self.full_search else "coarse_refine",
                 "color_prefilter": self.color_prefilter and not self.full_search,
                 "template_variants_cached": len(self.scaled_patterns),
+                "full_resolution_fallback_variants": sum(
+                    1
+                    for spec, _, pattern in self.scaled_patterns
+                    if pattern.coarse_image is None and (not lightweight or spec["kind"] != "obstacle")
+                ),
+                "coarse_fourier_variants_cached": sum(
+                    1
+                    for spec, _, pattern in self.scaled_patterns
+                    if pattern.coarse_spectrum is not None and (not lightweight or spec["kind"] != "obstacle")
+                ),
                 "frame_preprocessing_shared": True,
                 "positions_reused_from_previous_frame": False,
                 "template_workers": self.workers,
@@ -108,10 +151,17 @@ class BoardRecognizer:
                 "coarse_search_parameters": None
                 if self.full_search
                 else {
-                    "downscale": 0.5,
+                    "downscale": 0.25,
+                    "channels": "BGR",
                     "threshold": 0.55,
                     "max_candidates": 120,
                     "refine_radius": 5,
+                    "response_storage": "sparse_patches",
+                    "minimum_template_fidelity": 0.8,
+                    "masked_color_backend": "cached_rfft",
+                    "masked_refinement_prefilter": "rectangle_projection_bound",
+                    "local_peak_batching": True,
+                    "obstacles": {"downscale": 0.5, "channels": "GRAY", "masked_backend": "cached_rfft"},
                 },
             },
         )
@@ -122,36 +172,106 @@ class BoardRecognizer:
             return result
         normalized = cast(Image, cv2.resize(image, (ref_width, ref_height), interpolation=cv2.INTER_AREA))
         board = normalized[ry : ry + rh, rx : rx + rw]
-        hsv = cast(Image, cv2.cvtColor(board, cv2.COLOR_BGR2HSV))
-        color_masks = {color: self._color_mask(hsv, color) for color in HSV_RANGES}
-        integrals = {color: color_integral(mask) for color, mask in color_masks.items()}
-        coarse_board = None if self.full_search else prepare_board(board)
-        regular_board, regular_integrals, regular_coarse = board, integrals, coarse_board
-        dx, dy = 0, 0
-        if self.profile.standard_object_roi is not None:
-            ox, oy, ow, oh = self.profile.standard_object_roi
-            dx, dy = ox - rx, oy - ry
-            regular_board = board[dy : dy + oh, dx : dx + ow]
-            regular_integrals = {
-                color: color_integral(mask[dy : dy + oh, dx : dx + ow]) for color, mask in color_masks.items()
-            }
-            regular_coarse = None if self.full_search else prepare_board(regular_board)
+        # 当前帧的独立预处理与模板任务复用同一个线程池，输入只读共享。
+        executor = ThreadPoolExecutor(max_workers=self.workers) if self.workers > 1 else None
+        try:
+            coarse_future = obstacle_future = regular_future = None
+            if executor is not None and not self.full_search:
+                coarse_future = executor.submit(prepare_board, board)
+                if not lightweight:
+                    obstacle_future = executor.submit(prepare_board, board, coarse_color=False)
+                if self.profile.standard_object_roi is not None:
+                    ox, oy, ow, oh = self.profile.standard_object_roi
+                    roi = board[oy - ry : oy - ry + oh, ox - rx : ox - rx + ow]
+                    regular_future = executor.submit(prepare_board, roi)
+            hsv = cast(Image, cv2.cvtColor(board, cv2.COLOR_BGR2HSV))
+            color_masks = {color: self._color_mask(hsv, color) for color in HSV_RANGES}
+            enhanced_masks = dict(color_masks)
+            enhanced_masks["red"] = cast(
+                Image, cv2.bitwise_and(color_masks["red"], cv2.inRange(hsv, (0, 0, 175), (12, 255, 255)))
+            )
+            enhanced_palette = np.stack([enhanced_masks[color] for color in COLORS], axis=2)
+            integrals = {color: color_integral(mask) for color, mask in color_masks.items()}
+            coarse_board = (
+                None
+                if self.full_search
+                else (coarse_future.result() if coarse_future is not None else prepare_board(board))
+            )
+            obstacle_coarse = (
+                None
+                if self.full_search or lightweight
+                else (
+                    obstacle_future.result()
+                    if obstacle_future is not None
+                    else prepare_board(board, coarse_color=False)
+                )
+            )
+            regular_board, regular_integrals, regular_coarse = board, integrals, coarse_board
+            regular_hsv = hsv
+            dx, dy = 0, 0
+            if self.profile.standard_object_roi is not None:
+                ox, oy, ow, oh = self.profile.standard_object_roi
+                dx, dy = ox - rx, oy - ry
+                regular_board = board[dy : dy + oh, dx : dx + ow]
+                regular_hsv = hsv[dy : dy + oh, dx : dx + ow]
+                regular_integrals = {
+                    color: color_integral(mask[dy : dy + oh, dx : dx + ow]) for color, mask in color_masks.items()
+                }
+                regular_coarse = (
+                    None
+                    if self.full_search
+                    else (regular_future.result() if regular_future is not None else prepare_board(regular_board))
+                )
 
-        def regular_hits(kind: str) -> list[Hit]:
-            """保留普通对象原有的搜索边界和颜色占比分母。"""
-            hits = self._match(regular_board, regular_integrals, kind, regular_coarse, enhanced=False)
-            for hit in hits:
-                hit.center = (hit.center[0] + dx, hit.center[1] + dy)
-                hit.anchor = (hit.anchor[0] + dx, hit.anchor[1] + dy)
-            return hits
+            extra_kinds = ("special_ghoul",) if lightweight else ("obstacle", "special_ghoul")
+            searches = [
+                ("bomb", regular_board, regular_integrals, "bomb", regular_coarse, False),
+                ("regular", regular_board, regular_integrals, "ghoul", regular_coarse, False),
+                ("enhanced", board, integrals, "ghoul", coarse_board, True),
+                *(
+                    (kind, board, integrals, kind, obstacle_coarse if kind == "obstacle" else coarse_board, None)
+                    for kind in extra_kinds
+                ),
+            ]
+            jobs = [
+                (tag, job)
+                for tag, pixels, colors, kind, coarse, enhanced in searches
+                for job in self._match_jobs(
+                    pixels,
+                    colors,
+                    kind,
+                    coarse,
+                    hsv=regular_hsv if tag in ("bomb", "regular") else hsv,
+                    enhanced_palette=enhanced_palette,
+                    enhanced=enhanced,
+                )
+            ]
+            collected: dict[str, list[Hit]] = {tag: [] for tag, *_ in searches}
 
-        bomb_groups = [group for group in self._group(regular_hits("bomb")) if group[0].accepted]
-        ghoul_hits = [*regular_hits("ghoul"), *self._match(board, integrals, "ghoul", coarse_board, enhanced=True)]
+            def execute(entry: tuple[str, Callable[[], list[Hit]]]) -> list[Hit]:
+                """模板任务只读取当前帧，结果仍按模板原序汇集。"""
+                return entry[1]()
+
+            if executor is None:
+                outputs = [execute(job) for job in jobs]
+            else:
+                outputs = list(executor.map(execute, jobs))
+        finally:
+            if executor is not None:
+                executor.shutdown()
+        for (tag, _), hits in zip(jobs, outputs, strict=True):
+            if tag in ("bomb", "regular"):
+                for hit in hits:
+                    hit.center = (hit.center[0] + dx, hit.center[1] + dy)
+                    hit.anchor = (hit.anchor[0] + dx, hit.anchor[1] + dy)
+            collected[tag].extend(hits)
+        bomb_groups = [group for group in self._group(collected["bomb"]) if group[0].accepted]
+        ghoul_hits = [*collected["regular"], *collected["enhanced"]]
         accepted = [hit for hit in ghoul_hits if not any(self._in_bomb(hit.anchor, group[0]) for group in bomb_groups)]
         extra_hits = [
             hit
-            for kind in ("obstacle", "special_ghoul", "prop")
-            for hit in self._match(board, integrals, kind, coarse_board)
+            for kind in extra_kinds
+            for hit in collected[kind]
             if not any(self._in_bomb(hit.anchor, group[0]) for group in bomb_groups)
         ]
         groups = [*bomb_groups, *self._group(accepted), *self._group(extra_hits)]
@@ -179,16 +299,18 @@ class BoardRecognizer:
             mask |= cast(Image, cv2.inRange(hsv, np.array(low, dtype=np.uint8), np.array(high, dtype=np.uint8)))
         return mask
 
-    def _match(
+    def _match_jobs(
         self,
         board: Image,
         integrals: dict[str, ColorIntegral],
         kind: str,
-        coarse_board: Image | None,
+        coarse_board: PreparedBoard | None,
         *,
+        hsv: Image,
+        enhanced_palette: Image,
         enhanced: bool | None = None,
-    ) -> list[Hit]:
-        regions: dict[tuple[int, ...], tuple[Image, Image | None]] = {}
+    ) -> list[Callable[[], list[Hit]]]:
+        regions: dict[tuple[int, ...], tuple[Image, PreparedBoard | None]] = {}
         bomb_floor = (
             min(
                 (float(spec.get("threshold", 0.84)) for spec, _, _ in self.patterns if spec["kind"] == "bomb"),
@@ -209,7 +331,10 @@ class BoardRecognizer:
                     x, y, width, height = region
                     dx, dy = x - self.profile.board_roi[0], y - self.profile.board_roi[1]
                     cropped = board[dy : dy + height, dx : dx + width]
-                    regions[region] = (cropped, None if self.full_search else prepare_board(cropped))
+                    regions[region] = (
+                        cropped,
+                        None if self.full_search else prepare_board(cropped, coarse_color=kind != "obstacle"),
+                    )
 
         def match_one(item: tuple[dict[str, Any], float, PreparedTemplate]) -> list[Hit]:
             """独立处理一个模板尺度，不保存当前帧外的数据。"""
@@ -234,27 +359,22 @@ class BoardRecognizer:
                     (float(spec["body_size"][0]) * scale, float(spec["body_size"][1]) * scale),
                     float(spec.get("min_color_fraction", 0.3)),
                 )
-            response = local_response(search_board, pattern, self.full_search, search_coarse, gate)
-            peaks = cv2.dilate(response, np.ones((5, 5), dtype=np.uint8))
             threshold = float(spec.get("threshold", 0.84))
             search_threshold = bomb_floor if kind == "bomb" else threshold
-            ys, xs = np.where((response >= search_threshold) & (response >= peaks - 1e-7))
-            ordered = sorted(
-                zip(xs.tolist(), ys.tolist(), strict=True), key=lambda point: -float(response[point[1], point[0]])
-            )
+            ordered = local_peaks(search_board, pattern, self.full_search, search_coarse, gate, search_threshold)
             kept: list[tuple[int, int]] = []
-            for px, py in ordered:
+            for px, py, score in ordered:
                 if len(kept) >= 60:
                     break
                 if any(math.hypot(px - ox, py - oy) < min(tw, th) * 0.35 for ox, oy in kept):
                     continue
                 bx, by = px + offset_x, py + offset_y
                 if (kind == "bomb" or spec.get("check_template_color", False)) and not self._template_color_compatible(
-                    board[by : by + th, bx : bx + tw], resized, resized_mask
+                    hsv[by : by + th, bx : bx + tw], pattern
                 ):
                     continue
                 if kind == "special_ghoul" and spec.get("part") == "eye":
-                    eye = cv2.cvtColor(board[by : by + th, bx : bx + tw], cv2.COLOR_BGR2HSV)
+                    eye = hsv[by : by + th, bx : bx + tw]
                     red = ((eye[:, :, 0] <= 20) | (eye[:, :, 0] >= 165)) & (eye[:, :, 1] >= 60) & (eye[:, :, 2] >= 60)
                     if np.count_nonzero(red & (resized_mask > 0)) < 0.08 * np.count_nonzero(resized_mask):
                         continue
@@ -272,10 +392,10 @@ class BoardRecognizer:
                     fraction = float(count / max(1, (x2 - x1) * (y2 - y1)))
                     if fraction < float(spec.get("min_color_fraction", 0.3)):
                         continue
-                if spec.get("enhanced", False) and not self._enhanced_color_compatible(
-                    board, (cx, cy), (bw, bh), str(color)
-                ):
-                    continue
+                if spec.get("enhanced", False):
+                    support, color_index = self.enhanced_supports[id(pattern)]
+                    if not enhanced_color_compatible(enhanced_palette, support, (bx, by), color_index):
+                        continue
                 kept.append((px, py))
                 hits.append(
                     Hit(
@@ -287,9 +407,9 @@ class BoardRecognizer:
                         (cx, cy),
                         (bw, bh),
                         (bx + tw / 2, by + th / 2),
-                        float(response[py, px]),
+                        score,
                         fraction,
-                        float(response[py, px]) >= threshold,
+                        score >= threshold,
                         spec.get("subtype"),
                         bool(spec.get("enhanced", False)),
                         int(spec.get("minimum_parts", 1)),
@@ -297,45 +417,16 @@ class BoardRecognizer:
                 )
             return hits
 
-        if self.workers == 1 or len(selected) <= 1:
-            return [hit for item in selected for hit in match_one(item)]
-        with ThreadPoolExecutor(max_workers=self.workers) as executor:
-            return [hit for group in executor.map(match_one, selected) for hit in group]
-
-    @classmethod
-    def _enhanced_color_compatible(
-        cls, board: Image, center: tuple[float, float], body_size: tuple[float, float], color: str
-    ) -> bool:
-        """核对身体两侧和下部主色，排除红眼、嘴部与邻居造成的异色命中。"""
-        cx, cy = center
-        bw, bh = body_size
-        x1, x2 = max(0, math.floor(cx - bw * 0.41)), min(board.shape[1], math.ceil(cx + bw * 0.41))
-        y1, y2 = max(0, math.floor(cy - bh * 0.29)), min(board.shape[0], math.ceil(cy + bh * 0.42))
-        hsv = cast(Image, cv2.cvtColor(board[y1:y2, x1:x2], cv2.COLOR_BGR2HSV))
-        yy, xx = np.ogrid[y1:y2, x1:x2]
-        selected = ((xx - cx) / (bw * 0.4)) ** 2 + ((yy - cy - bh * 0.08) / (bh * 0.33)) ** 2 <= 1
-        selected |= (np.abs(xx - cx) < bw * 0.4) & (yy >= cy - bh * 0.28) & (yy < cy + bh * 0.1)
-        selected &= ~((np.abs(xx - cx) < bw * 0.21) & (yy < cy + bh * 0.22))
-        counts = {}
-        for candidate_color in COLORS:
-            mask = cls._color_mask(hsv, candidate_color) > 0
-            if candidate_color == "red":
-                mask &= (hsv[:, :, 0] <= 12) & (hsv[:, :, 2] >= 175)
-            counts[candidate_color] = int(np.count_nonzero(mask & selected))
-        return counts[color] >= np.count_nonzero(selected) * 0.06 and all(
-            counts[color] > count for candidate_color, count in counts.items() if candidate_color != color
-        )
+        return [partial(match_one, item) for item in selected]
 
     @staticmethod
-    def _template_color_compatible(candidate: Image, template: Image, mask: Image) -> bool:
+    def _template_color_compatible(actual: Image, pattern: PreparedTemplate) -> bool:
         """在外焰或指定模板的掩码内核对显著颜色，排除异色相似轮廓。"""
-        expected = cv2.cvtColor(template, cv2.COLOR_BGR2HSV)
-        actual = cv2.cvtColor(candidate, cv2.COLOR_BGR2HSV)
-        selected = (mask > 0) & (expected[:, :, 1] > 90) & (expected[:, :, 2] > 80)
-        count = np.count_nonzero(selected)
+        selected, count = pattern.colored_pixels, pattern.colored_count
         if count < 12:
             return True
-        delta = np.abs(actual[:, :, 0].astype(np.int16) - expected[:, :, 0].astype(np.int16))
+        assert pattern.expected_hue is not None and selected is not None
+        delta = np.abs(actual[:, :, 0].astype(np.int16) - pattern.expected_hue)
         difference = np.minimum(delta, 180 - delta)
         compatible = selected & (difference <= 15) & (actual[:, :, 1] > 55)
         return bool(np.count_nonzero(compatible) / count >= 0.55)

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .model import COLORS, OBSTACLE_TYPES, PROP_TYPES, SPECIAL_GHOUL_TYPES
+from .model import COLORS, OBSTACLE_TYPES, SPECIAL_GHOUL_TYPES
 
 
 def numbers(value: Any, length: int, name: str) -> tuple[float, ...]:
@@ -121,8 +121,11 @@ def validate_template(item: dict[str, Any]) -> None:
     minimum_parts = item.get("minimum_parts", 1)
     if isinstance(minimum_parts, bool) or not isinstance(minimum_parts, int) or not 1 <= minimum_parts <= 8:
         raise ValueError("最少可见部位数必须为1至8的整数")
-    if item.get("search_roi") is not None and item.get("kind") != "prop":
-        raise ValueError("固定搜索区域仅适用于已登记的固定道具")
+    fixed_bell = item.get("kind") == "obstacle" and item.get("subtype") == "bronze_bell"
+    if item.get("search_roi") is not None and not fixed_bell:
+        raise ValueError("固定搜索区域仅适用于已确认固定位置的青铜钟")
+    if fixed_bell and item.get("search_roi") is None:
+        raise ValueError("青铜钟模板必须指定已核对的固定搜索区域")
     if item.get("kind") == "ghoul":
         if item.get("color") not in COLORS:
             raise ValueError("饿鬼模板必须指定四种已确认颜色之一")
@@ -139,13 +142,8 @@ def validate_template(item: dict[str, Any]) -> None:
             raise ValueError("特殊饿鬼模板必须指定已登记的黑色类别")
         if item.get("bomb_level") is not None:
             raise ValueError("特殊饿鬼模板不能指定炸弹等级")
-    elif item.get("kind") == "prop":
-        if item.get("subtype") not in PROP_TYPES or item.get("search_roi") is None:
-            raise ValueError("固定道具模板必须指定已登记类型及搜索区域")
-        if item.get("color") is not None or item.get("bomb_level") is not None:
-            raise ValueError("固定道具不能指定饿鬼颜色或炸弹等级")
     else:
-        raise ValueError("模板类别只允许饿鬼、炸弹、障碍物、特殊饿鬼或固定道具")
+        raise ValueError("模板类别只允许饿鬼、炸弹、障碍物或特殊饿鬼")
     numbers(item.get("center_offset"), 2, "center_offset")
     body = numbers(item.get("body_size"), 2, "body_size")
     if min(body) <= 0:

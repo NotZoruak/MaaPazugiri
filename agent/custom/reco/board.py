@@ -27,8 +27,12 @@ class BoardVisionRecognition(CustomRecognition):
     ) -> CustomRecognition.AnalyzeResult:
         """识别当前帧，并把结构化棋盘状态写入 Maa 识别详情。"""
         try:
+            configuration = context.get_node_data("Flag_LightweightRecognition")
+            lightweight = configuration.get("enabled", False) if configuration is not None else False
+            if not isinstance(lightweight, bool):
+                raise ValueError("轻量识别配置的 enabled 必须为布尔值")
             recognizer = self._get_recognizer()
-            result = recognizer.analyze(argv.image, frame_id=uuid4().hex)
+            result = recognizer.analyze(argv.image, frame_id=uuid4().hex, lightweight=lightweight)
         except Exception:
             logger.exception("棋盘自定义识别失败")
             return CustomRecognition.AnalyzeResult(
@@ -54,12 +58,7 @@ class BoardVisionRecognition(CustomRecognition):
         """首次调用时加载静态模板，后续帧复用识别器实例。"""
         if self._recognizer is None:
             profile_path = (
-                get_runtime_paths().resource_dir
-                / "base"
-                / "image"
-                / "board"
-                / "development"
-                / "profile.json"
+                get_runtime_paths().resource_dir / "base" / "image" / "board" / "development" / "profile.json"
             )
             if not profile_path.is_file():
                 raise FileNotFoundError(f"找不到棋盘识别配置：{profile_path}")

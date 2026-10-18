@@ -21,9 +21,6 @@
             ]
         }
     ],
-    "import": [
-        "./tasks/tutorial.json"
-    ],
     "agent": [
         {
             "child_exec": "uv",
@@ -33,5 +30,39 @@
                 "agent/main.py"
             ]
         }
+    ],
+    "option": {
+        "轻量识别": {
+            "type": "switch",
+            "label": "轻量识别",
+            "description": "仅识别普通饿鬼、强化饿鬼、特殊黑色饿鬼和炸弹，跳过障碍物（含青铜钟），减少识别计算。轻量模式不提供障碍物信息。",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "开启",
+                    "pipeline_override": {
+                        "Flag_LightweightRecognition": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "label": "关闭",
+                    "pipeline_override": {
+                        "Flag_LightweightRecognition": {
+                            "enabled": false
+                        }
+                    }
+                }
+            ],
+            "default_case": "No"
+        }
+    },
+    "global_option": [
+        "轻量识别"
+    ],
+    "import": [
+        "./tasks/tutorial.json"
     ]
 }

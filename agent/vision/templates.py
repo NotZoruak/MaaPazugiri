@@ -82,7 +82,7 @@ def prepare_templates(catalog_path: Path, output_dir: Path) -> Path:
     result["templates"] = [entry for _, _, _, entry in prepared]
     result["catalog_sha256"] = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
     destination = output_dir / "profile.json"
-    write_text_atomic(destination, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    write_text_atomic(destination, json.dumps(result, ensure_ascii=False, indent=4) + "\n")
     return destination
 
 

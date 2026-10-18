@@ -6,9 +6,8 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 COLORS = ("red", "yellow", "blue", "green")
-OBSTACLE_TYPES = {"shell": "贝壳", "rock": "石头", "box": "箱子", "branch": "树枝"}
+OBSTACLE_TYPES = {"shell": "贝壳", "rock": "石头", "box": "箱子", "branch": "树枝", "bronze_bell": "青铜钟"}
 SPECIAL_GHOUL_TYPES = {"black": "特殊黑色饿鬼"}
-PROP_TYPES = {"bronze_bell": "青铜钟"}
 EXPECTED_LABELS = (
     *("ghoul_" + color for color in COLORS),
     "bomb_1",
@@ -16,7 +15,6 @@ EXPECTED_LABELS = (
     "bomb_3",
     *("obstacle_" + subtype for subtype in OBSTACLE_TYPES),
     *("special_ghoul_" + subtype for subtype in SPECIAL_GHOUL_TYPES),
-    *("prop_" + subtype for subtype in PROP_TYPES),
 )
 LABEL_NAMES = {
     "ghoul_red": "红色饿鬼",
@@ -29,7 +27,6 @@ LABEL_NAMES = {
     "bomb_unknown": "炸弹等级未知",
     **{"obstacle_" + subtype: name for subtype, name in OBSTACLE_TYPES.items()},
     **{"special_ghoul_" + subtype: name for subtype, name in SPECIAL_GHOUL_TYPES.items()},
-    **{"prop_" + subtype: name for subtype, name in PROP_TYPES.items()},
 }
 
 

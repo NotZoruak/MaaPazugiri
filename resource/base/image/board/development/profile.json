@@ -1,2269 +1,2269 @@
 {
-  "name": "720×1280 饿鬼、炸弹、障碍物与青铜钟开发原型",
-  "reference_size": [
-    720,
-    1280
-  ],
-  "board_roi": [
-    0,
-    210,
-    720,
-    780
-  ],
-  "scales": [
-    0.9,
-    1,
-    1.1
-  ],
-  "sample_role": "development",
-  "aspect_tolerance": 0.015,
-  "merge_fraction": 0.28,
-  "bomb_margin": 0.035,
-  "notes": [
-    "有效区域依据本次截图人工核对，仅适用于当前开发布局。",
-    "等级依据用户重命名标注，并逐一核对对应外焰；不依赖内部角色。",
-    "掩码排除内部角色，不能恢复被遮挡的内容。",
-    "新增障碍物按贝壳、石头、箱子、树枝分别制作模板；后续木头外观取得样本后另行登记。",
-    "特殊黑色饿鬼通过局部五官与深色身体交叉核对，不推测其游戏机制。",
-    "有效区域上缘依据 021 顶部黑色饿鬼扩至 210；尚未实现棋盘可操作状态前置判断。",
-    "普通饿鬼与炸弹保留原搜索区域，避免扩大黑色饿鬼范围改变原边缘颜色占比分母；黑色小嘴不单独作为定位模板。",
-    "强化饿鬼保留原颜色，统一使用enhanced属性；核心和受影响不细分，武器不单独识别。",
-    "青铜钟在用户确认的固定区域内逐帧核对，亮暗是同一对象的外观变体；作用未知，不生成触控点。"
-  ],
-  "templates": [
-    {
-      "id": "blue_eye",
-      "kind": "ghoul",
-      "color": "blue",
-      "center_offset": [
-        18,
-        28
-      ],
-      "body_size": [
-        96,
-        100
-      ],
-      "part": "eye",
-      "threshold": 0.82,
-      "min_color_fraction": 0.35,
-      "image": "blue_eye.png",
-      "mask": "blue_eye.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          147.0,
-          326.0,
-          36.0,
-          27.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "blue_mouth",
-      "kind": "ghoul",
-      "color": "blue",
-      "center_offset": [
-        22,
-        3
-      ],
-      "body_size": [
-        96,
-        100
-      ],
-      "part": "mouth",
-      "threshold": 0.8,
-      "min_color_fraction": 0.35,
-      "image": "blue_mouth.png",
-      "mask": "blue_mouth.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          143.0,
-          351.0,
-          44.0,
-          28.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "red_eye",
-      "kind": "ghoul",
-      "color": "red",
-      "center_offset": [
-        21,
-        32
-      ],
-      "body_size": [
-        96,
-        100
-      ],
-      "part": "eye",
-      "threshold": 0.82,
-      "min_color_fraction": 0.35,
-      "image": "red_eye.png",
-      "mask": "red_eye.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          495.0,
-          319.0,
-          40.0,
-          29.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "red_mouth",
-      "kind": "ghoul",
-      "color": "red",
-      "center_offset": [
-        23,
-        5
-      ],
-      "body_size": [
-        96,
-        100
-      ],
-      "part": "mouth",
-      "threshold": 0.8,
-      "min_color_fraction": 0.35,
-      "image": "red_mouth.png",
-      "mask": "red_mouth.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          493.0,
-          346.0,
-          49.0,
-          31.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "yellow_eye",
-      "kind": "ghoul",
-      "color": "yellow",
-      "center_offset": [
-        19,
-        33
-      ],
-      "body_size": [
-        96,
-        100
-      ],
-      "part": "eye",
-      "threshold": 0.82,
-      "min_color_fraction": 0.35,
-      "image": "yellow_eye.png",
-      "mask": "yellow_eye.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          320.0,
-          315.0,
-          38.0,
-          28.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "yellow_mouth",
-      "kind": "ghoul",
-      "color": "yellow",
-      "center_offset": [
-        22,
-        2
-      ],
-      "body_size": [
-        96,
-        100
-      ],
-      "part": "mouth",
-      "threshold": 0.8,
-      "min_color_fraction": 0.35,
-      "image": "yellow_mouth.png",
-      "mask": "yellow_mouth.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          317.0,
-          346.0,
-          49.0,
-          28.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "green_eye",
-      "kind": "ghoul",
-      "color": "green",
-      "center_offset": [
-        21,
-        31
-      ],
-      "body_size": [
-        96,
-        100
-      ],
-      "part": "eye",
-      "threshold": 0.82,
-      "min_color_fraction": 0.35,
-      "image": "green_eye.png",
-      "mask": "green_eye.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          366.0,
-          409.0,
-          42.0,
-          28.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "green_mouth",
-      "kind": "ghoul",
-      "color": "green",
-      "center_offset": [
-        26,
-        2
-      ],
-      "body_size": [
-        96,
-        100
-      ],
-      "part": "mouth",
-      "threshold": 0.8,
-      "min_color_fraction": 0.35,
-      "image": "green_mouth.png",
-      "mask": "green_mouth.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          361.0,
-          438.0,
-          51.0,
-          28.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "bomb_1_flame",
-      "kind": "bomb",
-      "bomb_level": 1,
-      "center_offset": [
-        52,
-        87
-      ],
-      "body_size": [
-        92,
-        94
-      ],
-      "part": "flame",
-      "threshold": 0.82,
-      "image": "bomb_1_flame.png",
-      "mask": "bomb_1_flame.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          418.0,
-          378.0,
-          105.0,
-          139.0
-        ],
-        "ignore_rects": [
-          [
-            20,
-            57,
-            63,
-            62
-          ]
-        ],
-        "include_polygons": [
-          [
-            [
-              51,
-              0
-            ],
-            [
-              35,
-              22
-            ],
-            [
-              37,
-              31
-            ],
-            [
-              20,
-              42
-            ],
-            [
-              7,
-              64
-            ],
-            [
-              3,
-              92
-            ],
-            [
-              15,
-              117
-            ],
-            [
-              35,
-              133
-            ],
-            [
-              64,
-              135
-            ],
-            [
-              84,
-              121
-            ],
-            [
-              97,
-              104
-            ],
-            [
-              99,
-              79
-            ],
-            [
-              88,
-              53
-            ],
-            [
-              65,
-              30
-            ],
-            [
-              65,
-              10
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "bomb_2_flame",
-      "kind": "bomb",
-      "bomb_level": 2,
-      "center_offset": [
-        73,
-        121
-      ],
-      "body_size": [
-        136,
-        138
-      ],
-      "part": "flame",
-      "threshold": 0.82,
-      "image": "bomb_2_flame.png",
-      "mask": "bomb_2_flame.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          286.0,
-          614.0,
-          146.0,
-          182.0
-        ],
-        "ignore_rects": [
-          [
-            17,
-            70,
-            112,
-            91
-          ]
-        ],
-        "include_polygons": [
-          [
-            [
-              67,
-              1
-            ],
-            [
-              50,
-              15
-            ],
-            [
-              58,
-              31
-            ],
-            [
-              42,
-              42
-            ],
-            [
-              22,
-              57
-            ],
-            [
-              6,
-              84
-            ],
-            [
-              2,
-              120
-            ],
-            [
-              11,
-              146
-            ],
-            [
-              32,
-              164
-            ],
-            [
-              63,
-              176
-            ],
-            [
-              96,
-              169
-            ],
-            [
-              123,
-              152
-            ],
-            [
-              139,
-              125
-            ],
-            [
-              139,
-              94
-            ],
-            [
-              124,
-              66
-            ],
-            [
-              103,
-              45
-            ],
-            [
-              88,
-              29
-            ],
-            [
-              81,
-              8
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "bomb_1_tip",
-      "kind": "bomb",
-      "bomb_level": 1,
-      "center_offset": [
-        22,
-        83
-      ],
-      "body_size": [
-        92,
-        94
-      ],
-      "part": "flame_tip",
-      "threshold": 0.82,
-      "image": "bomb_1_tip.png",
-      "mask": "bomb_1_tip.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          448.0,
-          382.0,
-          45.0,
-          54.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "bomb_2_tip_main",
-      "kind": "bomb",
-      "bomb_level": 2,
-      "center_offset": [
-        32,
-        121
-      ],
-      "body_size": [
-        136,
-        138
-      ],
-      "part": "flame_tip",
-      "threshold": 0.82,
-      "image": "bomb_2_tip_main.png",
-      "mask": "bomb_2_tip_main.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          327.0,
-          614.0,
-          62.0,
-          69.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "bomb_2_tip_wave",
-      "kind": "bomb",
-      "bomb_level": 2,
-      "center_offset": [
-        30,
-        118
-      ],
-      "body_size": [
-        136,
-        138
-      ],
-      "part": "flame_tip",
-      "threshold": 0.82,
-      "image": "bomb_2_tip_wave.png",
-      "mask": "bomb_2_tip_wave.mask.png",
-      "provenance": {
-        "source_name": "001_bombs_lv1x1_lv2x4.png",
-        "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
-        "source_crop": [
-          38.0,
-          652.0,
-          56.0,
-          64.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "bomb_3_tip",
-      "kind": "bomb",
-      "bomb_level": 3,
-      "center_offset": [
-        40,
-        151
-      ],
-      "body_size": [
-        174,
-        166
-      ],
-      "part": "flame_tip",
-      "threshold": 0.82,
-      "image": "bomb_3_tip.png",
-      "mask": "bomb_3_tip.mask.png",
-      "provenance": {
-        "source_name": "002_bombs_lv1x3_lv3x1.png",
-        "source_sha256": "e8d2f3364071313e6c27110bf354c7a79067889dc6c3e08991958d111aedc219",
-        "source_crop": [
-          215.0,
-          557.0,
-          86.0,
-          88.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              27,
-              1
-            ],
-            [
-              12,
-              15
-            ],
-            [
-              18,
-              30
-            ],
-            [
-              6,
-              47
-            ],
-            [
-              1,
-              69
-            ],
-            [
-              4,
-              87
-            ],
-            [
-              83,
-              87
-            ],
-            [
-              83,
-              68
-            ],
-            [
-              69,
-              48
-            ],
-            [
-              52,
-              28
-            ],
-            [
-              44,
-              10
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "bomb_1_tip_curl",
-      "kind": "bomb",
-      "bomb_level": 1,
-      "center_offset": [
-        27,
-        81
-      ],
-      "body_size": [
-        94,
-        96
-      ],
-      "part": "flame_tip",
-      "threshold": 0.82,
-      "image": "bomb_1_tip_curl.png",
-      "mask": "bomb_1_tip_curl.mask.png",
-      "provenance": {
-        "source_name": "002_bombs_lv1x3_lv3x1.png",
-        "source_sha256": "e8d2f3364071313e6c27110bf354c7a79067889dc6c3e08991958d111aedc219",
-        "source_crop": [
-          119.0,
-          534.0,
-          52.0,
-          48.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              15,
-              0
-            ],
-            [
-              9,
-              7
-            ],
-            [
-              13,
-              14
-            ],
-            [
-              4,
-              24
-            ],
-            [
-              0,
-              47
-            ],
-            [
-              51,
-              47
-            ],
-            [
-              47,
-              32
-            ],
-            [
-              33,
-              21
-            ],
-            [
-              26,
-              12
-            ],
-            [
-              23,
-              2
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "shell_body",
-      "kind": "obstacle",
-      "subtype": "shell",
-      "center_offset": [
-        45,
-        40
-      ],
-      "body_size": [
-        100,
-        88
-      ],
-      "part": "body",
-      "threshold": 0.82,
-      "image": "shell_body.png",
-      "mask": "shell_body.mask.png",
-      "provenance": {
-        "source_name": "012_shellsx3.png",
-        "source_sha256": "dc8432ba22edf47e6f46511687b139a8e23b3ea586015c2df883c949d65458b7",
-        "source_crop": [
-          205.0,
-          548.0,
-          87.0,
-          73.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              40,
-              3
-            ],
-            [
-              53,
-              5
-            ],
-            [
-              70,
-              17
-            ],
-            [
-              80,
-              35
-            ],
-            [
-              78,
-              53
-            ],
-            [
-              62,
-              62
-            ],
-            [
-              45,
-              64
-            ],
-            [
-              23,
-              62
-            ],
-            [
-              8,
-              50
-            ],
-            [
-              8,
-              32
-            ],
-            [
-              21,
-              15
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "shell_ribs",
-      "kind": "obstacle",
-      "subtype": "shell",
-      "center_offset": [
-        25,
-        28
-      ],
-      "body_size": [
-        100,
-        88
-      ],
-      "part": "ribs",
-      "threshold": 0.85,
-      "image": "shell_ribs.png",
-      "mask": "shell_ribs.mask.png",
-      "provenance": {
-        "source_name": "012_shellsx3.png",
-        "source_sha256": "dc8432ba22edf47e6f46511687b139a8e23b3ea586015c2df883c949d65458b7",
-        "source_crop": [
-          225.0,
-          560.0,
-          50.0,
-          42.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "rock_body",
-      "kind": "obstacle",
-      "subtype": "rock",
-      "center_offset": [
-        61,
-        52
-      ],
-      "body_size": [
-        120,
-        116
-      ],
-      "part": "body",
-      "threshold": 0.83,
-      "image": "rock_body.png",
-      "mask": "rock_body.mask.png",
-      "provenance": {
-        "source_name": "018_bombs_lv1x3_lv2x1_shellsx2_rocksx3_boxesx2_ult_ready_all.png",
-        "source_sha256": "6763d98204c0e69c0721445f0241cd3c26b589c022dfc9a6a114db33bb67ee83",
-        "source_crop": [
-          491.0,
-          542.0,
-          119.0,
-          110.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              20,
-              29
-            ],
-            [
-              44,
-              12
-            ],
-            [
-              73,
-              17
-            ],
-            [
-              100,
-              29
-            ],
-            [
-              107,
-              59
-            ],
-            [
-              95,
-              85
-            ],
-            [
-              72,
-              101
-            ],
-            [
-              36,
-              98
-            ],
-            [
-              10,
-              79
-            ],
-            [
-              5,
-              51
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "rock_facets",
-      "kind": "obstacle",
-      "subtype": "rock",
-      "center_offset": [
-        40,
-        22
-      ],
-      "body_size": [
-        120,
-        116
-      ],
-      "part": "facets",
-      "threshold": 0.87,
-      "image": "rock_facets.png",
-      "mask": "rock_facets.mask.png",
-      "provenance": {
-        "source_name": "018_bombs_lv1x3_lv2x1_shellsx2_rocksx3_boxesx2_ult_ready_all.png",
-        "source_sha256": "6763d98204c0e69c0721445f0241cd3c26b589c022dfc9a6a114db33bb67ee83",
-        "source_crop": [
-          512.0,
-          572.0,
-          71.0,
-          58.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "box_weave",
-      "kind": "obstacle",
-      "subtype": "box",
-      "center_offset": [
-        39,
-        44
-      ],
-      "body_size": [
-        114,
-        104
-      ],
-      "part": "weave",
-      "threshold": 0.84,
-      "image": "box_weave.png",
-      "mask": "box_weave.mask.png",
-      "provenance": {
-        "source_name": "018_bombs_lv1x3_lv2x1_shellsx2_rocksx3_boxesx2_ult_ready_all.png",
-        "source_sha256": "6763d98204c0e69c0721445f0241cd3c26b589c022dfc9a6a114db33bb67ee83",
-        "source_crop": [
-          463.0,
-          656.0,
-          67.0,
-          28.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "box_stamp",
-      "kind": "obstacle",
-      "subtype": "box",
-      "center_offset": [
-        -12,
-        11
-      ],
-      "body_size": [
-        114,
-        104
-      ],
-      "part": "stamp",
-      "threshold": 0.84,
-      "image": "box_stamp.png",
-      "mask": "box_stamp.mask.png",
-      "provenance": {
-        "source_name": "018_bombs_lv1x3_lv2x1_shellsx2_rocksx3_boxesx2_ult_ready_all.png",
-        "source_sha256": "6763d98204c0e69c0721445f0241cd3c26b589c022dfc9a6a114db33bb67ee83",
-        "source_crop": [
-          514.0,
-          689.0,
-          37.0,
-          41.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "branch_cut_end",
-      "kind": "obstacle",
-      "subtype": "branch",
-      "center_offset": [
-        -9,
-        50
-      ],
-      "body_size": [
-        105,
-        122
-      ],
-      "part": "cut_end",
-      "threshold": 0.83,
-      "check_template_color": true,
-      "image": "branch_cut_end.png",
-      "mask": "branch_cut_end.mask.png",
-      "provenance": {
-        "source_name": "022_branchesx3.png",
-        "source_sha256": "3ab88f9d4b4ba7bd19c942344a1509d89d6719a00cb9d8d2104f2ec2f8e8b766",
-        "source_crop": [
-          264.0,
-          790.0,
-          37.0,
-          29.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "branch_bark",
-      "kind": "obstacle",
-      "subtype": "branch",
-      "center_offset": [
-        27,
-        29
-      ],
-      "body_size": [
-        105,
-        122
-      ],
-      "part": "bark",
-      "threshold": 0.88,
-      "check_template_color": true,
-      "image": "branch_bark.png",
-      "mask": "branch_bark.mask.png",
-      "provenance": {
-        "source_name": "022_branchesx3.png",
-        "source_sha256": "3ab88f9d4b4ba7bd19c942344a1509d89d6719a00cb9d8d2104f2ec2f8e8b766",
-        "source_crop": [
-          228.0,
-          811.0,
-          53.0,
-          61.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              28,
-              3
-            ],
-            [
-              48,
-              3
-            ],
-            [
-              42,
-              25
-            ],
-            [
-              26,
-              51
-            ],
-            [
-              12,
-              56
-            ],
-            [
-              10,
-              39
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "black_eye",
-      "kind": "special_ghoul",
-      "subtype": "black",
-      "center_offset": [
-        16,
-        24
-      ],
-      "body_size": [
-        91,
-        100
-      ],
-      "part": "eye",
-      "threshold": 0.84,
-      "color": "black",
-      "min_color_fraction": 0.32,
-      "image": "black_eye.png",
-      "mask": "black_eye.mask.png",
-      "provenance": {
-        "source_name": "013_special_black_ghoulsx5.png",
-        "source_sha256": "914a892a4b09eec1404da7721779ace57610fc956bad005035455e73ddb31cdd",
-        "source_crop": [
-          210.0,
-          603.0,
-          36.0,
-          37.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "shell_hinge",
-      "kind": "obstacle",
-      "subtype": "shell",
-      "center_offset": [
-        19,
-        40
-      ],
-      "body_size": [
-        100,
-        88
-      ],
-      "part": "hinge",
-      "threshold": 0.84,
-      "image": "shell_hinge.png",
-      "mask": "shell_hinge.mask.png",
-      "provenance": {
-        "source_name": "012_shellsx3.png",
-        "source_sha256": "dc8432ba22edf47e6f46511687b139a8e23b3ea586015c2df883c949d65458b7",
-        "source_crop": [
-          231.0,
-          548.0,
-          39.0,
-          39.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              11,
-              1
-            ],
-            [
-              27,
-              2
-            ],
-            [
-              37,
-              16
-            ],
-            [
-              38,
-              37
-            ],
-            [
-              1,
-              37
-            ],
-            [
-              2,
-              19
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "shell_ribs_right",
-      "kind": "obstacle",
-      "subtype": "shell",
-      "center_offset": [
-        3,
-        34
-      ],
-      "body_size": [
-        100,
-        88
-      ],
-      "part": "ribs",
-      "threshold": 0.87,
-      "image": "shell_ribs_right.png",
-      "mask": "shell_ribs_right.mask.png",
-      "provenance": {
-        "source_name": "012_shellsx3.png",
-        "source_sha256": "dc8432ba22edf47e6f46511687b139a8e23b3ea586015c2df883c949d65458b7",
-        "source_crop": [
-          641.0,
-          553.0,
-          32.0,
-          46.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "branch_bark_inner",
-      "kind": "obstacle",
-      "subtype": "branch",
-      "center_offset": [
-        13,
-        21
-      ],
-      "body_size": [
-        105,
-        122
-      ],
-      "part": "bark_inner",
-      "threshold": 0.88,
-      "check_template_color": true,
-      "image": "branch_bark_inner.png",
-      "mask": "branch_bark_inner.mask.png",
-      "provenance": {
-        "source_name": "022_branchesx3.png",
-        "source_sha256": "3ab88f9d4b4ba7bd19c942344a1509d89d6719a00cb9d8d2104f2ec2f8e8b766",
-        "source_crop": [
-          242.0,
-          819.0,
-          31.0,
-          36.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "black_eye_glow",
-      "kind": "special_ghoul",
-      "subtype": "black",
-      "center_offset": [
-        17,
-        25
-      ],
-      "body_size": [
-        91,
-        100
-      ],
-      "part": "eye",
-      "threshold": 0.85,
-      "color": "black",
-      "min_color_fraction": 0.23,
-      "image": "black_eye_glow.png",
-      "mask": "black_eye_glow.mask.png",
-      "provenance": {
-        "source_name": "021_special_black_ghoulsx20_bombs_lv1x4_lv2x1_lv3x1_rocksx1_ult_ready_all.png",
-        "source_sha256": "0411e4b436a031471d1c15e45eb954cc3153d80bcda35b78dec626868bad5cb5",
-        "source_crop": [
-          368.0,
-          817.0,
-          34.0,
-          35.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "black_eye_glow_side",
-      "kind": "special_ghoul",
-      "subtype": "black",
-      "center_offset": [
-        17,
-        25
-      ],
-      "body_size": [
-        91,
-        100
-      ],
-      "part": "eye",
-      "threshold": 0.85,
-      "color": "black",
-      "min_color_fraction": 0.23,
-      "image": "black_eye_glow_side.png",
-      "mask": "black_eye_glow_side.mask.png",
-      "provenance": {
-        "source_name": "021_special_black_ghoulsx20_bombs_lv1x4_lv2x1_lv3x1_rocksx1_ult_ready_all.png",
-        "source_sha256": "0411e4b436a031471d1c15e45eb954cc3153d80bcda35b78dec626868bad5cb5",
-        "source_crop": [
-          330.0,
-          738.0,
-          34.0,
-          35.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "black_head",
-      "kind": "special_ghoul",
-      "subtype": "black",
-      "center_offset": [
-        30,
-        39
-      ],
-      "body_size": [
-        91,
-        100
-      ],
-      "part": "head",
-      "threshold": 0.87,
-      "color": "black",
-      "min_color_fraction": 0.32,
-      "image": "black_head.png",
-      "mask": "black_head.mask.png",
-      "provenance": {
-        "source_name": "013_special_black_ghoulsx5.png",
-        "source_sha256": "914a892a4b09eec1404da7721779ace57610fc956bad005035455e73ddb31cdd",
-        "source_crop": [
-          196.0,
-          588.0,
-          65.0,
-          45.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "shell_hinge_glow",
-      "kind": "obstacle",
-      "subtype": "shell",
-      "center_offset": [
-        17,
-        41
-      ],
-      "body_size": [
-        100,
-        88
-      ],
-      "part": "hinge_glow",
-      "threshold": 0.86,
-      "image": "shell_hinge_glow.png",
-      "mask": "shell_hinge_glow.mask.png",
-      "provenance": {
-        "source_name": "014_bombs_lv1x1_lv2x1_shellsx4_rocksx1.png",
-        "source_sha256": "bd73091b99ef1e04a7944f15e20c53530fc8ec80c72d6fff417ec5584ad33189",
-        "source_crop": [
-          188.0,
-          284.0,
-          35.0,
-          35.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              11,
-              3
-            ],
-            [
-              24,
-              3
-            ],
-            [
-              32,
-              14
-            ],
-            [
-              32,
-              33
-            ],
-            [
-              2,
-              33
-            ],
-            [
-              3,
-              17
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "branch_bark_tilted",
-      "kind": "obstacle",
-      "subtype": "branch",
-      "center_offset": [
-        15,
-        17
-      ],
-      "body_size": [
-        105,
-        122
-      ],
-      "part": "bark_tilted",
-      "threshold": 0.9,
-      "check_template_color": true,
-      "image": "branch_bark_tilted.png",
-      "mask": "branch_bark_tilted.mask.png",
-      "provenance": {
-        "source_name": "024_bombs_lv1x1_lv2x1_branchesx6.png",
-        "source_sha256": "e137d22d4843b8859934799142b0160cf3732885bc67791b9bd94d359238e85e",
-        "source_crop": [
-          320.0,
-          423.0,
-          29.0,
-          30.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_blue_head",
-      "center_offset": [
-        38,
-        47
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "blue",
-      "enhanced": true,
-      "part": "enhanced_head",
-      "threshold": 0.82,
-      "min_color_fraction": 0.025,
-      "image": "enhanced_blue_head.png",
-      "mask": "enhanced_blue_head.mask.png",
-      "provenance": {
-        "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
-        "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
-        "source_crop": [
-          297.0,
-          370.0,
-          76.0,
-          78.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              12,
-              12
-            ],
-            [
-              26,
-              3
-            ],
-            [
-              49,
-              3
-            ],
-            [
-              64,
-              13
-            ],
-            [
-              73,
-              58
-            ],
-            [
-              59,
-              76
-            ],
-            [
-              14,
-              76
-            ],
-            [
-              1,
-              56
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "enhanced_red_head",
-      "center_offset": [
-        37,
-        47
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "red",
-      "enhanced": true,
-      "part": "enhanced_head",
-      "threshold": 0.82,
-      "min_color_fraction": 0.025,
-      "image": "enhanced_red_head.png",
-      "mask": "enhanced_red_head.mask.png",
-      "provenance": {
-        "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
-        "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
-        "source_crop": [
-          172.0,
-          577.0,
-          75.0,
-          79.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              12,
-              12
-            ],
-            [
-              26,
-              3
-            ],
-            [
-              49,
-              3
-            ],
-            [
-              64,
-              13
-            ],
-            [
-              73,
-              58
-            ],
-            [
-              59,
-              76
-            ],
-            [
-              14,
-              76
-            ],
-            [
-              1,
-              56
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "enhanced_yellow_head",
-      "center_offset": [
-        38,
-        47
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "yellow",
-      "enhanced": true,
-      "part": "enhanced_head",
-      "threshold": 0.82,
-      "min_color_fraction": 0.025,
-      "image": "enhanced_yellow_head.png",
-      "mask": "enhanced_yellow_head.mask.png",
-      "provenance": {
-        "source_name": "028_enhanced_ghouls_bluex6_yellowx3_bronze_bell.png",
-        "source_sha256": "39a6f695f253ce3f5c18777e5432b8b246df540eb3cf9d6bad929510a4467d25",
-        "source_crop": [
-          268.0,
-          395.0,
-          75.0,
-          78.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              12,
-              12
-            ],
-            [
-              26,
-              3
-            ],
-            [
-              49,
-              3
-            ],
-            [
-              64,
-              13
-            ],
-            [
-              73,
-              58
-            ],
-            [
-              59,
-              76
-            ],
-            [
-              14,
-              76
-            ],
-            [
-              1,
-              56
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "enhanced_green_head",
-      "center_offset": [
-        37,
-        47
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "green",
-      "enhanced": true,
-      "part": "enhanced_head",
-      "threshold": 0.82,
-      "min_color_fraction": 0.025,
-      "image": "enhanced_green_head.png",
-      "mask": "enhanced_green_head.mask.png",
-      "provenance": {
-        "source_name": "030_enhanced_ghouls_greenx2_bluex12_bronze_bell.png",
-        "source_sha256": "3e349e1413a63a1f303396608feb243a822db99e8f093d185ca8283aa387a5cf",
-        "source_crop": [
-          18.0,
-          548.0,
-          74.0,
-          78.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              12,
-              12
-            ],
-            [
-              26,
-              3
-            ],
-            [
-              49,
-              3
-            ],
-            [
-              64,
-              13
-            ],
-            [
-              73,
-              58
-            ],
-            [
-              59,
-              76
-            ],
-            [
-              14,
-              76
-            ],
-            [
-              1,
-              56
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "id": "bronze_bell_bright_ring",
-      "center_offset": [
-        22,
-        -17
-      ],
-      "body_size": [
-        144,
-        212
-      ],
-      "kind": "prop",
-      "subtype": "bronze_bell",
-      "part": "ring",
-      "threshold": 0.86,
-      "search_roi": [
-        275,
-        490,
-        170,
-        235
-      ],
-      "minimum_parts": 2,
-      "image": "bronze_bell_bright_ring.png",
-      "mask": "bronze_bell_bright_ring.mask.png",
-      "provenance": {
-        "source_name": "026_bronze_bell_bright.png",
-        "source_sha256": "cef2718b5dbe3f190f6aaeb9c5c52b1e88cda7559c6a983804f76873edb84bca",
-        "source_crop": [
-          336.0,
-          629.0,
-          43.0,
-          43.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "bronze_bell_bright_rivets",
-      "center_offset": [
-        48,
-        52
-      ],
-      "body_size": [
-        144,
-        212
-      ],
-      "kind": "prop",
-      "subtype": "bronze_bell",
-      "part": "rivets",
-      "threshold": 0.86,
-      "search_roi": [
-        275,
-        490,
-        170,
-        235
-      ],
-      "minimum_parts": 2,
-      "image": "bronze_bell_bright_rivets.png",
-      "mask": "bronze_bell_bright_rivets.mask.png",
-      "provenance": {
-        "source_name": "026_bronze_bell_bright.png",
-        "source_sha256": "cef2718b5dbe3f190f6aaeb9c5c52b1e88cda7559c6a983804f76873edb84bca",
-        "source_crop": [
-          310.0,
-          560.0,
-          92.0,
-          38.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "bronze_bell_dim_ring",
-      "center_offset": [
-        22,
-        -17
-      ],
-      "body_size": [
-        144,
-        212
-      ],
-      "kind": "prop",
-      "subtype": "bronze_bell",
-      "part": "ring",
-      "threshold": 0.86,
-      "search_roi": [
-        275,
-        490,
-        170,
-        235
-      ],
-      "minimum_parts": 2,
-      "image": "bronze_bell_dim_ring.png",
-      "mask": "bronze_bell_dim_ring.mask.png",
-      "provenance": {
-        "source_name": "027_bronze_bell_dim.png",
-        "source_sha256": "57906446509bf7aa59d74f2b6a5a72fcba7ac506b90fcadf3a04c351ecd52f3f",
-        "source_crop": [
-          336.0,
-          629.0,
-          43.0,
-          43.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "bronze_bell_dim_rivets",
-      "center_offset": [
-        48,
-        52
-      ],
-      "body_size": [
-        144,
-        212
-      ],
-      "kind": "prop",
-      "subtype": "bronze_bell",
-      "part": "rivets",
-      "threshold": 0.86,
-      "search_roi": [
-        275,
-        490,
-        170,
-        235
-      ],
-      "minimum_parts": 2,
-      "image": "bronze_bell_dim_rivets.png",
-      "mask": "bronze_bell_dim_rivets.mask.png",
-      "provenance": {
-        "source_name": "027_bronze_bell_dim.png",
-        "source_sha256": "57906446509bf7aa59d74f2b6a5a72fcba7ac506b90fcadf3a04c351ecd52f3f",
-        "source_crop": [
-          310.0,
-          560.0,
-          92.0,
-          38.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_blue_eye",
-      "center_offset": [
-        20,
-        30
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "blue",
-      "enhanced": true,
-      "part": "enhanced_eye",
-      "threshold": 0.86,
-      "min_color_fraction": 0.025,
-      "check_template_color": true,
-      "image": "enhanced_blue_eye.png",
-      "mask": "enhanced_blue_eye.mask.png",
-      "provenance": {
-        "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
-        "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
-        "source_crop": [
-          315.0,
-          387.0,
-          40.0,
-          32.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_red_eye",
-      "center_offset": [
-        19,
-        29
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "red",
-      "enhanced": true,
-      "part": "enhanced_eye",
-      "threshold": 0.86,
-      "min_color_fraction": 0.025,
-      "check_template_color": true,
-      "image": "enhanced_red_eye.png",
-      "mask": "enhanced_red_eye.mask.png",
-      "provenance": {
-        "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
-        "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
-        "source_crop": [
-          190.0,
-          595.0,
-          38.0,
-          32.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_yellow_eye",
-      "center_offset": [
-        20,
-        32
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "yellow",
-      "enhanced": true,
-      "part": "enhanced_eye",
-      "threshold": 0.86,
-      "min_color_fraction": 0.025,
-      "check_template_color": true,
-      "image": "enhanced_yellow_eye.png",
-      "mask": "enhanced_yellow_eye.mask.png",
-      "provenance": {
-        "source_name": "028_enhanced_ghouls_bluex6_yellowx3_bronze_bell.png",
-        "source_sha256": "39a6f695f253ce3f5c18777e5432b8b246df540eb3cf9d6bad929510a4467d25",
-        "source_crop": [
-          286.0,
-          410.0,
-          40.0,
-          34.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_green_eye",
-      "center_offset": [
-        19,
-        35
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "green",
-      "enhanced": true,
-      "part": "enhanced_eye",
-      "threshold": 0.86,
-      "min_color_fraction": 0.025,
-      "check_template_color": true,
-      "image": "enhanced_green_eye.png",
-      "mask": "enhanced_green_eye.mask.png",
-      "provenance": {
-        "source_name": "030_enhanced_ghouls_greenx2_bluex12_bronze_bell.png",
-        "source_sha256": "3e349e1413a63a1f303396608feb243a822db99e8f093d185ca8283aa387a5cf",
-        "source_crop": [
-          36.0,
-          560.0,
-          38.0,
-          33.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_blue_eye_bright",
-      "center_offset": [
-        19,
-        30
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "blue",
-      "enhanced": true,
-      "part": "enhanced_eye",
-      "threshold": 0.86,
-      "min_color_fraction": 0.025,
-      "check_template_color": true,
-      "image": "enhanced_blue_eye_bright.png",
-      "mask": "enhanced_blue_eye_bright.mask.png",
-      "provenance": {
-        "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
-        "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
-        "source_crop": [
-          230.0,
-          373.0,
-          40.0,
-          34.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_red_eye_bright",
-      "center_offset": [
-        21,
-        37
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "red",
-      "enhanced": true,
-      "part": "enhanced_eye",
-      "threshold": 0.86,
-      "min_color_fraction": 0.025,
-      "check_template_color": true,
-      "image": "enhanced_red_eye_bright.png",
-      "mask": "enhanced_red_eye_bright.mask.png",
-      "provenance": {
-        "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
-        "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
-        "source_crop": [
-          286.0,
-          892.0,
-          40.0,
-          35.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "bronze_bell_bright_rim",
-      "center_offset": [
-        53,
-        -64
-      ],
-      "body_size": [
-        144,
-        212
-      ],
-      "kind": "prop",
-      "subtype": "bronze_bell",
-      "part": "rim",
-      "threshold": 0.86,
-      "search_roi": [
-        275,
-        490,
-        170,
-        235
-      ],
-      "minimum_parts": 2,
-      "image": "bronze_bell_bright_rim.png",
-      "mask": "bronze_bell_bright_rim.mask.png",
-      "provenance": {
-        "source_name": "026_bronze_bell_bright.png",
-        "source_sha256": "cef2718b5dbe3f190f6aaeb9c5c52b1e88cda7559c6a983804f76873edb84bca",
-        "source_crop": [
-          305.0,
-          676.0,
-          104.0,
-          24.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "bronze_bell_dim_rim",
-      "center_offset": [
-        53,
-        -64
-      ],
-      "body_size": [
-        144,
-        212
-      ],
-      "kind": "prop",
-      "subtype": "bronze_bell",
-      "part": "rim",
-      "threshold": 0.86,
-      "search_roi": [
-        275,
-        490,
-        170,
-        235
-      ],
-      "minimum_parts": 2,
-      "image": "bronze_bell_dim_rim.png",
-      "mask": "bronze_bell_dim_rim.mask.png",
-      "provenance": {
-        "source_name": "027_bronze_bell_dim.png",
-        "source_sha256": "57906446509bf7aa59d74f2b6a5a72fcba7ac506b90fcadf3a04c351ecd52f3f",
-        "source_crop": [
-          305.0,
-          676.0,
-          104.0,
-          24.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_yellow_eye_bright",
-      "center_offset": [
-        20,
-        32
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "yellow",
-      "enhanced": true,
-      "part": "enhanced_eye",
-      "threshold": 0.86,
-      "min_color_fraction": 0.025,
-      "check_template_color": true,
-      "image": "enhanced_yellow_eye_bright.png",
-      "mask": "enhanced_yellow_eye_bright.mask.png",
-      "provenance": {
-        "source_name": "028_enhanced_ghouls_bluex6_yellowx3_bronze_bell.png",
-        "source_sha256": "39a6f695f253ce3f5c18777e5432b8b246df540eb3cf9d6bad929510a4467d25",
-        "source_crop": [
-          193.0,
-          464.0,
-          40.0,
-          34.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_green_eye_bright",
-      "center_offset": [
-        20,
-        31
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "green",
-      "enhanced": true,
-      "part": "enhanced_eye",
-      "threshold": 0.86,
-      "min_color_fraction": 0.025,
-      "check_template_color": true,
-      "image": "enhanced_green_eye_bright.png",
-      "mask": "enhanced_green_eye_bright.mask.png",
-      "provenance": {
-        "source_name": "030_enhanced_ghouls_greenx2_bluex12_bronze_bell.png",
-        "source_sha256": "3e349e1413a63a1f303396608feb243a822db99e8f093d185ca8283aa387a5cf",
-        "source_crop": [
-          56.0,
-          478.0,
-          40.0,
-          34.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_blue_eye_glow",
-      "center_offset": [
-        18,
-        34
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "blue",
-      "enhanced": true,
-      "part": "enhanced_eye",
-      "threshold": 0.86,
-      "min_color_fraction": 0.025,
-      "check_template_color": true,
-      "image": "enhanced_blue_eye_glow.png",
-      "mask": "enhanced_blue_eye_glow.mask.png",
-      "provenance": {
-        "source_name": "030_enhanced_ghouls_greenx2_bluex12_bronze_bell.png",
-        "source_sha256": "3e349e1413a63a1f303396608feb243a822db99e8f093d185ca8283aa387a5cf",
-        "source_crop": [
-          650.0,
-          586.0,
-          38.0,
-          34.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_blue_eye_left",
-      "center_offset": [
-        20,
-        30
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "blue",
-      "enhanced": true,
-      "part": "enhanced_eye",
-      "threshold": 0.88,
-      "min_color_fraction": 0.025,
-      "check_template_color": true,
-      "image": "enhanced_blue_eye_left.png",
-      "mask": "enhanced_blue_eye_left.mask.png",
-      "provenance": {
-        "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
-        "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
-        "source_crop": [
-          315.0,
-          387.0,
-          25.0,
-          32.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": []
-      }
-    },
-    {
-      "id": "enhanced_yellow_upper_head",
-      "center_offset": [
-        32,
-        49
-      ],
-      "body_size": [
-        96,
-        104
-      ],
-      "kind": "ghoul",
-      "color": "yellow",
-      "enhanced": true,
-      "part": "enhanced_head",
-      "threshold": 0.88,
-      "min_color_fraction": 0.025,
-      "image": "enhanced_yellow_upper_head.png",
-      "mask": "enhanced_yellow_upper_head.mask.png",
-      "provenance": {
-        "source_name": "029_enhanced_ghouls_yellowx9_bluex1_redx3_bronze_bell.png",
-        "source_sha256": "bfa92e9d622da40fa1696c15ba94061f85073a40f6157815c08bce98af3eed8f",
-        "source_crop": [
-          275.0,
-          325.0,
-          66.0,
-          45.0
-        ],
-        "ignore_rects": [],
-        "include_polygons": [
-          [
-            [
-              10,
-              0
-            ],
-            [
-              55,
-              0
-            ],
-            [
-              65,
-              29
-            ],
-            [
-              50,
-              43
-            ],
-            [
-              47,
-              30
-            ],
-            [
-              18,
-              30
-            ],
-            [
-              17,
-              43
-            ],
-            [
-              0,
-              29
-            ]
-          ]
-        ]
-      }
-    }
-  ],
-  "standard_object_roi": [
-    0,
-    290,
-    720,
-    700
-  ],
-  "catalog_sha256": "7c4ef431c32c63e264524c9c732b50ef6b6cb0daccf72a16cb64a470ac21201d"
+    "name": "720×1280 饿鬼、炸弹、障碍物与青铜钟开发原型",
+    "reference_size": [
+        720,
+        1280
+    ],
+    "board_roi": [
+        0,
+        210,
+        720,
+        780
+    ],
+    "scales": [
+        0.9,
+        1,
+        1.1
+    ],
+    "sample_role": "development",
+    "aspect_tolerance": 0.015,
+    "merge_fraction": 0.28,
+    "bomb_margin": 0.035,
+    "notes": [
+        "有效区域依据本次截图人工核对，仅适用于当前开发布局。",
+        "等级依据用户重命名标注，并逐一核对对应外焰；不依赖内部角色。",
+        "掩码排除内部角色，不能恢复被遮挡的内容。",
+        "新增障碍物按贝壳、石头、箱子、树枝分别制作模板；后续木头外观取得样本后另行登记。",
+        "特殊黑色饿鬼通过局部五官与深色身体交叉核对，不推测其游戏机制。",
+        "有效区域上缘依据 021 顶部黑色饿鬼扩至 210；尚未实现棋盘可操作状态前置判断。",
+        "普通饿鬼与炸弹保留原搜索区域，避免扩大黑色饿鬼范围改变原边缘颜色占比分母；黑色小嘴不单独作为定位模板。",
+        "强化饿鬼保留原颜色，统一使用enhanced属性；核心和受影响不细分，武器不单独识别。",
+        "青铜钟在用户确认的固定区域内逐帧核对，亮暗是同一对象的外观变体；作用未知，不生成触控点。"
+    ],
+    "templates": [
+        {
+            "id": "blue_eye",
+            "kind": "ghoul",
+            "color": "blue",
+            "center_offset": [
+                18,
+                28
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "eye",
+            "threshold": 0.82,
+            "min_color_fraction": 0.35,
+            "image": "blue_eye.png",
+            "mask": "blue_eye.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    147.0,
+                    326.0,
+                    36.0,
+                    27.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "blue_mouth",
+            "kind": "ghoul",
+            "color": "blue",
+            "center_offset": [
+                22,
+                3
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "mouth",
+            "threshold": 0.8,
+            "min_color_fraction": 0.35,
+            "image": "blue_mouth.png",
+            "mask": "blue_mouth.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    143.0,
+                    351.0,
+                    44.0,
+                    28.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "red_eye",
+            "kind": "ghoul",
+            "color": "red",
+            "center_offset": [
+                21,
+                32
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "eye",
+            "threshold": 0.82,
+            "min_color_fraction": 0.35,
+            "image": "red_eye.png",
+            "mask": "red_eye.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    495.0,
+                    319.0,
+                    40.0,
+                    29.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "red_mouth",
+            "kind": "ghoul",
+            "color": "red",
+            "center_offset": [
+                23,
+                5
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "mouth",
+            "threshold": 0.8,
+            "min_color_fraction": 0.35,
+            "image": "red_mouth.png",
+            "mask": "red_mouth.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    493.0,
+                    346.0,
+                    49.0,
+                    31.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "yellow_eye",
+            "kind": "ghoul",
+            "color": "yellow",
+            "center_offset": [
+                19,
+                33
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "eye",
+            "threshold": 0.82,
+            "min_color_fraction": 0.35,
+            "image": "yellow_eye.png",
+            "mask": "yellow_eye.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    320.0,
+                    315.0,
+                    38.0,
+                    28.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "yellow_mouth",
+            "kind": "ghoul",
+            "color": "yellow",
+            "center_offset": [
+                22,
+                2
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "mouth",
+            "threshold": 0.8,
+            "min_color_fraction": 0.35,
+            "image": "yellow_mouth.png",
+            "mask": "yellow_mouth.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    317.0,
+                    346.0,
+                    49.0,
+                    28.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "green_eye",
+            "kind": "ghoul",
+            "color": "green",
+            "center_offset": [
+                21,
+                31
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "eye",
+            "threshold": 0.82,
+            "min_color_fraction": 0.35,
+            "image": "green_eye.png",
+            "mask": "green_eye.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    366.0,
+                    409.0,
+                    42.0,
+                    28.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "green_mouth",
+            "kind": "ghoul",
+            "color": "green",
+            "center_offset": [
+                26,
+                2
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "mouth",
+            "threshold": 0.8,
+            "min_color_fraction": 0.35,
+            "image": "green_mouth.png",
+            "mask": "green_mouth.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    361.0,
+                    438.0,
+                    51.0,
+                    28.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "bomb_1_flame",
+            "kind": "bomb",
+            "bomb_level": 1,
+            "center_offset": [
+                52,
+                87
+            ],
+            "body_size": [
+                92,
+                94
+            ],
+            "part": "flame",
+            "threshold": 0.82,
+            "image": "bomb_1_flame.png",
+            "mask": "bomb_1_flame.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    418.0,
+                    378.0,
+                    105.0,
+                    139.0
+                ],
+                "ignore_rects": [
+                    [
+                        20,
+                        57,
+                        63,
+                        62
+                    ]
+                ],
+                "include_polygons": [
+                    [
+                        [
+                            51,
+                            0
+                        ],
+                        [
+                            35,
+                            22
+                        ],
+                        [
+                            37,
+                            31
+                        ],
+                        [
+                            20,
+                            42
+                        ],
+                        [
+                            7,
+                            64
+                        ],
+                        [
+                            3,
+                            92
+                        ],
+                        [
+                            15,
+                            117
+                        ],
+                        [
+                            35,
+                            133
+                        ],
+                        [
+                            64,
+                            135
+                        ],
+                        [
+                            84,
+                            121
+                        ],
+                        [
+                            97,
+                            104
+                        ],
+                        [
+                            99,
+                            79
+                        ],
+                        [
+                            88,
+                            53
+                        ],
+                        [
+                            65,
+                            30
+                        ],
+                        [
+                            65,
+                            10
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "bomb_2_flame",
+            "kind": "bomb",
+            "bomb_level": 2,
+            "center_offset": [
+                73,
+                121
+            ],
+            "body_size": [
+                136,
+                138
+            ],
+            "part": "flame",
+            "threshold": 0.82,
+            "image": "bomb_2_flame.png",
+            "mask": "bomb_2_flame.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    286.0,
+                    614.0,
+                    146.0,
+                    182.0
+                ],
+                "ignore_rects": [
+                    [
+                        17,
+                        70,
+                        112,
+                        91
+                    ]
+                ],
+                "include_polygons": [
+                    [
+                        [
+                            67,
+                            1
+                        ],
+                        [
+                            50,
+                            15
+                        ],
+                        [
+                            58,
+                            31
+                        ],
+                        [
+                            42,
+                            42
+                        ],
+                        [
+                            22,
+                            57
+                        ],
+                        [
+                            6,
+                            84
+                        ],
+                        [
+                            2,
+                            120
+                        ],
+                        [
+                            11,
+                            146
+                        ],
+                        [
+                            32,
+                            164
+                        ],
+                        [
+                            63,
+                            176
+                        ],
+                        [
+                            96,
+                            169
+                        ],
+                        [
+                            123,
+                            152
+                        ],
+                        [
+                            139,
+                            125
+                        ],
+                        [
+                            139,
+                            94
+                        ],
+                        [
+                            124,
+                            66
+                        ],
+                        [
+                            103,
+                            45
+                        ],
+                        [
+                            88,
+                            29
+                        ],
+                        [
+                            81,
+                            8
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "bomb_1_tip",
+            "kind": "bomb",
+            "bomb_level": 1,
+            "center_offset": [
+                22,
+                83
+            ],
+            "body_size": [
+                92,
+                94
+            ],
+            "part": "flame_tip",
+            "threshold": 0.82,
+            "image": "bomb_1_tip.png",
+            "mask": "bomb_1_tip.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    448.0,
+                    382.0,
+                    45.0,
+                    54.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "bomb_2_tip_main",
+            "kind": "bomb",
+            "bomb_level": 2,
+            "center_offset": [
+                32,
+                121
+            ],
+            "body_size": [
+                136,
+                138
+            ],
+            "part": "flame_tip",
+            "threshold": 0.82,
+            "image": "bomb_2_tip_main.png",
+            "mask": "bomb_2_tip_main.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    327.0,
+                    614.0,
+                    62.0,
+                    69.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "bomb_2_tip_wave",
+            "kind": "bomb",
+            "bomb_level": 2,
+            "center_offset": [
+                30,
+                118
+            ],
+            "body_size": [
+                136,
+                138
+            ],
+            "part": "flame_tip",
+            "threshold": 0.82,
+            "image": "bomb_2_tip_wave.png",
+            "mask": "bomb_2_tip_wave.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    38.0,
+                    652.0,
+                    56.0,
+                    64.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "bomb_3_tip",
+            "kind": "bomb",
+            "bomb_level": 3,
+            "center_offset": [
+                40,
+                151
+            ],
+            "body_size": [
+                174,
+                166
+            ],
+            "part": "flame_tip",
+            "threshold": 0.82,
+            "image": "bomb_3_tip.png",
+            "mask": "bomb_3_tip.mask.png",
+            "provenance": {
+                "source_name": "002_bombs_lv1x3_lv3x1.png",
+                "source_sha256": "e8d2f3364071313e6c27110bf354c7a79067889dc6c3e08991958d111aedc219",
+                "source_crop": [
+                    215.0,
+                    557.0,
+                    86.0,
+                    88.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            27,
+                            1
+                        ],
+                        [
+                            12,
+                            15
+                        ],
+                        [
+                            18,
+                            30
+                        ],
+                        [
+                            6,
+                            47
+                        ],
+                        [
+                            1,
+                            69
+                        ],
+                        [
+                            4,
+                            87
+                        ],
+                        [
+                            83,
+                            87
+                        ],
+                        [
+                            83,
+                            68
+                        ],
+                        [
+                            69,
+                            48
+                        ],
+                        [
+                            52,
+                            28
+                        ],
+                        [
+                            44,
+                            10
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "bomb_1_tip_curl",
+            "kind": "bomb",
+            "bomb_level": 1,
+            "center_offset": [
+                27,
+                81
+            ],
+            "body_size": [
+                94,
+                96
+            ],
+            "part": "flame_tip",
+            "threshold": 0.82,
+            "image": "bomb_1_tip_curl.png",
+            "mask": "bomb_1_tip_curl.mask.png",
+            "provenance": {
+                "source_name": "002_bombs_lv1x3_lv3x1.png",
+                "source_sha256": "e8d2f3364071313e6c27110bf354c7a79067889dc6c3e08991958d111aedc219",
+                "source_crop": [
+                    119.0,
+                    534.0,
+                    52.0,
+                    48.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            15,
+                            0
+                        ],
+                        [
+                            9,
+                            7
+                        ],
+                        [
+                            13,
+                            14
+                        ],
+                        [
+                            4,
+                            24
+                        ],
+                        [
+                            0,
+                            47
+                        ],
+                        [
+                            51,
+                            47
+                        ],
+                        [
+                            47,
+                            32
+                        ],
+                        [
+                            33,
+                            21
+                        ],
+                        [
+                            26,
+                            12
+                        ],
+                        [
+                            23,
+                            2
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "shell_body",
+            "kind": "obstacle",
+            "subtype": "shell",
+            "center_offset": [
+                45,
+                40
+            ],
+            "body_size": [
+                100,
+                88
+            ],
+            "part": "body",
+            "threshold": 0.82,
+            "image": "shell_body.png",
+            "mask": "shell_body.mask.png",
+            "provenance": {
+                "source_name": "012_shellsx3.png",
+                "source_sha256": "dc8432ba22edf47e6f46511687b139a8e23b3ea586015c2df883c949d65458b7",
+                "source_crop": [
+                    205.0,
+                    548.0,
+                    87.0,
+                    73.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            40,
+                            3
+                        ],
+                        [
+                            53,
+                            5
+                        ],
+                        [
+                            70,
+                            17
+                        ],
+                        [
+                            80,
+                            35
+                        ],
+                        [
+                            78,
+                            53
+                        ],
+                        [
+                            62,
+                            62
+                        ],
+                        [
+                            45,
+                            64
+                        ],
+                        [
+                            23,
+                            62
+                        ],
+                        [
+                            8,
+                            50
+                        ],
+                        [
+                            8,
+                            32
+                        ],
+                        [
+                            21,
+                            15
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "shell_ribs",
+            "kind": "obstacle",
+            "subtype": "shell",
+            "center_offset": [
+                25,
+                28
+            ],
+            "body_size": [
+                100,
+                88
+            ],
+            "part": "ribs",
+            "threshold": 0.85,
+            "image": "shell_ribs.png",
+            "mask": "shell_ribs.mask.png",
+            "provenance": {
+                "source_name": "012_shellsx3.png",
+                "source_sha256": "dc8432ba22edf47e6f46511687b139a8e23b3ea586015c2df883c949d65458b7",
+                "source_crop": [
+                    225.0,
+                    560.0,
+                    50.0,
+                    42.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "rock_body",
+            "kind": "obstacle",
+            "subtype": "rock",
+            "center_offset": [
+                61,
+                52
+            ],
+            "body_size": [
+                120,
+                116
+            ],
+            "part": "body",
+            "threshold": 0.83,
+            "image": "rock_body.png",
+            "mask": "rock_body.mask.png",
+            "provenance": {
+                "source_name": "018_bombs_lv1x3_lv2x1_shellsx2_rocksx3_boxesx2_ult_ready_all.png",
+                "source_sha256": "6763d98204c0e69c0721445f0241cd3c26b589c022dfc9a6a114db33bb67ee83",
+                "source_crop": [
+                    491.0,
+                    542.0,
+                    119.0,
+                    110.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            20,
+                            29
+                        ],
+                        [
+                            44,
+                            12
+                        ],
+                        [
+                            73,
+                            17
+                        ],
+                        [
+                            100,
+                            29
+                        ],
+                        [
+                            107,
+                            59
+                        ],
+                        [
+                            95,
+                            85
+                        ],
+                        [
+                            72,
+                            101
+                        ],
+                        [
+                            36,
+                            98
+                        ],
+                        [
+                            10,
+                            79
+                        ],
+                        [
+                            5,
+                            51
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "rock_facets",
+            "kind": "obstacle",
+            "subtype": "rock",
+            "center_offset": [
+                40,
+                22
+            ],
+            "body_size": [
+                120,
+                116
+            ],
+            "part": "facets",
+            "threshold": 0.87,
+            "image": "rock_facets.png",
+            "mask": "rock_facets.mask.png",
+            "provenance": {
+                "source_name": "018_bombs_lv1x3_lv2x1_shellsx2_rocksx3_boxesx2_ult_ready_all.png",
+                "source_sha256": "6763d98204c0e69c0721445f0241cd3c26b589c022dfc9a6a114db33bb67ee83",
+                "source_crop": [
+                    512.0,
+                    572.0,
+                    71.0,
+                    58.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "box_weave",
+            "kind": "obstacle",
+            "subtype": "box",
+            "center_offset": [
+                39,
+                44
+            ],
+            "body_size": [
+                114,
+                104
+            ],
+            "part": "weave",
+            "threshold": 0.84,
+            "image": "box_weave.png",
+            "mask": "box_weave.mask.png",
+            "provenance": {
+                "source_name": "018_bombs_lv1x3_lv2x1_shellsx2_rocksx3_boxesx2_ult_ready_all.png",
+                "source_sha256": "6763d98204c0e69c0721445f0241cd3c26b589c022dfc9a6a114db33bb67ee83",
+                "source_crop": [
+                    463.0,
+                    656.0,
+                    67.0,
+                    28.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "box_stamp",
+            "kind": "obstacle",
+            "subtype": "box",
+            "center_offset": [
+                -12,
+                11
+            ],
+            "body_size": [
+                114,
+                104
+            ],
+            "part": "stamp",
+            "threshold": 0.84,
+            "image": "box_stamp.png",
+            "mask": "box_stamp.mask.png",
+            "provenance": {
+                "source_name": "018_bombs_lv1x3_lv2x1_shellsx2_rocksx3_boxesx2_ult_ready_all.png",
+                "source_sha256": "6763d98204c0e69c0721445f0241cd3c26b589c022dfc9a6a114db33bb67ee83",
+                "source_crop": [
+                    514.0,
+                    689.0,
+                    37.0,
+                    41.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "branch_cut_end",
+            "kind": "obstacle",
+            "subtype": "branch",
+            "center_offset": [
+                -9,
+                50
+            ],
+            "body_size": [
+                105,
+                122
+            ],
+            "part": "cut_end",
+            "threshold": 0.83,
+            "check_template_color": true,
+            "image": "branch_cut_end.png",
+            "mask": "branch_cut_end.mask.png",
+            "provenance": {
+                "source_name": "022_branchesx3.png",
+                "source_sha256": "3ab88f9d4b4ba7bd19c942344a1509d89d6719a00cb9d8d2104f2ec2f8e8b766",
+                "source_crop": [
+                    264.0,
+                    790.0,
+                    37.0,
+                    29.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "branch_bark",
+            "kind": "obstacle",
+            "subtype": "branch",
+            "center_offset": [
+                27,
+                29
+            ],
+            "body_size": [
+                105,
+                122
+            ],
+            "part": "bark",
+            "threshold": 0.88,
+            "check_template_color": true,
+            "image": "branch_bark.png",
+            "mask": "branch_bark.mask.png",
+            "provenance": {
+                "source_name": "022_branchesx3.png",
+                "source_sha256": "3ab88f9d4b4ba7bd19c942344a1509d89d6719a00cb9d8d2104f2ec2f8e8b766",
+                "source_crop": [
+                    228.0,
+                    811.0,
+                    53.0,
+                    61.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            28,
+                            3
+                        ],
+                        [
+                            48,
+                            3
+                        ],
+                        [
+                            42,
+                            25
+                        ],
+                        [
+                            26,
+                            51
+                        ],
+                        [
+                            12,
+                            56
+                        ],
+                        [
+                            10,
+                            39
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "black_eye",
+            "kind": "special_ghoul",
+            "subtype": "black",
+            "center_offset": [
+                16,
+                24
+            ],
+            "body_size": [
+                91,
+                100
+            ],
+            "part": "eye",
+            "threshold": 0.84,
+            "color": "black",
+            "min_color_fraction": 0.32,
+            "image": "black_eye.png",
+            "mask": "black_eye.mask.png",
+            "provenance": {
+                "source_name": "013_special_black_ghoulsx5.png",
+                "source_sha256": "914a892a4b09eec1404da7721779ace57610fc956bad005035455e73ddb31cdd",
+                "source_crop": [
+                    210.0,
+                    603.0,
+                    36.0,
+                    37.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "shell_hinge",
+            "kind": "obstacle",
+            "subtype": "shell",
+            "center_offset": [
+                19,
+                40
+            ],
+            "body_size": [
+                100,
+                88
+            ],
+            "part": "hinge",
+            "threshold": 0.84,
+            "image": "shell_hinge.png",
+            "mask": "shell_hinge.mask.png",
+            "provenance": {
+                "source_name": "012_shellsx3.png",
+                "source_sha256": "dc8432ba22edf47e6f46511687b139a8e23b3ea586015c2df883c949d65458b7",
+                "source_crop": [
+                    231.0,
+                    548.0,
+                    39.0,
+                    39.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            11,
+                            1
+                        ],
+                        [
+                            27,
+                            2
+                        ],
+                        [
+                            37,
+                            16
+                        ],
+                        [
+                            38,
+                            37
+                        ],
+                        [
+                            1,
+                            37
+                        ],
+                        [
+                            2,
+                            19
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "shell_ribs_right",
+            "kind": "obstacle",
+            "subtype": "shell",
+            "center_offset": [
+                3,
+                34
+            ],
+            "body_size": [
+                100,
+                88
+            ],
+            "part": "ribs",
+            "threshold": 0.87,
+            "image": "shell_ribs_right.png",
+            "mask": "shell_ribs_right.mask.png",
+            "provenance": {
+                "source_name": "012_shellsx3.png",
+                "source_sha256": "dc8432ba22edf47e6f46511687b139a8e23b3ea586015c2df883c949d65458b7",
+                "source_crop": [
+                    641.0,
+                    553.0,
+                    32.0,
+                    46.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "branch_bark_inner",
+            "kind": "obstacle",
+            "subtype": "branch",
+            "center_offset": [
+                13,
+                21
+            ],
+            "body_size": [
+                105,
+                122
+            ],
+            "part": "bark_inner",
+            "threshold": 0.88,
+            "check_template_color": true,
+            "image": "branch_bark_inner.png",
+            "mask": "branch_bark_inner.mask.png",
+            "provenance": {
+                "source_name": "022_branchesx3.png",
+                "source_sha256": "3ab88f9d4b4ba7bd19c942344a1509d89d6719a00cb9d8d2104f2ec2f8e8b766",
+                "source_crop": [
+                    242.0,
+                    819.0,
+                    31.0,
+                    36.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "black_eye_glow",
+            "kind": "special_ghoul",
+            "subtype": "black",
+            "center_offset": [
+                17,
+                25
+            ],
+            "body_size": [
+                91,
+                100
+            ],
+            "part": "eye",
+            "threshold": 0.85,
+            "color": "black",
+            "min_color_fraction": 0.23,
+            "image": "black_eye_glow.png",
+            "mask": "black_eye_glow.mask.png",
+            "provenance": {
+                "source_name": "021_special_black_ghoulsx20_bombs_lv1x4_lv2x1_lv3x1_rocksx1_ult_ready_all.png",
+                "source_sha256": "0411e4b436a031471d1c15e45eb954cc3153d80bcda35b78dec626868bad5cb5",
+                "source_crop": [
+                    368.0,
+                    817.0,
+                    34.0,
+                    35.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "black_eye_glow_side",
+            "kind": "special_ghoul",
+            "subtype": "black",
+            "center_offset": [
+                17,
+                25
+            ],
+            "body_size": [
+                91,
+                100
+            ],
+            "part": "eye",
+            "threshold": 0.85,
+            "color": "black",
+            "min_color_fraction": 0.23,
+            "image": "black_eye_glow_side.png",
+            "mask": "black_eye_glow_side.mask.png",
+            "provenance": {
+                "source_name": "021_special_black_ghoulsx20_bombs_lv1x4_lv2x1_lv3x1_rocksx1_ult_ready_all.png",
+                "source_sha256": "0411e4b436a031471d1c15e45eb954cc3153d80bcda35b78dec626868bad5cb5",
+                "source_crop": [
+                    330.0,
+                    738.0,
+                    34.0,
+                    35.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "black_head",
+            "kind": "special_ghoul",
+            "subtype": "black",
+            "center_offset": [
+                30,
+                39
+            ],
+            "body_size": [
+                91,
+                100
+            ],
+            "part": "head",
+            "threshold": 0.87,
+            "color": "black",
+            "min_color_fraction": 0.32,
+            "image": "black_head.png",
+            "mask": "black_head.mask.png",
+            "provenance": {
+                "source_name": "013_special_black_ghoulsx5.png",
+                "source_sha256": "914a892a4b09eec1404da7721779ace57610fc956bad005035455e73ddb31cdd",
+                "source_crop": [
+                    196.0,
+                    588.0,
+                    65.0,
+                    45.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "shell_hinge_glow",
+            "kind": "obstacle",
+            "subtype": "shell",
+            "center_offset": [
+                17,
+                41
+            ],
+            "body_size": [
+                100,
+                88
+            ],
+            "part": "hinge_glow",
+            "threshold": 0.86,
+            "image": "shell_hinge_glow.png",
+            "mask": "shell_hinge_glow.mask.png",
+            "provenance": {
+                "source_name": "014_bombs_lv1x1_lv2x1_shellsx4_rocksx1.png",
+                "source_sha256": "bd73091b99ef1e04a7944f15e20c53530fc8ec80c72d6fff417ec5584ad33189",
+                "source_crop": [
+                    188.0,
+                    284.0,
+                    35.0,
+                    35.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            11,
+                            3
+                        ],
+                        [
+                            24,
+                            3
+                        ],
+                        [
+                            32,
+                            14
+                        ],
+                        [
+                            32,
+                            33
+                        ],
+                        [
+                            2,
+                            33
+                        ],
+                        [
+                            3,
+                            17
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "branch_bark_tilted",
+            "kind": "obstacle",
+            "subtype": "branch",
+            "center_offset": [
+                15,
+                17
+            ],
+            "body_size": [
+                105,
+                122
+            ],
+            "part": "bark_tilted",
+            "threshold": 0.9,
+            "check_template_color": true,
+            "image": "branch_bark_tilted.png",
+            "mask": "branch_bark_tilted.mask.png",
+            "provenance": {
+                "source_name": "024_bombs_lv1x1_lv2x1_branchesx6.png",
+                "source_sha256": "e137d22d4843b8859934799142b0160cf3732885bc67791b9bd94d359238e85e",
+                "source_crop": [
+                    320.0,
+                    423.0,
+                    29.0,
+                    30.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_blue_head",
+            "center_offset": [
+                38,
+                47
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "blue",
+            "enhanced": true,
+            "part": "enhanced_head",
+            "threshold": 0.82,
+            "min_color_fraction": 0.025,
+            "image": "enhanced_blue_head.png",
+            "mask": "enhanced_blue_head.mask.png",
+            "provenance": {
+                "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
+                "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
+                "source_crop": [
+                    297.0,
+                    370.0,
+                    76.0,
+                    78.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            12,
+                            12
+                        ],
+                        [
+                            26,
+                            3
+                        ],
+                        [
+                            49,
+                            3
+                        ],
+                        [
+                            64,
+                            13
+                        ],
+                        [
+                            73,
+                            58
+                        ],
+                        [
+                            59,
+                            76
+                        ],
+                        [
+                            14,
+                            76
+                        ],
+                        [
+                            1,
+                            56
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "enhanced_red_head",
+            "center_offset": [
+                37,
+                47
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "red",
+            "enhanced": true,
+            "part": "enhanced_head",
+            "threshold": 0.82,
+            "min_color_fraction": 0.025,
+            "image": "enhanced_red_head.png",
+            "mask": "enhanced_red_head.mask.png",
+            "provenance": {
+                "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
+                "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
+                "source_crop": [
+                    172.0,
+                    577.0,
+                    75.0,
+                    79.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            12,
+                            12
+                        ],
+                        [
+                            26,
+                            3
+                        ],
+                        [
+                            49,
+                            3
+                        ],
+                        [
+                            64,
+                            13
+                        ],
+                        [
+                            73,
+                            58
+                        ],
+                        [
+                            59,
+                            76
+                        ],
+                        [
+                            14,
+                            76
+                        ],
+                        [
+                            1,
+                            56
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "enhanced_yellow_head",
+            "center_offset": [
+                38,
+                47
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "yellow",
+            "enhanced": true,
+            "part": "enhanced_head",
+            "threshold": 0.82,
+            "min_color_fraction": 0.025,
+            "image": "enhanced_yellow_head.png",
+            "mask": "enhanced_yellow_head.mask.png",
+            "provenance": {
+                "source_name": "028_enhanced_ghouls_bluex6_yellowx3_bronze_bell.png",
+                "source_sha256": "39a6f695f253ce3f5c18777e5432b8b246df540eb3cf9d6bad929510a4467d25",
+                "source_crop": [
+                    268.0,
+                    395.0,
+                    75.0,
+                    78.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            12,
+                            12
+                        ],
+                        [
+                            26,
+                            3
+                        ],
+                        [
+                            49,
+                            3
+                        ],
+                        [
+                            64,
+                            13
+                        ],
+                        [
+                            73,
+                            58
+                        ],
+                        [
+                            59,
+                            76
+                        ],
+                        [
+                            14,
+                            76
+                        ],
+                        [
+                            1,
+                            56
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "enhanced_green_head",
+            "center_offset": [
+                37,
+                47
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "green",
+            "enhanced": true,
+            "part": "enhanced_head",
+            "threshold": 0.82,
+            "min_color_fraction": 0.025,
+            "image": "enhanced_green_head.png",
+            "mask": "enhanced_green_head.mask.png",
+            "provenance": {
+                "source_name": "030_enhanced_ghouls_greenx2_bluex12_bronze_bell.png",
+                "source_sha256": "3e349e1413a63a1f303396608feb243a822db99e8f093d185ca8283aa387a5cf",
+                "source_crop": [
+                    18.0,
+                    548.0,
+                    74.0,
+                    78.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            12,
+                            12
+                        ],
+                        [
+                            26,
+                            3
+                        ],
+                        [
+                            49,
+                            3
+                        ],
+                        [
+                            64,
+                            13
+                        ],
+                        [
+                            73,
+                            58
+                        ],
+                        [
+                            59,
+                            76
+                        ],
+                        [
+                            14,
+                            76
+                        ],
+                        [
+                            1,
+                            56
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "bronze_bell_bright_ring",
+            "center_offset": [
+                22,
+                -17
+            ],
+            "body_size": [
+                144,
+                212
+            ],
+            "kind": "obstacle",
+            "subtype": "bronze_bell",
+            "part": "ring",
+            "threshold": 0.86,
+            "search_roi": [
+                275,
+                490,
+                170,
+                235
+            ],
+            "minimum_parts": 2,
+            "image": "bronze_bell_bright_ring.png",
+            "mask": "bronze_bell_bright_ring.mask.png",
+            "provenance": {
+                "source_name": "026_bronze_bell_bright.png",
+                "source_sha256": "cef2718b5dbe3f190f6aaeb9c5c52b1e88cda7559c6a983804f76873edb84bca",
+                "source_crop": [
+                    336.0,
+                    629.0,
+                    43.0,
+                    43.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "bronze_bell_bright_rivets",
+            "center_offset": [
+                48,
+                52
+            ],
+            "body_size": [
+                144,
+                212
+            ],
+            "kind": "obstacle",
+            "subtype": "bronze_bell",
+            "part": "rivets",
+            "threshold": 0.86,
+            "search_roi": [
+                275,
+                490,
+                170,
+                235
+            ],
+            "minimum_parts": 2,
+            "image": "bronze_bell_bright_rivets.png",
+            "mask": "bronze_bell_bright_rivets.mask.png",
+            "provenance": {
+                "source_name": "026_bronze_bell_bright.png",
+                "source_sha256": "cef2718b5dbe3f190f6aaeb9c5c52b1e88cda7559c6a983804f76873edb84bca",
+                "source_crop": [
+                    310.0,
+                    560.0,
+                    92.0,
+                    38.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "bronze_bell_dim_ring",
+            "center_offset": [
+                22,
+                -17
+            ],
+            "body_size": [
+                144,
+                212
+            ],
+            "kind": "obstacle",
+            "subtype": "bronze_bell",
+            "part": "ring",
+            "threshold": 0.86,
+            "search_roi": [
+                275,
+                490,
+                170,
+                235
+            ],
+            "minimum_parts": 2,
+            "image": "bronze_bell_dim_ring.png",
+            "mask": "bronze_bell_dim_ring.mask.png",
+            "provenance": {
+                "source_name": "027_bronze_bell_dim.png",
+                "source_sha256": "57906446509bf7aa59d74f2b6a5a72fcba7ac506b90fcadf3a04c351ecd52f3f",
+                "source_crop": [
+                    336.0,
+                    629.0,
+                    43.0,
+                    43.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "bronze_bell_dim_rivets",
+            "center_offset": [
+                48,
+                52
+            ],
+            "body_size": [
+                144,
+                212
+            ],
+            "kind": "obstacle",
+            "subtype": "bronze_bell",
+            "part": "rivets",
+            "threshold": 0.86,
+            "search_roi": [
+                275,
+                490,
+                170,
+                235
+            ],
+            "minimum_parts": 2,
+            "image": "bronze_bell_dim_rivets.png",
+            "mask": "bronze_bell_dim_rivets.mask.png",
+            "provenance": {
+                "source_name": "027_bronze_bell_dim.png",
+                "source_sha256": "57906446509bf7aa59d74f2b6a5a72fcba7ac506b90fcadf3a04c351ecd52f3f",
+                "source_crop": [
+                    310.0,
+                    560.0,
+                    92.0,
+                    38.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_blue_eye",
+            "center_offset": [
+                20,
+                30
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "blue",
+            "enhanced": true,
+            "part": "enhanced_eye",
+            "threshold": 0.86,
+            "min_color_fraction": 0.025,
+            "check_template_color": true,
+            "image": "enhanced_blue_eye.png",
+            "mask": "enhanced_blue_eye.mask.png",
+            "provenance": {
+                "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
+                "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
+                "source_crop": [
+                    315.0,
+                    387.0,
+                    40.0,
+                    32.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_red_eye",
+            "center_offset": [
+                19,
+                29
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "red",
+            "enhanced": true,
+            "part": "enhanced_eye",
+            "threshold": 0.86,
+            "min_color_fraction": 0.025,
+            "check_template_color": true,
+            "image": "enhanced_red_eye.png",
+            "mask": "enhanced_red_eye.mask.png",
+            "provenance": {
+                "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
+                "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
+                "source_crop": [
+                    190.0,
+                    595.0,
+                    38.0,
+                    32.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_yellow_eye",
+            "center_offset": [
+                20,
+                32
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "yellow",
+            "enhanced": true,
+            "part": "enhanced_eye",
+            "threshold": 0.86,
+            "min_color_fraction": 0.025,
+            "check_template_color": true,
+            "image": "enhanced_yellow_eye.png",
+            "mask": "enhanced_yellow_eye.mask.png",
+            "provenance": {
+                "source_name": "028_enhanced_ghouls_bluex6_yellowx3_bronze_bell.png",
+                "source_sha256": "39a6f695f253ce3f5c18777e5432b8b246df540eb3cf9d6bad929510a4467d25",
+                "source_crop": [
+                    286.0,
+                    410.0,
+                    40.0,
+                    34.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_green_eye",
+            "center_offset": [
+                19,
+                35
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "green",
+            "enhanced": true,
+            "part": "enhanced_eye",
+            "threshold": 0.86,
+            "min_color_fraction": 0.025,
+            "check_template_color": true,
+            "image": "enhanced_green_eye.png",
+            "mask": "enhanced_green_eye.mask.png",
+            "provenance": {
+                "source_name": "030_enhanced_ghouls_greenx2_bluex12_bronze_bell.png",
+                "source_sha256": "3e349e1413a63a1f303396608feb243a822db99e8f093d185ca8283aa387a5cf",
+                "source_crop": [
+                    36.0,
+                    560.0,
+                    38.0,
+                    33.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_blue_eye_bright",
+            "center_offset": [
+                19,
+                30
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "blue",
+            "enhanced": true,
+            "part": "enhanced_eye",
+            "threshold": 0.86,
+            "min_color_fraction": 0.025,
+            "check_template_color": true,
+            "image": "enhanced_blue_eye_bright.png",
+            "mask": "enhanced_blue_eye_bright.mask.png",
+            "provenance": {
+                "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
+                "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
+                "source_crop": [
+                    230.0,
+                    373.0,
+                    40.0,
+                    34.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_red_eye_bright",
+            "center_offset": [
+                21,
+                37
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "red",
+            "enhanced": true,
+            "part": "enhanced_eye",
+            "threshold": 0.86,
+            "min_color_fraction": 0.025,
+            "check_template_color": true,
+            "image": "enhanced_red_eye_bright.png",
+            "mask": "enhanced_red_eye_bright.mask.png",
+            "provenance": {
+                "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
+                "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
+                "source_crop": [
+                    286.0,
+                    892.0,
+                    40.0,
+                    35.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "bronze_bell_bright_rim",
+            "center_offset": [
+                53,
+                -64
+            ],
+            "body_size": [
+                144,
+                212
+            ],
+            "kind": "obstacle",
+            "subtype": "bronze_bell",
+            "part": "rim",
+            "threshold": 0.86,
+            "search_roi": [
+                275,
+                490,
+                170,
+                235
+            ],
+            "minimum_parts": 2,
+            "image": "bronze_bell_bright_rim.png",
+            "mask": "bronze_bell_bright_rim.mask.png",
+            "provenance": {
+                "source_name": "026_bronze_bell_bright.png",
+                "source_sha256": "cef2718b5dbe3f190f6aaeb9c5c52b1e88cda7559c6a983804f76873edb84bca",
+                "source_crop": [
+                    305.0,
+                    676.0,
+                    104.0,
+                    24.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "bronze_bell_dim_rim",
+            "center_offset": [
+                53,
+                -64
+            ],
+            "body_size": [
+                144,
+                212
+            ],
+            "kind": "obstacle",
+            "subtype": "bronze_bell",
+            "part": "rim",
+            "threshold": 0.86,
+            "search_roi": [
+                275,
+                490,
+                170,
+                235
+            ],
+            "minimum_parts": 2,
+            "image": "bronze_bell_dim_rim.png",
+            "mask": "bronze_bell_dim_rim.mask.png",
+            "provenance": {
+                "source_name": "027_bronze_bell_dim.png",
+                "source_sha256": "57906446509bf7aa59d74f2b6a5a72fcba7ac506b90fcadf3a04c351ecd52f3f",
+                "source_crop": [
+                    305.0,
+                    676.0,
+                    104.0,
+                    24.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_yellow_eye_bright",
+            "center_offset": [
+                20,
+                32
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "yellow",
+            "enhanced": true,
+            "part": "enhanced_eye",
+            "threshold": 0.86,
+            "min_color_fraction": 0.025,
+            "check_template_color": true,
+            "image": "enhanced_yellow_eye_bright.png",
+            "mask": "enhanced_yellow_eye_bright.mask.png",
+            "provenance": {
+                "source_name": "028_enhanced_ghouls_bluex6_yellowx3_bronze_bell.png",
+                "source_sha256": "39a6f695f253ce3f5c18777e5432b8b246df540eb3cf9d6bad929510a4467d25",
+                "source_crop": [
+                    193.0,
+                    464.0,
+                    40.0,
+                    34.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_green_eye_bright",
+            "center_offset": [
+                20,
+                31
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "green",
+            "enhanced": true,
+            "part": "enhanced_eye",
+            "threshold": 0.86,
+            "min_color_fraction": 0.025,
+            "check_template_color": true,
+            "image": "enhanced_green_eye_bright.png",
+            "mask": "enhanced_green_eye_bright.mask.png",
+            "provenance": {
+                "source_name": "030_enhanced_ghouls_greenx2_bluex12_bronze_bell.png",
+                "source_sha256": "3e349e1413a63a1f303396608feb243a822db99e8f093d185ca8283aa387a5cf",
+                "source_crop": [
+                    56.0,
+                    478.0,
+                    40.0,
+                    34.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_blue_eye_glow",
+            "center_offset": [
+                18,
+                34
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "blue",
+            "enhanced": true,
+            "part": "enhanced_eye",
+            "threshold": 0.86,
+            "min_color_fraction": 0.025,
+            "check_template_color": true,
+            "image": "enhanced_blue_eye_glow.png",
+            "mask": "enhanced_blue_eye_glow.mask.png",
+            "provenance": {
+                "source_name": "030_enhanced_ghouls_greenx2_bluex12_bronze_bell.png",
+                "source_sha256": "3e349e1413a63a1f303396608feb243a822db99e8f093d185ca8283aa387a5cf",
+                "source_crop": [
+                    650.0,
+                    586.0,
+                    38.0,
+                    34.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_blue_eye_left",
+            "center_offset": [
+                20,
+                30
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "blue",
+            "enhanced": true,
+            "part": "enhanced_eye",
+            "threshold": 0.88,
+            "min_color_fraction": 0.025,
+            "check_template_color": true,
+            "image": "enhanced_blue_eye_left.png",
+            "mask": "enhanced_blue_eye_left.mask.png",
+            "provenance": {
+                "source_name": "025_enhanced_ghouls_bluex5_redx4.png",
+                "source_sha256": "0e16f2f595d008ee995ce1d786cf8ca1a356d5f3311f09a2fc8e3e7448e8425b",
+                "source_crop": [
+                    315.0,
+                    387.0,
+                    25.0,
+                    32.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "enhanced_yellow_upper_head",
+            "center_offset": [
+                32,
+                49
+            ],
+            "body_size": [
+                96,
+                104
+            ],
+            "kind": "ghoul",
+            "color": "yellow",
+            "enhanced": true,
+            "part": "enhanced_head",
+            "threshold": 0.88,
+            "min_color_fraction": 0.025,
+            "image": "enhanced_yellow_upper_head.png",
+            "mask": "enhanced_yellow_upper_head.mask.png",
+            "provenance": {
+                "source_name": "029_enhanced_ghouls_yellowx9_bluex1_redx3_bronze_bell.png",
+                "source_sha256": "bfa92e9d622da40fa1696c15ba94061f85073a40f6157815c08bce98af3eed8f",
+                "source_crop": [
+                    275.0,
+                    325.0,
+                    66.0,
+                    45.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            10,
+                            0
+                        ],
+                        [
+                            55,
+                            0
+                        ],
+                        [
+                            65,
+                            29
+                        ],
+                        [
+                            50,
+                            43
+                        ],
+                        [
+                            47,
+                            30
+                        ],
+                        [
+                            18,
+                            30
+                        ],
+                        [
+                            17,
+                            43
+                        ],
+                        [
+                            0,
+                            29
+                        ]
+                    ]
+                ]
+            }
+        }
+    ],
+    "standard_object_roi": [
+        0,
+        290,
+        720,
+        700
+    ],
+    "catalog_sha256": "ae42a3b661577a70152e52c919f8a4b950b724d26dd6e815607b7a4c6dbdf4c2"
 }
