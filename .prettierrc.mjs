@@ -34,20 +34,14 @@ export default {
             files: [
                 "*.json",
                 "*.jsonc",
+                "**/*.json",
+                "**/*.jsonc",
             ],
             options: {
                 parser: "json",
                 useTabs: false,
                 bracketSameLine: false,
                 trailingComma: "none",
-            },
-        },
-        {
-            files: [
-                "resource/base/pipeline/**/*.json",
-                "resource/base/pipeline/**/*.jsonc",
-            ],
-            options: {
                 multilineArraysWrapThreshold: -1,
                 printWidth: 1000000,
                 objectWrap: "preserve",

@@ -1,0 +1,44 @@
+{
+    "ResidentBattle": {
+        "next": ["RB_DetectWhereAmI"]
+    },
+    "RB_DetectWhereAmI": {
+        "timeout": 120000,
+        "next": ["[JumpBack]MainPage_EnterSortie", "RB_CheckTargetChapter", "[JumpBack]ChapterMap_ChangeChapter", "RB_SelectTargetChapter"],
+        "on_error": ["[JumpBack]RestartGame"]
+    },
+    "RB_SelectTargetChapter": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [317, 22, 83, 52],
+                "template": "Common/Button/选择章节.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [295, 921, 54, 41]
+            }
+        },
+        "next": ["RB_SelectTargetChapter", "RB_CheckTargetChapter"],
+        "on_error": ["RB_DetectWhereAmI"]
+    },
+    "RB_CheckTargetChapter": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [238, 97, 244, 37],
+                "template": "ResidentBattle/第1章桃太郎.png"
+            }
+        },
+        "next": ["RB_FindTargetStage"]
+    },
+    "RB_FindTargetStage": {
+        "recognition": {
+            "type": "OCR",
+            "param": {"expected": "1-2"}
+        },
+        "action": {"type": "Click"}
+    }
+}
