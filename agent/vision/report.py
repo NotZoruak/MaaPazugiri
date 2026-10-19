@@ -27,8 +27,8 @@ OBSTACLE_COLORS = {
 }
 
 
-def write_report(image: Image, result: BoardResult, destination: Path, stem: str) -> dict[str, int]:
-    """保存原图副本上的编号标记和对应 JSON。"""
+def annotate_board(image: Image, result: BoardResult) -> Image:
+    """在原图副本上绘制当前帧编号，供不同诊断报告复用。"""
     annotated = image.copy()
     for item in result.objects:
         color = DRAW_COLORS.get(item.color or "", (220, 80, 230))
@@ -66,6 +66,12 @@ def write_report(image: Image, result: BoardResult, destination: Path, stem: str
                 label += f":{result.chain_endpoint.object_id}"
             cv2.putText(annotated, label, (x, max(16, y - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
             cv2.putText(annotated, label, (x, max(16, y - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+    return annotated
+
+
+def write_report(image: Image, result: BoardResult, destination: Path, stem: str) -> dict[str, int]:
+    """保存原图副本上的编号标记和对应 JSON。"""
+    annotated = annotate_board(image, result)
     destination.mkdir(parents=True, exist_ok=True)
     write_image(destination / f"{stem}.annotated.png", annotated)
     write_text_atomic(
