@@ -4,8 +4,8 @@
             "name": "ResidentBattle",
             "label": "常驻作战",
             "entry": "ResidentBattle",
-            "option": ["选择章节", "选择部队"],
-            "doc": ["重复次数可在任务设置中调整；选择章节后，可在对应的关卡下拉框中选择目标关卡，并选择目标部队。"],
+            "option": ["选择章节", "选择部队", "体力不足时展开恢复界面", "使用当日限定体力回复"],
+            "doc": ["重复次数可在任务设置中调整；选择章节后，可在对应的关卡下拉框中选择目标关卡，并选择目标部队。体力不足时展开恢复界面和使用当日限定体力回复默认关闭；使用当日限定体力回复时会自动展开恢复界面。"],
             "repeatable": true,
             "repeat_count": 1
         }
@@ -834,6 +834,61 @@
                 }
             ],
             "default_case": "Team1"
+        },
+        "体力不足时展开恢复界面": {
+            "type": "switch",
+            "label": "体力不足时展开恢复界面",
+            "description": "开启后，识别到体力不足时点击加号展开体力恢复界面。",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "开启",
+                    "pipeline_override": {
+                        "BattleSettlement_OpenStaminaRecovery": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "label": "关闭",
+                    "pipeline_override": {
+                        "BattleSettlement_OpenStaminaRecovery": {
+                            "enabled": false
+                        }
+                    }
+                }
+            ],
+            "default_case": "No"
+        },
+        "使用当日限定体力回复": {
+            "type": "switch",
+            "label": "使用当日限定体力回复",
+            "description": "开启后，在恢复界面点击当日限定的1体力回复选项。",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "开启",
+                    "pipeline_override": {
+                        "BattleSettlement_UseDailyStaminaRecovery": {
+                            "enabled": true
+                        },
+                        "BattleSettlement_OpenStaminaRecovery": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "label": "关闭",
+                    "pipeline_override": {
+                        "BattleSettlement_UseDailyStaminaRecovery": {
+                            "enabled": false
+                        }
+                    }
+                }
+            ],
+            "default_case": "No"
         }
     }
 }

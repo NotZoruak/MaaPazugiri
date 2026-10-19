@@ -1,5 +1,6 @@
 {
     "ResidentBattle": {
+        "anchor": "Hub",
         "next": ["RB_DetectWhereAmI"]
     },
     "RB_DetectWhereAmI": {
@@ -12,6 +13,7 @@
             "RB_SelectTargetChapter",
             "RB_CheckChallengeStagePage",
             "RB_CheckBattleStarted",
+            "BattleSettlement_NoStamina",
             "[JumpBack]BattleSettlement_FailureConfirm",
             "[JumpBack]LoginGameIcon",
             "[JumpBack]Login_TitleScreen",
@@ -20,7 +22,8 @@
             "[JumpBack]Pump_TapToContinue",
             "[JumpBack]Pump_NoPurchasableProducts",
             "[JumpBack]Pump_RewardReceived",
-            "[JumpBack]Pump_DateChange"
+            "[JumpBack]Pump_DateChange",
+            "[JumpBack]Pump_NotificationAnnouncement"
         ],
         "on_error": ["[JumpBack]RestartGame"]
     },

@@ -1,4 +1,19 @@
 {
+    "Pump_NotificationAnnouncement": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [292, 49, 131, 40],
+                "template": "pump/通知公告.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [300, 1170, 120, 58]
+            }
+        }
+    },
     "Pump_DailyReport": {
         "recognition": {
             "type": "TemplateMatch",

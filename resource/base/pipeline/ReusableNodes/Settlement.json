@@ -1,4 +1,105 @@
 {
+    "BattleSettlement_NoStamina": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [18, 29, 38, 34],
+                "template": "region/无剩余体力.png"
+            }
+        },
+        "next": [
+            "BattleSettlement_OpenStaminaRecovery",
+            "BattleSettlement_CompleteCurrentTask"
+        ]
+    },
+    "BattleSettlement_OpenStaminaRecovery": {
+        "enabled": false,
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [18, 29, 38, 34],
+                "template": "region/无剩余体力.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [237, 33, 18, 24]
+            }
+        },
+        "next": ["BattleSettlement_CheckStaminaRecovery", "BattleSettlement_OpenStaminaRecovery"],
+        "on_error": ["[Anchor]Hub"]
+    },
+    "BattleSettlement_CheckStaminaRecovery": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [152, 253, 427, 201],
+                "template": "region/体力恢复页面.png"
+            }
+        },
+        "next": ["BattleSettlement_UseDailyStaminaRecovery"],
+        "on_error": ["[Anchor]Hub"]
+    },
+    "BattleSettlement_UseDailyStaminaRecovery": {
+        "enabled": false,
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [42, 538, 472, 521],
+                "template": "region/1体力回复_当日限定.png",
+                "green_mask": true
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target_offset": [506, 59, -386, -88]
+            }
+        },
+        "next": ["BattleSettlement_ConfirmDailyStaminaRecovery", "BattleSettlement_UseDailyStaminaRecovery"],
+        "on_error": ["[Anchor]Hub"]
+    },
+    "BattleSettlement_ConfirmDailyStaminaRecovery": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [121, 559, 473, 123],
+                "template": "region/确认使用1体力回复_当日限定.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [456, 1174, 114, 57]
+            }
+        },
+        "next": ["BattleSettlement_DailyStaminaRecoverySucceeded"],
+        "on_error": ["[Anchor]Hub"]
+    },
+    "BattleSettlement_DailyStaminaRecoverySucceeded": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [121, 559, 473, 123],
+                "template": "region/确认使用1体力回复_当日限定.png"
+            }
+        },
+        "inverse": true,
+        "next": ["[Anchor]Hub"],
+        "focus": {
+            "Node.Recognition.Succeeded": "已成功使用当日限定体力回复。"
+        }
+    },
+    "BattleSettlement_CompleteCurrentTask": {
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "CompleteCurrentTaskAction",
+                "custom_action_param": {"reason": "剩余体力不足"}
+            }
+        }
+    },
     "BattleSettlement_FailureConfirm": {
         "recognition": {
             "type": "TemplateMatch",
