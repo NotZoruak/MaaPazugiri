@@ -4,7 +4,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [310, 164, 103, 60],
-                "template": "Common/Pump/日报.png"
+                "template": "pump/日报.png"
             }
         },
         "action": {
@@ -19,7 +19,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [89, 603, 533, 62],
-                "template": "Common/Pump/要继续当前正在进行的战斗吗.png"
+                "template": "pump/要继续当前正在进行的战斗吗.png"
             }
         },
         "action": {
@@ -28,14 +28,14 @@
                 "target": [426, 1174, 172, 59]
             }
         },
-        "next": ["Pump_ResumeBattleConfirm"]
+        "next": ["Pump_ResumeBattleConfirm", "Pump_ResumeBattle"]
     },
     "Pump_ResumeBattleConfirm": {
         "recognition": {
             "type": "TemplateMatch",
             "param": {
                 "roi": [272, 1172, 173, 57],
-                "template": "Common/Pump/确认继续战斗.png"
+                "template": "pump/确认继续战斗.png"
             }
         },
         "action": {"type": "Click"}
@@ -45,7 +45,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [220, 1165, 275, 70],
-                "template": "Common/Pump/点击继续.png"
+                "template": "pump/点击继续.png"
             }
         },
         "action": {"type": "Click"}
@@ -55,7 +55,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [40, 573, 638, 107],
-                "template": "Common/Pump/没有可购买的商品.png"
+                "template": "pump/没有可购买的商品.png"
             }
         },
         "action": {
@@ -70,7 +70,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [29, 40, 656, 657],
-                "template": "Common/Pump/获得奖励.png"
+                "template": "pump/获得奖励.png"
             }
         },
         "action": {
@@ -85,7 +85,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [41, 565, 632, 122],
-                "template": "Common/Pump/日期变化.png"
+                "template": "pump/日期变化.png"
             }
         },
         "action": {

@@ -5,11 +5,22 @@
     "RB_DetectWhereAmI": {
         "timeout": 120000,
         "next": [
+            "[JumpBack]AutoHeadPat_MainPage",
             "[JumpBack]MainPage_EnterSortie",
             "RB_CheckTargetChapter",
             "[JumpBack]ChapterMap_ChangeChapter",
             "RB_SelectTargetChapter",
-            "RB_CheckChallengeStagePage"
+            "RB_CheckChallengeStagePage",
+            "RB_CheckBattleStarted",
+            "[JumpBack]BattleSettlement_FailureConfirm",
+            "[JumpBack]LoginGameIcon",
+            "[JumpBack]Login_TitleScreen",
+            "[JumpBack]Pump_DailyReport",
+            "[JumpBack]Pump_ResumeBattle",
+            "[JumpBack]Pump_TapToContinue",
+            "[JumpBack]Pump_NoPurchasableProducts",
+            "[JumpBack]Pump_RewardReceived",
+            "[JumpBack]Pump_DateChange"
         ],
         "on_error": ["[JumpBack]RestartGame"]
     },
@@ -18,7 +29,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [238, 97, 244, 37],
-                "template": "ResidentBattle/第1章桃太郎.png"
+                "template": "region/第1章桃太郎.png"
             }
         },
         "next": ["RB_FindTargetStage"],
@@ -31,7 +42,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [317, 22, 83, 52],
-                "template": "Common/Button/选择章节.png"
+                "template": "button/选择章节.png"
             }
         },
         "action": {
@@ -65,7 +76,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [263, 1156, 198, 80],
-                "template": "ResidentBattle/关卡准备_决定按钮.png"
+                "template": "button/关卡准备_决定按钮.png"
             }
         },
         "action": {
@@ -82,7 +93,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [296, 1165, 156, 75],
-                "template": "ResidentBattle/关卡准备_战斗按钮.png"
+                "template": "button/关卡准备_战斗按钮.png"
             }
         },
         "next": ["RB_CheckTargetStage", "RB_ExitNonTargetStage"],
@@ -122,11 +133,33 @@
         "recognition": {
             "type": "TemplateMatch",
             "param": {
-                "template": "Common/Button/战斗.png"
+                "template": "button/战斗.png"
             }
         },
         "action": {
             "type": "Click"
+        },
+        "next": ["RB_EnterBattle", "RB_DetectWhereAmI"]
+    },
+    "RB_CheckBattleStarted": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [651, 24, 58, 59],
+                "template": "region/战斗中_设置齿轮.png"
+            }
+        },
+        "next": ["RB_RunBattle"],
+        "focus": {
+            "Node.Recognition.Succeeded": "已进入战斗。"
+        }
+    },
+    "RB_RunBattle": {
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "BattleAction"
+            }
         }
     },
     "RB_SelectTargetTeam": {
@@ -160,7 +193,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [57, 1160, 85, 90],
-                "template": "Common/Button/关闭.png"
+                "template": "button/关闭.png"
             }
         },
         "action": {

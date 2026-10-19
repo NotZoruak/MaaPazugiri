@@ -4,7 +4,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [353, 1038, 101, 102],
-                "template": "Common/Button/主页面_出阵.png"
+                "template": "button/主页面_出阵.png"
             }
         },
         "action": {
@@ -19,7 +19,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [571, 96, 110, 39],
-                "template": "Common/Button/章变更.png"
+                "template": "button/章变更.png"
             }
         },
         "action": {
@@ -34,7 +34,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [317, 22, 83, 52],
-                "template": "Common/Button/选择章节.png"
+                "template": "button/选择章节.png"
             }
         },
         "action": {

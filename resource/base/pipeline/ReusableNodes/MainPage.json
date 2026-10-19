@@ -1,0 +1,76 @@
+{
+    "AutoHeadPat_MainPage": {
+        "max_hit": 1,
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [353, 1038, 101, 102],
+                "template": "button/主页面_出阵.png"
+            }
+        },
+        "next": ["AutoHeadPat_Click01"]
+    },
+    "AutoHeadPat_Click01": {
+        "action": {"type": "Click", "param": {"target": [73, 415]}},
+        "next": ["AutoHeadPat_Click02"]
+    },
+    "AutoHeadPat_Click02": {
+        "action": {"type": "Click", "param": {"target": [220, 415]}},
+        "next": ["AutoHeadPat_Click03"]
+    },
+    "AutoHeadPat_Click03": {
+        "action": {"type": "Click", "param": {"target": [367, 415]}},
+        "next": ["AutoHeadPat_Click04"]
+    },
+    "AutoHeadPat_Click04": {
+        "action": {"type": "Click", "param": {"target": [514, 415]}},
+        "next": ["AutoHeadPat_Click05"]
+    },
+    "AutoHeadPat_Click05": {
+        "action": {"type": "Click", "param": {"target": [73, 589]}},
+        "next": ["AutoHeadPat_Click06"]
+    },
+    "AutoHeadPat_Click06": {
+        "action": {"type": "Click", "param": {"target": [220, 589]}},
+        "next": ["AutoHeadPat_Click07"]
+    },
+    "AutoHeadPat_Click07": {
+        "action": {"type": "Click", "param": {"target": [367, 589]}},
+        "next": ["AutoHeadPat_Click08"]
+    },
+    "AutoHeadPat_Click08": {
+        "action": {"type": "Click", "param": {"target": [514, 589]}},
+        "next": ["AutoHeadPat_Click09"]
+    },
+    "AutoHeadPat_Click09": {
+        "action": {"type": "Click", "param": {"target": [73, 762]}},
+        "next": ["AutoHeadPat_Click10"]
+    },
+    "AutoHeadPat_Click10": {
+        "action": {"type": "Click", "param": {"target": [220, 762]}},
+        "next": ["AutoHeadPat_Click11"]
+    },
+    "AutoHeadPat_Click11": {
+        "action": {"type": "Click", "param": {"target": [367, 762]}},
+        "next": ["AutoHeadPat_Click12"]
+    },
+    "AutoHeadPat_Click12": {
+        "action": {"type": "Click", "param": {"target": [514, 762]}},
+        "next": ["AutoHeadPat_Click13"]
+    },
+    "AutoHeadPat_Click13": {
+        "action": {"type": "Click", "param": {"target": [73, 936]}},
+        "next": ["AutoHeadPat_Click14"]
+    },
+    "AutoHeadPat_Click14": {
+        "action": {"type": "Click", "param": {"target": [220, 936]}},
+        "next": ["AutoHeadPat_Click15"]
+    },
+    "AutoHeadPat_Click15": {
+        "action": {"type": "Click", "param": {"target": [367, 936]}},
+        "next": ["AutoHeadPat_Click16"]
+    },
+    "AutoHeadPat_Click16": {
+        "action": {"type": "Click", "param": {"target": [514, 936]}}
+    }
+}

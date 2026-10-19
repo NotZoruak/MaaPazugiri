@@ -1,0 +1,25 @@
+{
+    "LoginGameIcon": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "template": "region/游戏图标.png"
+            }
+        },
+        "action": {
+            "type": "Click"
+        }
+    },
+    "Login_TitleScreen": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [447, 100, 63, 194],
+                "template": "region/标题界面.png"
+            }
+        },
+        "action": {
+            "type": "Click"
+        }
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "BattleSettlement_FailureConfirm": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [64, 432, 601, 142],
+                "template": "region/战斗失败确认.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [140, 1175, 135, 57]
+            }
+        },
+        "next": ["BattleSettlement_FailureConfirm", "BattleSettlement_FailureRetreat"]
+    },
+    "BattleSettlement_FailureRetreat": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [102, 1172, 210, 58],
+                "template": "button/战斗失败撤退.png"
+            }
+        },
+        "action": {"type": "Click"}
+    }
+}

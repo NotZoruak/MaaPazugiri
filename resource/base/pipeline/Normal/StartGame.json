@@ -21,7 +21,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [447, 100, 63, 194],
-                "template": "Common/Login/标题界面.png"
+                "template": "region/标题界面.png"
             }
         },
         "focus": {
