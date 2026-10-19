@@ -12,10 +12,10 @@ maa-pipeline-generate ROI Sweep 测试工具。
     然后用 run_pipeline 逐个测试（手动）
 """
 
+import json
 import os
 import re
 import sys
-import json
 from pathlib import Path
 
 from project_paths import find_project_root

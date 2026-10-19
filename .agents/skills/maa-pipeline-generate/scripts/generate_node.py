@@ -13,10 +13,11 @@ maa-pipeline-generate: 自动生成 OCR 文本节点并合并到指定 pipeline�
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
-from project_paths import find_project_root, resolve_pipeline_path
+from project_paths import resolve_pipeline_path
 
 # Windows GBK 编码下 emoji/特殊字符报错 → 强制 UTF-8
 if sys.platform == "win32":
@@ -56,7 +57,7 @@ def _val(r, key):
 
 
 def connect_device():
-    from maa_mcp.adb import find_adb_device_list, connect_adb_device
+    from maa_mcp.adb import connect_adb_device, find_adb_device_list
     devices = find_adb_device_list()
     if not devices:
         raise RuntimeError("未找到 ADB 设备，请启动模拟器或打开 USB 调试")
@@ -70,8 +71,8 @@ def connect_device():
 
 def find_target_box(controller_id, target_text):
     """Step 2: 调 ocr() 拿 box，自动处理模型下载。"""
-    from maa_mcp.vision import ocr
     from maa_mcp.download import check_and_download_ocr
+    from maa_mcp.vision import ocr
 
     results = ocr(controller_id)
     # 首次可能 OCR 模型未下载
@@ -155,11 +156,26 @@ def main():
         "--action", default="Click",
         choices=["Click", "DoNothing", "LongPress", "Swipe", "ClickKey", "InputText"],
     )
-    parser.add_argument("--expand", type=int, default=20, help="ROI 扩边像素（推荐 20-30，可先用 generate_sweep.py 测试）")
+    parser.add_argument(
+        "--expand",
+        type=int,
+        default=20,
+        help="ROI 扩边像素（推荐 20-30，可先用 generate_sweep.py 测试）",
+    )
     parser.add_argument("--post-delay", type=int, default=500)
     parser.add_argument("--timeout", type=int, default=2000)
-    parser.add_argument("--screen-width", type=int, default=None, help="屏幕宽度（默认 720，可通过环境变量 SCREEN_WIDTH 或 SCREEN_SIZE 读取）")
-    parser.add_argument("--screen-height", type=int, default=None, help="屏幕高度（默认 1280，可通过环境变量 SCREEN_HEIGHT 或 SCREEN_SIZE 读取）")
+    parser.add_argument(
+        "--screen-width",
+        type=int,
+        default=None,
+        help="屏幕宽度（默认 720，可通过环境变量 SCREEN_WIDTH 或 SCREEN_SIZE 读取）",
+    )
+    parser.add_argument(
+        "--screen-height",
+        type=int,
+        default=None,
+        help="屏幕高度（默认 1280，可通过环境变量 SCREEN_HEIGHT 或 SCREEN_SIZE 读取）",
+    )
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 
