@@ -1,5 +1,6 @@
 # BEGIN create-maa-project
 node_modules/
+.cache/maa-tools/
 .venv/
 .uv-cache/
 __pycache__/
