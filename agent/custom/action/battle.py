@@ -12,6 +12,7 @@ from battle.progress import BattleProgressReporter
 from battle.ranbu import choose_ranbu_start, ranbu_short_link_points
 from battle.recognition import BattleFrameRecognizer, Image
 from battle.session import BattleSession, BattleState
+from battle.stability import NormalLinkStability
 from battle.strategy import BattlePhase, StrategyRuntime, decide_action, load_strategy
 from battle.ultimate import UltimateChargeRecognizer
 from maa.agent.agent_server import AgentServer
@@ -60,26 +61,30 @@ class BattleAction(CustomAction):
             current_image: Image | None = None
             last_decision_at = float("-inf")
             force_next_decision = False
-            ranbu_observe_after: float | None = None
+            observe_after: float | None = None
+            normal_link_stability = NormalLinkStability()
 
             def observe() -> BattleState:
                 """重新截图并核对状态，不在本阶段发送棋盘输入。"""
-                nonlocal last_state, current_image, ranbu_deadline, ranbu_observe_after
+                nonlocal last_state, current_image, ranbu_deadline, observe_after
                 current_image = None
-                if ranbu_observe_after is not None:
+                if observe_after is not None:
                     while not context.tasker.stopping:
-                        remaining = ranbu_observe_after - time.monotonic()
+                        remaining = observe_after - time.monotonic()
                         if remaining <= 0:
                             break
                         time.sleep(min(0.05, remaining))
-                    ranbu_observe_after = None
+                    observe_after = None
                     if context.tasker.stopping:
                         return BattleState.UNKNOWN
                 job = controller.post_screencap().wait()
                 if not job.succeeded:
+                    normal_link_stability.reset()
                     return BattleState.UNKNOWN
                 image = job.get()
                 state = BattleState.UNKNOWN if not image.size else recognizer.analyze(image)
+                if state != BattleState.OPERABLE:
+                    normal_link_stability.reset()
                 now = time.monotonic()
                 if state == BattleState.RANBU and ranbu_deadline is None:
                     ranbu_deadline = now + 5.5
@@ -99,7 +104,7 @@ class BattleAction(CustomAction):
 
             def process_current_frame(phase: BattlePhase) -> None:
                 """串联观测、阶段评估、行动选择和单步派发。"""
-                nonlocal current_image, last_decision_at, force_next_decision, ranbu_observe_after
+                nonlocal current_image, last_decision_at, force_next_decision, observe_after
                 try:
                     now = time.monotonic()
                     if current_image is None or (not force_next_decision and now - last_decision_at < 1.0):
@@ -111,13 +116,18 @@ class BattleAction(CustomAction):
                     if not isinstance(lightweight, bool):
                         raise ValueError("轻量识别配置的enabled必须为布尔值")
                     observation = observer.observe(image, phase, lightweight=lightweight)
+                    board_stable = phase == BattlePhase.OPERABLE and normal_link_stability.observe(observation.board)
                     resolution = strategy_runtime.evaluate_stage(observation.metrics)
                     observation = observer.apply_stage_resolution(observation, resolution)
                     route_preview = None
+                    waiting_for_stability = False
 
                     def provide_normal_routes() -> tuple[object, ...]:
                         """仅在策略已选到普通连线时，规划当前帧路线。"""
-                        nonlocal route_preview
+                        nonlocal route_preview, waiting_for_stability
+                        if not board_stable:
+                            waiting_for_stability = True
+                            return ()
                         if observation.board is None:
                             return ()
                         route_preview = previewer.preview_routes(image, observation.board)
@@ -138,6 +148,11 @@ class BattleAction(CustomAction):
                         route_provider=provide_normal_routes,
                         stage_resolution=resolution,
                     )
+                    if waiting_for_stability or (decision.kind == "normal_link" and not board_stable):
+                        waiting_for_stability = True
+                        decision = replace(
+                            decision, kind="wait", route=None, reason="等待棋盘稳定，需连续两次识别结果相近"
+                        )
                     if decision.kind == "ranbu_link" and (
                         observation.board is None
                         or choose_ranbu_start(observation.board, decision.reserved_color) is None
@@ -180,9 +195,15 @@ class BattleAction(CustomAction):
                     else:
                         progress.report(phase, resolution, decision)
                         executor.execute_once(observation, resolution, decision)
-                        force_next_decision = decision.kind in ("ultimate", "bomb", "normal_link")
-                        if decision.kind in ("ranbu_link", "ranbu_short_link"):
-                            ranbu_observe_after = time.monotonic() + 1.0
+                        if decision.kind != "wait":
+                            normal_link_stability.reset()
+                        force_next_decision = waiting_for_stability or decision.kind in (
+                            "ultimate",
+                            "bomb",
+                            "normal_link",
+                        )
+                        if decision.kind in ("normal_link", "ranbu_link", "ranbu_short_link"):
+                            observe_after = time.monotonic() + 1.0
                     last_decision_at = time.monotonic()
                 finally:
                     current_image = None

@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from itertools import pairwise
 from pathlib import Path
+from uuid import uuid4
 
 import cv2
 from vision.image_io import Image, write_image, write_text_atomic
-from vision.model import BoardResult, ChainEndpointResult
+from vision.model import BoardResult, ChainEndpointResult, ChainMovePositions
 from vision.recognizer import BoardRecognizer
 from vision.report import DRAW_COLORS, annotate_board
 
@@ -82,14 +83,40 @@ class BoardPreviewer:
         write_preview_report(image, board, preview, self.destination, stem)
         return preview
 
-    def recognize_chain_endpoint(self, image: Image, board: BoardResult) -> ChainEndpointResult | None:
-        """只在当前截图中查找连线菱形，不重新定位或复用动态棋子。"""
+    def recognize_chain_endpoint(
+        self, image: Image, board: BoardResult, *, move: ChainMovePositions | None = None
+    ) -> ChainEndpointResult | None:
+        """在新截图中确认菱形落点，不把规划帧对象关联到新截图。"""
         if self._recognizer is None:
             self._recognizer = BoardRecognizer(self.profile_path)
         endpoint_recognizer = self._recognizer.endpoint_recognizer
         if endpoint_recognizer is None:
             return None
-        return endpoint_recognizer.analyze(image, board)
+        current_frame = replace(board, frame_id=uuid4().hex, objects=[], chain_endpoint=None)
+        return endpoint_recognizer.analyze(image, current_frame, move=move)
+
+    def save_link_failure(
+        self,
+        image: Image | None,
+        board: BoardResult,
+        move: ChainMovePositions,
+        result: ChainEndpointResult | None,
+        details: dict[str, object],
+    ) -> None:
+        """保留最近一次未确认移动的现场，不无限积累截图。"""
+        report = {
+            "planned_frame_id": board.frame_id,
+            "move": asdict(move),
+            "recognition": asdict(result) if result is not None else None,
+            **details,
+        }
+        if image is not None:
+            write_image(self.destination / "latest-link-failure.png", image)
+        report["screenshot_available"] = image is not None
+        write_text_atomic(
+            self.destination / "latest-link-failure.json",
+            json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
+        )
 
     def analyze(self, image: Image, frame_id: str, *, lightweight: bool = False, stem: str = "latest") -> RoutePreview:
         """兼容旧接口，依次识别棋盘并生成路线预演。"""

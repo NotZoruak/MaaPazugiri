@@ -13,8 +13,8 @@ from utils import logger
 from utils.params import parse_params
 
 STAGE_OCR_ROI = [0, 182, 720, 331]
-MAX_CHANGED_SWIPES = 10
 MAX_UNCHANGED_SWIPES = 10
+SWIPE_SEGMENT_DURATION_MS = 500
 STAGE_PATTERN = re.compile(r"\s*(\d+)\s*[-－—−]\s*(\d+)\s*")
 
 
@@ -42,16 +42,20 @@ class FindTargetStageAction(CustomAction):
             current_image = context.tasker.controller.post_screencap().wait().get()
             if not current_image.size:
                 raise RuntimeError("无法获取当前页面截图")
-            changed_swipes = 0
             unchanged_swipes = 0
             stages = self._recognize_stages(context, current_image)
+            logged_signature: tuple[tuple[int, int], ...] | None = None
 
             while True:
                 if not stages:
                     raise RuntimeError("未能从当前页面识别出关卡编号")
 
-                stage_texts = [stage.text for stage in stages]
-                logger.info(f"当前页面识别到关卡：{'、'.join(stage_texts)}")
+                current_signature = self._signature(stages)
+                if current_signature != logged_signature:
+                    stage_texts = [stage.text for stage in stages]
+                    logger.info(f"当前页面识别到关卡：{'、'.join(stage_texts)}")
+                    logged_signature = current_signature
+
                 target_result = next(
                     (stage for stage in stages if (stage.chapter, stage.stage) == target),
                     None,
@@ -65,9 +69,6 @@ class FindTargetStageAction(CustomAction):
                 maximum = max(stage_numbers)
                 if minimum < target < maximum:
                     raise RuntimeError(f"目标关卡 {target[0]}-{target[1]} 位于当前识别范围内，但页面未识别到该关卡")
-                if changed_swipes >= MAX_CHANGED_SWIPES:
-                    raise RuntimeError(f"已达到识别结果变化的滑动上限：{MAX_CHANGED_SWIPES} 次")
-
                 if target < minimum:
                     start, horizontal_end = (50, 400), (650, 400)
                 elif target > maximum:
@@ -87,13 +88,10 @@ class FindTargetStageAction(CustomAction):
 
                 if updated_signature == previous_signature:
                     unchanged_swipes += 1
-                    logger.info(f"滑动后识别结果未变化，继续尝试（{unchanged_swipes}/{MAX_UNCHANGED_SWIPES}）")
                     if unchanged_swipes >= MAX_UNCHANGED_SWIPES:
                         raise RuntimeError(f"连续 {MAX_UNCHANGED_SWIPES} 次滑动后识别结果未变化")
                 else:
-                    changed_swipes += 1
                     unchanged_swipes = 0
-                    logger.info(f"滑动后识别结果已变化（{changed_swipes}/{MAX_CHANGED_SWIPES}）")
                 stages = updated_stages
         except Exception as error:
             logger.error(f"查找目标关卡失败：{error}")
@@ -178,18 +176,18 @@ class FindTargetStageAction(CustomAction):
         horizontal_end: tuple[int, int],
     ) -> None:
         controller = context.tasker.controller
-        try:
-            points = (start, horizontal_end, (horizontal_end[0], horizontal_end[1] + 200))
-            for index, point in enumerate(points):
-                if index == 0:
-                    job = controller.post_touch_down(*point)
-                else:
-                    job = controller.post_touch_move(*point)
-                if not job.wait().succeeded:
-                    raise RuntimeError("执行 L 形滑动手势失败")
-        finally:
-            if not controller.post_touch_up().wait().succeeded:
-                raise RuntimeError("释放滑动触点失败")
+        vertical_end = (horizontal_end[0], horizontal_end[1] + 200)
+        for segment_start, segment_end in ((start, horizontal_end), (horizontal_end, vertical_end)):
+            if (
+                not controller.post_swipe(
+                    *segment_start,
+                    *segment_end,
+                    SWIPE_SEGMENT_DURATION_MS,
+                )
+                .wait()
+                .succeeded
+            ):
+                raise RuntimeError("执行 L 形滑动手势失败")
 
     @staticmethod
     def _enter_stage(context: Context, stage: StageResult) -> None:
