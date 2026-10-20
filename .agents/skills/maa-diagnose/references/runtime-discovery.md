@@ -4,14 +4,14 @@ The diagnostic runtime is an external latest-tracking project that is not vendor
 
 ## Runtime identity
 
-| Field | Value |
-| --- | --- |
-| Upstream | [Windsland52/MaaEvidenceKit](https://github.com/Windsland52/MaaEvidenceKit), formerly `MaaDiagnosticExpert` |
-| npm package | `maa-evidence-kit@latest` |
-| Executable | `maa-evidence` |
-| Version policy | Resolve `latest`; never replace it with a historical Everything Maa pin |
-| Structured schemas | Discover from the current runtime result and upstream guidance |
-| MCP surface | Discover from the current runtime's help and configured harness |
+| Field              | Value                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Upstream           | [Windsland52/MaaEvidenceKit](https://github.com/Windsland52/MaaEvidenceKit), formerly `MaaDiagnosticExpert` |
+| npm package        | `maa-evidence-kit@latest`                                                                                   |
+| Executable         | `maa-evidence`                                                                                              |
+| Version policy     | Resolve `latest`; never replace it with a historical Everything Maa pin                                     |
+| Structured schemas | Discover from the current runtime result and upstream guidance                                              |
+| MCP surface        | Discover from the current runtime's help and configured harness                                             |
 
 The rename is the reason discovery is mandatory. Command names from older planning notes are not authoritative.
 
@@ -53,13 +53,13 @@ Do not mix surfaces inside one diagnosis, and do not fall back to a surface the 
 
 ## Failing safely
 
-| Condition | Result |
-| --- | --- |
-| No surface resolves | `status: error`, `failure_owner: user`, `stop_reason: diagnostic-runtime-unavailable` |
-| Guidance or help cannot be read | `status: error`, `failure_owner: user`, `stop_reason: diagnostic-runtime-unavailable` |
-| Discovered schema id is unknown | `status: error`, `failure_owner: user`, `stop_reason: diagnostic-contract-unsupported`; do not guess field meanings |
-| Runtime reports an unsupported host | `status: error`, `failure_owner: user`, `stop_reason: diagnostic-runtime-host-unsupported` |
-| Command exits non-zero | Treat it as a tool failure, keep stderr as evidence, and do not present it as a project defect |
+| Condition                           | Result                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| No surface resolves                 | `status: error`, `failure_owner: user`, `stop_reason: diagnostic-runtime-unavailable`                               |
+| Guidance or help cannot be read     | `status: error`, `failure_owner: user`, `stop_reason: diagnostic-runtime-unavailable`                               |
+| Discovered schema id is unknown     | `status: error`, `failure_owner: user`, `stop_reason: diagnostic-contract-unsupported`; do not guess field meanings |
+| Runtime reports an unsupported host | `status: error`, `failure_owner: user`, `stop_reason: diagnostic-runtime-host-unsupported`                          |
+| Command exits non-zero              | Treat it as a tool failure, keep stderr as evidence, and do not present it as a project defect                      |
 
 In every failing case, report what would unblock the diagnosis as a `next_actions` entry for the user, and keep the original failure that triggered the request unresolved rather than guessing an owner.
 

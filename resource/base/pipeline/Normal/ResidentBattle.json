@@ -6,6 +6,7 @@
     "RB_DetectWhereAmI": {
         "timeout": 120000,
         "next": [
+            "[JumpBack]BattleSettlement_NoStamina",
             "[JumpBack]AutoHeadPat_MainPage",
             "[JumpBack]MainPage_EnterSortie",
             "RB_CheckTargetChapter",
@@ -13,8 +14,8 @@
             "RB_SelectTargetChapter",
             "RB_CheckChallengeStagePage",
             "RB_CheckBattleStarted",
-            "BattleSettlement_NoStamina",
-            "[JumpBack]BattleSettlement_FailureConfirm",
+            "BattleSettlement_SuccessConfirm",
+            "BattleSettlement_FailureConfirm",
             "[JumpBack]LoginGameIcon",
             "[JumpBack]Login_TitleScreen",
             "[JumpBack]Pump_DailyReport",
@@ -161,9 +162,12 @@
         "action": {
             "type": "Custom",
             "param": {
-                "custom_action": "BattleAction"
+                "custom_action": "BattleAction",
+                "custom_action_param": {"strategy_id": "default"}
             }
-        }
+        },
+        "next": ["BattleSettlement_SuccessConfirm", "BattleSettlement_FailureConfirm"],
+        "on_error": ["RB_DetectWhereAmI"]
     },
     "RB_SelectTargetTeam": {
         "recognition": {

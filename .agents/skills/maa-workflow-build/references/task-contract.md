@@ -8,23 +8,23 @@ goal: observable outcome in one sentence
 non_goals: []
 
 start_states:
-  - id: stable-state-name
-    evidence: how the state is recognized
-    evidence_status: observed | guessed
-    evidence_artifact: screenshot, capture id, or recognition trace
-  - id: unknown-state
-    evidence: unexpected or insufficient observation
-    evidence_status: observed | guessed
+    - id: stable-state-name
+      evidence: how the state is recognized
+      evidence_status: observed | guessed
+      evidence_artifact: screenshot, capture id, or recognition trace
+    - id: unknown-state
+      evidence: unexpected or insufficient observation
+      evidence_status: observed | guessed
 
 success_states:
-  - id: completed-state
-    evidence: observable postcondition
-    evidence_status: observed | guessed
-    evidence_artifact: screenshot, capture id, or recognition trace
+    - id: completed-state
+      evidence: observable postcondition
+      evidence_status: observed | guessed
+      evidence_artifact: screenshot, capture id, or recognition trace
 
 failure_states:
-  - id: bounded-failure
-    response: recover | stop | request-user
+    - id: bounded-failure
+      response: recover | stop | request-user
 
 constraints: []
 allowed_side_effects: []
@@ -33,15 +33,15 @@ forbidden_side_effects: []
 facts: []
 user_decisions: []
 assumptions:
-  - statement: reversible working assumption
-    validation: how and when to verify it
+    - statement: reversible working assumption
+      validation: how and when to verify it
 open_questions: []
 
 acceptance_criteria:
-  - id: AC-1
-    behavior: externally observable behavior
-    evidence_required: test, screenshot, log, graph, or file inspection
-    required: true
+    - id: AC-1
+      behavior: externally observable behavior
+      evidence_required: test, screenshot, log, graph, or file inspection
+      required: true
 ```
 
 ## Contract rules
@@ -62,43 +62,43 @@ acceptance_criteria:
 ```yaml
 goal: Resume the original task after using at most one owned normal stamina item when stamina is insufficient.
 non_goals:
-  - Buy stamina items.
-  - Spend premium currency.
+    - Buy stamina items.
+    - Spend premium currency.
 start_states:
-  - id: original-task
-    evidence: the task entry or its stable pre-action screen is recognized
-    evidence_status: observed
-    evidence_artifact: capture-01 main screen
-  - id: stamina-insufficient-dialog
-    evidence: the insufficient-stamina message is recognized
-    evidence_status: observed
-    evidence_artifact: capture-03 dialog
-  - id: recovery-dialog
-    evidence: the owned normal item and its use control are recognized
-    evidence_status: observed
-    evidence_artifact: capture-04 item list
-  - id: unknown-state
-    evidence: none of the supported stable states is recognized
-    evidence_status: observed
+    - id: original-task
+      evidence: the task entry or its stable pre-action screen is recognized
+      evidence_status: observed
+      evidence_artifact: capture-01 main screen
+    - id: stamina-insufficient-dialog
+      evidence: the insufficient-stamina message is recognized
+      evidence_status: observed
+      evidence_artifact: capture-03 dialog
+    - id: recovery-dialog
+      evidence: the owned normal item and its use control are recognized
+      evidence_status: observed
+      evidence_artifact: capture-04 item list
+    - id: unknown-state
+      evidence: none of the supported stable states is recognized
+      evidence_status: observed
 success_states:
-  - id: resumed
-    evidence: stamina increased or the insufficient dialog disappeared, and the original task resumed
-    evidence_status: observed
-    evidence_artifact: capture-06 after item use
+    - id: resumed
+      evidence: stamina increased or the insufficient dialog disappeared, and the original task resumed
+      evidence_status: observed
+      evidence_artifact: capture-06 after item use
 constraints:
-  - Never purchase an item or spend premium currency.
-  - Never repeat consumption after an unverified attempt.
+    - Never purchase an item or spend premium currency.
+    - Never repeat consumption after an unverified attempt.
 acceptance_criteria:
-  - id: AC-1
-    behavior: Sufficient stamina follows the no-op path.
-    evidence_required: behavioral test
-    required: true
-  - id: AC-2
-    behavior: An owned normal item is used at most once and recovery is observed.
-    evidence_required: authorized end-to-end trace
-    required: true
-  - id: AC-3
-    behavior: Missing items, paid-only recovery, and ambiguous recognition stop safely.
-    evidence_required: failure-path tests
-    required: true
+    - id: AC-1
+      behavior: Sufficient stamina follows the no-op path.
+      evidence_required: behavioral test
+      required: true
+    - id: AC-2
+      behavior: An owned normal item is used at most once and recovery is observed.
+      evidence_required: authorized end-to-end trace
+      required: true
+    - id: AC-3
+      behavior: Missing items, paid-only recovery, and ambiguous recognition stop safely.
+      evidence_required: failure-path tests
+      required: true
 ```

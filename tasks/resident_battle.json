@@ -4,8 +4,8 @@
             "name": "ResidentBattle",
             "label": "常驻作战",
             "entry": "ResidentBattle",
-            "option": ["选择章节", "选择部队", "体力不足时展开恢复界面", "使用当日限定体力回复"],
-            "doc": ["重复次数可在任务设置中调整；选择章节后，可在对应的关卡下拉框中选择目标关卡，并选择目标部队。体力不足时展开恢复界面和使用当日限定体力回复默认关闭；使用当日限定体力回复时会自动展开恢复界面。"],
+            "option": ["选择章节", "选择部队", "选择作战策略", "使用体力回复药", "碎玉换体"],
+            "doc": ["重复次数可在任务设置中调整；选择章节后，可在对应的关卡下拉框中选择目标关卡，并选择目标部队和作战策略。使用体力回复药和碎玉换体默认关闭。"],
             "repeatable": true,
             "repeat_count": 1
         }
@@ -14,7 +14,6 @@
         "选择章节": {
             "type": "select",
             "label": "选择章节",
-            "description": "选择常驻作战的目标章节。",
             "cases": [
                 {
                     "name": "Chapter1",
@@ -79,7 +78,6 @@
         "选择关卡_第1章": {
             "type": "select",
             "label": "选择关卡",
-            "description": "选择第1章的常驻作战目标关卡。",
             "cases": [
                 {
                     "name": "Stage1_2",
@@ -231,7 +229,6 @@
         "选择关卡_第2章": {
             "type": "select",
             "label": "选择关卡",
-            "description": "选择第2章的常驻作战目标关卡。",
             "cases": [
                 {
                     "name": "Stage2_2",
@@ -473,7 +470,6 @@
         "选择关卡_第3章": {
             "type": "select",
             "label": "选择关卡",
-            "description": "选择第3章的常驻作战目标关卡。",
             "cases": [
                 {
                     "name": "Stage3_2",
@@ -835,14 +831,35 @@
             ],
             "default_case": "Team1"
         },
-        "体力不足时展开恢复界面": {
+        "选择作战策略": {
+            "type": "select",
+            "label": "选择作战策略",
+            "description": "选择用于常驻作战的策略。策略列表从 config/strategies 文件读取；default 为内置策略。",
+            "cases": [
+                {
+                    "name": "default",
+                    "label": "默认策略",
+                    "pipeline_override": {
+                        "RB_RunBattle": {
+                            "action": {
+                                "param": {
+                                    "custom_action_param": {"strategy_id": "default"}
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "default"
+        },
+        "使用体力回复药": {
             "type": "switch",
-            "label": "体力不足时展开恢复界面",
-            "description": "开启后，识别到体力不足时点击加号展开体力恢复界面。",
+            "label": "使用体力回复药",
             "cases": [
                 {
                     "name": "Yes",
                     "label": "开启",
+                    "option": ["使用当日限定1体力回复药"],
                     "pipeline_override": {
                         "BattleSettlement_OpenStaminaRecovery": {
                             "enabled": true
@@ -851,20 +868,14 @@
                 },
                 {
                     "name": "No",
-                    "label": "关闭",
-                    "pipeline_override": {
-                        "BattleSettlement_OpenStaminaRecovery": {
-                            "enabled": false
-                        }
-                    }
+                    "label": "关闭"
                 }
             ],
             "default_case": "No"
         },
-        "使用当日限定体力回复": {
+        "使用当日限定1体力回复药": {
             "type": "switch",
-            "label": "使用当日限定体力回复",
-            "description": "开启后，在恢复界面点击当日限定的1体力回复选项。",
+            "label": "使用当日限定1体力回复药",
             "cases": [
                 {
                     "name": "Yes",
@@ -872,23 +883,48 @@
                     "pipeline_override": {
                         "BattleSettlement_UseDailyStaminaRecovery": {
                             "enabled": true
-                        },
-                        "BattleSettlement_OpenStaminaRecovery": {
-                            "enabled": true
                         }
                     }
                 },
                 {
                     "name": "No",
-                    "label": "关闭",
-                    "pipeline_override": {
-                        "BattleSettlement_UseDailyStaminaRecovery": {
-                            "enabled": false
-                        }
-                    }
+                    "label": "关闭"
+                }
+            ],
+            "default_case": "Yes"
+        },
+        "碎玉换体": {
+            "type": "switch",
+            "label": "碎玉换体",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "开启",
+                    "option": ["最大次数"]
+                },
+                {
+                    "name": "No",
+                    "label": "关闭"
                 }
             ],
             "default_case": "No"
+        },
+        "最大次数": {
+            "type": "select",
+            "label": "最大次数",
+            "cases": [
+                {"name": "1", "label": "1"},
+                {"name": "2", "label": "2"},
+                {"name": "3", "label": "3"},
+                {"name": "4", "label": "4"},
+                {"name": "5", "label": "5"},
+                {"name": "6", "label": "6"},
+                {"name": "7", "label": "7"},
+                {"name": "8", "label": "8"},
+                {"name": "9", "label": "9"},
+                {"name": "10", "label": "10"}
+            ],
+            "default_case": "1"
         }
     }
 }

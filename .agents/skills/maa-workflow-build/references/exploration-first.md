@@ -6,10 +6,10 @@ Read this when the exploration gate is open. An unexplored scene is discovered, 
 
 The gate is mechanical. For every entry in `start_states` and `success_states` that the task contract marks `required`:
 
-| `evidence_status` | Means | Gate |
-|---|---|---|
-| `observed` | A `screencap`, `ocr`, or recognition trace captured in this task shows the state, and the run state names that artifact. | closed for this state |
-| `guessed` | Inferred from documentation, a node name, a reused component's assumed precondition, a similar game, a previous project, or model expectation. | open |
+| `evidence_status` | Means                                                                                                                                          | Gate                  |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `observed`        | A `screencap`, `ocr`, or recognition trace captured in this task shows the state, and the run state names that artifact.                       | closed for this state |
+| `guessed`         | Inferred from documentation, a node name, a reused component's assumed precondition, a similar game, a previous project, or model expectation. | open                  |
 
 One `guessed` required state opens the gate for the whole task. A reused artifact only closes the gate when it is a real capture of the current target and the run state can point at it; a plausible description is not a capture.
 
@@ -42,9 +42,9 @@ Record each hop:
 - state: stable-state-name
   artifact: screenshot path or capture identifier
   recognized:
-    text: text read on the screen
-    box: [x, y, w, h]
-    source: ocr | template | color | manual-read
+      text: text read on the screen
+      box: [x, y, w, h]
+      source: ocr | template | color | manual-read
   action: what was done to leave this state
   next_state: the state observed after the action
   notes: popups, loading screens, animations, or timing seen on the way

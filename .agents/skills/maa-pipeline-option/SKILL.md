@@ -23,12 +23,12 @@ M9A 是根目录 `interface.json` + 根目录 `tasks/**/*.json` import + `resour
 
 常见联动点如下，按项目实际协议取用，缺关键点会导致 UI 看不到选项或运行时读不到值：
 
-| # | 位置 | 内容 |
-|---|------|------|
-| 1 | option 定义处 | 主 Interface 的 `option` 字典，或主 Interface `import[]` 指向文件里的 `option` 字典 |
-| 2 | task 注册处 | 主 Interface 或 import 文件里的 task `option: []` / group / preset 引用 |
-| 3 | 主 Interface 声明资源根下的 `pipeline/**/*.json` | **预定义**目标节点（pipeline_override 不会创建节点） |
-| 4 | Python 代码（仅 Python 需要读取或执行 Custom 时必需） | `context.get_node_data()`、`argv.custom_action_param`、`argv.custom_recognition_param` 与 option 路径保持一致 |
+| #   | 位置                                                  | 内容                                                                                                          |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 1   | option 定义处                                         | 主 Interface 的 `option` 字典，或主 Interface `import[]` 指向文件里的 `option` 字典                           |
+| 2   | task 注册处                                           | 主 Interface 或 import 文件里的 task `option: []` / group / preset 引用                                       |
+| 3   | 主 Interface 声明资源根下的 `pipeline/**/*.json`      | **预定义**目标节点（pipeline_override 不会创建节点）                                                          |
+| 4   | Python 代码（仅 Python 需要读取或执行 Custom 时必需） | `context.get_node_data()`、`argv.custom_action_param`、`argv.custom_recognition_param` 与 option 路径保持一致 |
 
 > ⚠️ **pipeline_override 只做属性合并，不会凭空创建节点。** 少了第 3 步，`context.get_node_data()` 会返回 `None`，运行时静默失败。
 
@@ -45,22 +45,22 @@ M9A 是根目录 `interface.json` + 根目录 `tasks/**/*.json` import + `resour
 
 ## 4 种 type 速查
 
-| type | 选择 | override 字段 | 节点预定义形态 |
-|------|------|---------------|---------------|
-| `select` | 单选互斥 | `expected` | `recognition: "OCR"` + `expected: [...]` |
-| `switch` | 二元 Yes/No | `enabled`（或项目已有的 `enable`） | `{"enabled": bool}` / `{"enable": bool}` |
-| `input` | 自由文本 | `{name}` 占位符可注入目标字段 | 按最终读取方预定义 `expected` 或 `action.param.custom_action_param` |
-| `checkbox` | 多选 | `enabled` | `{"enabled": false}` |
+| type       | 选择        | override 字段                      | 节点预定义形态                                                      |
+| ---------- | ----------- | ---------------------------------- | ------------------------------------------------------------------- |
+| `select`   | 单选互斥    | `expected`                         | `recognition: "OCR"` + `expected: [...]`                            |
+| `switch`   | 二元 Yes/No | `enabled`（或项目已有的 `enable`） | `{"enabled": bool}` / `{"enable": bool}`                            |
+| `input`    | 自由文本    | `{name}` 占位符可注入目标字段      | 按最终读取方预定义 `expected` 或 `action.param.custom_action_param` |
+| `checkbox` | 多选        | `enabled`                          | `{"enabled": false}`                                                |
 
 ## 选哪个模式？
 
-| 你的需求 | 推荐模式 |
-|---------|---------|
-| 启用/禁用一个 Python 业务函数 | **A**（switch + Flag 节点 + Python 读 flag） |
-| 从多个互斥选项里选一个值 | **B**（select + OCR 节点） |
-| 同时启用多个独立的功能模块 | **C**（checkbox + 多个 Flag 节点） |
-| 用户输入自定义文本 | **D**（input + 占位符注入） |
-| 切换行为（点哪个按钮 / 走哪条 next 链）但不想改 Python | **E**（pure override 现有节点字段） |
+| 你的需求                                               | 推荐模式                                     |
+| ------------------------------------------------------ | -------------------------------------------- |
+| 启用/禁用一个 Python 业务函数                          | **A**（switch + Flag 节点 + Python 读 flag） |
+| 从多个互斥选项里选一个值                               | **B**（select + OCR 节点）                   |
+| 同时启用多个独立的功能模块                             | **C**（checkbox + 多个 Flag 节点）           |
+| 用户输入自定义文本                                     | **D**（input + 占位符注入）                  |
+| 切换行为（点哪个按钮 / 走哪条 next 链）但不想改 Python | **E**（pure override 现有节点字段）          |
 
 > **经验法则**：行为只等于“覆盖已有节点字段”时优先 pure override；一旦需要运行时数据、计数、动态识别、失败策略或跨节点状态，改用 Flag + Python / CustomAction / CustomRecognition。目标是让改动面和逻辑复杂度匹配。
 
@@ -70,12 +70,12 @@ M9A 是根目录 `interface.json` + 根目录 `tasks/**/*.json` import + `resour
 
 常见对应关系:
 
-| UI override 写什么 | Python 应该读什么 | 备注 |
-|-------------------|-------------------|------|
-| `{ "Flag_X": { "enabled": true } }` | `node.get("enabled")` | MaaFramework 标准启停字段 |
-| `{ "Flag_X": { "enable": true } }` | `node.get("enable")` 或兼容 helper | 仅用于已有项目约定/历史字段 |
-| `{ "SomeOCR": { "expected": ["A"] } }` | `node["recognition"]["param"]["expected"][0]` | 节点必须预定义为 OCR |
-| `{ "SomeNode": { "next": ["A"] } }` | 不读，直接由 pipeline 行为生效 | pure override 模式 |
+| UI override 写什么                     | Python 应该读什么                             | 备注                        |
+| -------------------------------------- | --------------------------------------------- | --------------------------- |
+| `{ "Flag_X": { "enabled": true } }`    | `node.get("enabled")`                         | MaaFramework 标准启停字段   |
+| `{ "Flag_X": { "enable": true } }`     | `node.get("enable")` 或兼容 helper            | 仅用于已有项目约定/历史字段 |
+| `{ "SomeOCR": { "expected": ["A"] } }` | `node["recognition"]["param"]["expected"][0]` | 节点必须预定义为 OCR        |
+| `{ "SomeNode": { "next": ["A"] } }`    | 不读，直接由 pipeline 行为生效                | pure override 模式          |
 
 **不要字段错位**：例如 UI 写 `AutoSky_CloneConfig.enable`，Python 却调用读取 `expected` 的函数；或 UI 写 `expected`，Python 只看 `enabled`。这种错误不会报 JSON 语法错，但运行时会表现为"选项没生效"。
 
@@ -103,31 +103,31 @@ if _node_enabled(context, "OptionalNode"):
 
 ### 命名约定
 
-| 角色 | 风格 | 示例 |
-|------|------|------|
-| option 名（用户可见） | 中文动词起头 | `开启5月城堡相亲`、`选择刷取任务国家` |
-| 节点名（pipeline） | 英文 | `Flag_EnableMarryTask`、`EnterCity`、`检测_科内塔之怒` |
-| switch case 名 | **严格 `Yes` / `No`** | 不要用 `true/false` 或 `是/否`（Client 解析跨平台不一致） |
+| 角色                  | 风格                  | 示例                                                      |
+| --------------------- | --------------------- | --------------------------------------------------------- |
+| option 名（用户可见） | 中文动词起头          | `开启5月城堡相亲`、`选择刷取任务国家`                     |
+| 节点名（pipeline）    | 英文                  | `Flag_EnableMarryTask`、`EnterCity`、`检测_科内塔之怒`    |
+| switch case 名        | **严格 `Yes` / `No`** | 不要用 `true/false` 或 `是/否`（Client 解析跨平台不一致） |
 
 ### 默认值策略
 
 > **保持现有行为是底线。** 老用户不该因新选项而行为改变。
 
-| 场景 | 推荐 default |
-|------|-------------|
+| 场景                 | 推荐 default               |
+| -------------------- | -------------------------- |
 | 新开关让功能默认关闭 | `No`（明确告知用户"关了"） |
-| 新开关让功能默认开启 | `Yes`（保留旧行为） |
-| 旧代码无条件开启 | `Yes`（兼容） |
-| 旧代码无条件关闭 | `No`（兼容） |
+| 新开关让功能默认开启 | `Yes`（保留旧行为）        |
+| 旧代码无条件开启     | `Yes`（兼容）              |
+| 旧代码无条件关闭     | `No`（兼容）               |
 
 ---
 
 ## 读取位置
 
-| 决策类型 | 放哪读 | 理由 |
-|---------|-------|------|
-| 是否执行某段流程 | 业务函数入口 `handle_xxx` | 与现有同名函数风格一致，子函数自治 |
-| 用哪个值做主逻辑 | 任务入口 `run` 或 `YearlyTaskProcessor` | 一次读取、多次复用 |
+| 决策类型         | 放哪读                                  | 理由                               |
+| ---------------- | --------------------------------------- | ---------------------------------- |
+| 是否执行某段流程 | 业务函数入口 `handle_xxx`               | 与现有同名函数风格一致，子函数自治 |
+| 用哪个值做主逻辑 | 任务入口 `run` 或 `YearlyTaskProcessor` | 一次读取、多次复用                 |
 
 > **反例**：不要把"是否开启 X"的判断堆在通用 `dispatch` 函数（如 `handle_festival_by_month`）里。每加一个开关 dispatch 就多一个 `if-elif`，越来越臃肿。
 
@@ -154,26 +154,26 @@ if _node_enabled(context, "OptionalNode"):
 
 1. **JSON 语法检查**
 
-   ```bash
-   python -c "import json; json.load(open('<main-interface-or-import>', encoding='utf-8'))"
-   python -c "import json; json.load(open('<declared-pipeline-file>', encoding='utf-8'))"
-   ```
+    ```bash
+    python -c "import json; json.load(open('<main-interface-or-import>', encoding='utf-8'))"
+    python -c "import json; json.load(open('<declared-pipeline-file>', encoding='utf-8'))"
+    ```
 
 2. **资源加载检查**
 
-   ```bash
-   <project-locked-validation-command>  # 例如 M9A: pnpm check
-   ```
+    ```bash
+    <project-locked-validation-command>  # 例如 M9A: pnpm check
+    ```
 
-   期望采用项目已有检查的通过结果；JSONC 文件必须用支持 JSONC 的解析方式，不要用严格 JSON 误判。
+    期望采用项目已有检查的通过结果；JSONC 文件必须用支持 JSONC 的解析方式，不要用严格 JSON 误判。
 
 3. **Pipeline 节点测试**（可选）
 
-   ```python
-   data = context.get_node_data("Flag_EnableSailingFestivalPurchase")
-   assert data is not None, "节点未预定义"
-   assert "enabled" in data
-   ```
+    ```python
+    data = context.get_node_data("Flag_EnableSailingFestivalPurchase")
+    assert data is not None, "节点未预定义"
+    assert "enabled" in data
+    ```
 
 4. **端到端验证**：用 Pipeline Testing Skill 跑一次实际流程
 

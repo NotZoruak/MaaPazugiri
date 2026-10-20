@@ -6,10 +6,12 @@ from collections.abc import Callable
 
 import numpy as np
 from maa.define import RecognitionDetail
-from maa.pipeline import JColorMatch, JRecognitionParam, JRecognitionType, JTemplateMatch
+from maa.pipeline import JOCR, JColorMatch, JRecognitionParam, JRecognitionType, JTemplateMatch
 from numpy.typing import NDArray
 
+from .ranbu import matches_ranbu_marker
 from .session import BattleState
+from .strategy import parse_hp_percent
 
 Image = NDArray[np.uint8]
 RECOGNITIONS: dict[str, tuple[JRecognitionType, JRecognitionParam]] = {
@@ -31,6 +33,26 @@ RECOGNITIONS: dict[str, tuple[JRecognitionType, JRecognitionParam]] = {
     ),
 }
 NativeRecognition = Callable[[JRecognitionType, JRecognitionParam, Image], RecognitionDetail | None]
+
+HP_REGIONS: dict[str, tuple[int, int, int, int]] = {
+    "enemy": (219, 10, 285, 27),
+    "ally": (206, 1193, 382, 33),
+}
+
+
+def recognize_hp_percent(recognize: NativeRecognition, image: Image, side: str) -> float | None:
+    """在同一张核对过的战斗截图中 OCR 指定一方的 A/B 血量并换算百分比。"""
+    roi = HP_REGIONS.get(side)
+    if roi is None or image.shape != (1280, 720, 3) or image.dtype != np.uint8:
+        return None
+    detail = recognize(JRecognitionType.OCR, JOCR(roi=roi, order_by="Horizontal"), image)
+    if detail is None:
+        return None
+    texts = [getattr(result, "text", "") for result in detail.all_results]
+    parsed = [value for text in texts if (value := parse_hp_percent(text)) is not None]
+    if parsed:
+        return parsed[0]
+    return parse_hp_percent("".join(texts))
 
 
 class BattleFrameRecognizer:
@@ -61,4 +83,10 @@ class BattleFrameRecognizer:
             return BattleState.DEFEAT
         if not self._hit("gear", image):
             return BattleState.UNKNOWN
-        return BattleState.OPERABLE if self._hit("brightness", image) else BattleState.INOPERABLE
+        operable = self._hit("brightness", image)
+        ranbu = matches_ranbu_marker(image)
+        if operable and ranbu:
+            return BattleState.UNKNOWN
+        if ranbu:
+            return BattleState.RANBU
+        return BattleState.OPERABLE if operable else BattleState.INOPERABLE

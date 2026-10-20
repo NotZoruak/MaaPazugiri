@@ -18,15 +18,15 @@ node scripts/find-create-maa-project-skill.mjs --root PATH
 
 The locator validates the frontmatter `name: create-maa-project`, excludes Everything Maa's wrapper copy, and returns JSON with:
 
-| Field | Meaning |
-| --- | --- |
-| `versionPolicy` / `guidanceAuthority` | Runtime follows `latest`; guidance follows the latest formal release |
-| `status` | `found`, `package-without-skill`, or `not-found`; local candidates are diagnostics only |
-| `skillPath` | Local `SKILL.md`, when found |
-| `packageRoot` / `packageVersion` | npm package metadata, when applicable |
-| `skillVersion` | Version declared by the local Skill, when present |
-| `latestReleaseUrl` | Latest formal-release handoff entry point |
-| `defaultBranchReadmeUrl` / `defaultBranchSkillUrl` | Disclosed default-branch fallback routes |
+| Field                                              | Meaning                                                                                 |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `versionPolicy` / `guidanceAuthority`              | Runtime follows `latest`; guidance follows the latest formal release                    |
+| `status`                                           | `found`, `package-without-skill`, or `not-found`; local candidates are diagnostics only |
+| `skillPath`                                        | Local `SKILL.md`, when found                                                            |
+| `packageRoot` / `packageVersion`                   | npm package metadata, when applicable                                                   |
+| `skillVersion`                                     | Version declared by the local Skill, when present                                       |
+| `latestReleaseUrl`                                 | Latest formal-release handoff entry point                                               |
+| `defaultBranchReadmeUrl` / `defaultBranchSkillUrl` | Disclosed default-branch fallback routes                                                |
 
 Search precedence is an explicit candidate, then an installed standalone Skill, then a project npm package, then npm/pnpm globals. Package metadata is not a substitute for the runtime version; query the CLI itself with `--cli-version`.
 

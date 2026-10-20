@@ -27,46 +27,46 @@ M9A is a standard root-Interface project: the root `interface.json` imports `tas
 ## Core Workflow
 
 1. Locate the target project root.
-   - Prefer a user-provided path.
-   - Otherwise look for the main Interface using the Project Discovery Contract above.
-   - Treat the loaded Interface bundle as the source of resource groups, controller types, task entries, options, and agent settings.
+    - Prefer a user-provided path.
+    - Otherwise look for the main Interface using the Project Discovery Contract above.
+    - Treat the loaded Interface bundle as the source of resource groups, controller types, task entries, options, and agent settings.
 
 2. Run the analyzer in summary mode first:
 
-   ```bash
-   python "<skill-dir>/scripts/analyze_pipeline_project.py" "<project-root>"
-   ```
+    ```bash
+    python "<skill-dir>/scripts/analyze_pipeline_project.py" "<project-root>"
+    ```
 
 3. Inspect the summary for:
-   - resource groups and task entries from `interface.json`
-   - Interface import diagnostics and warnings
-   - pipeline file count and unique node count
-   - high in-degree common nodes
-   - Back / Return / Exit / Close / Confirm / Wait / Flag nodes
-   - entry task flowcharts and primary path previews
-   - unresolved references, isolated nodes, and cycle candidates
-   - image directory inventory and TemplateMatch usage
-   - Python `context.run_task()` / `run_recognition()` external entries
-   - orphan candidates after excluding interface and Python entry points
-   - agent script paths (declared `child_args` resolution + project_root 与 4 层 ancestor 约定入口候选 + 交叉对比)
+    - resource groups and task entries from `interface.json`
+    - Interface import diagnostics and warnings
+    - pipeline file count and unique node count
+    - high in-degree common nodes
+    - Back / Return / Exit / Close / Confirm / Wait / Flag nodes
+    - entry task flowcharts and primary path previews
+    - unresolved references, isolated nodes, and cycle candidates
+    - image directory inventory and TemplateMatch usage
+    - Python `context.run_task()` / `run_recognition()` external entries
+    - orphan candidates after excluding interface and Python entry points
+    - agent script paths (declared `child_args` resolution + project_root 与 4 层 ancestor 约定入口候选 + 交叉对比)
 
 Task counts describe the merged Interface bundle's total top-level `task[]` entries after imports. Separator and other display-only task entries remain counted; if a report separately claims a functional-task count, it must state the filter used.
 
 4. Generate `basic_info.md` only after the summary looks reasonable:
 
-   ```bash
-   python "<skill-dir>/scripts/analyze_pipeline_project.py" "<project-root>" --write-basic-info
-   ```
+    ```bash
+    python "<skill-dir>/scripts/analyze_pipeline_project.py" "<project-root>" --write-basic-info
+    ```
 
-   If `basic_info.md` already exists, the script refuses to overwrite it. Use `--overwrite` only after the user explicitly confirms.
+    If `basic_info.md` already exists, the script refuses to overwrite it. Use `--overwrite` only after the user explicitly confirms.
 
 5. Report where `basic_info.md` was written and name the most important sections that still need human review.
 
 6. When handing off to another Maa skill:
-   - tell it to read `basic_info.md` section 0 and the routed sections for its task
-   - treat the document as a cache, not as source of truth
-   - re-check every touched node in current JSON/Python and every live claim on the current device
-   - if relevant source files are newer than `basic_info.md`, rerun summary mode and report staleness; do not overwrite silently
+    - tell it to read `basic_info.md` section 0 and the routed sections for its task
+    - treat the document as a cache, not as source of truth
+    - re-check every touched node in current JSON/Python and every live claim on the current device
+    - if relevant source files are newer than `basic_info.md`, rerun summary mode and report staleness; do not overwrite silently
 
 ## What The Analyzer Reads
 
@@ -99,7 +99,7 @@ Strip bracket prefixes when resolving the target node, but preserve the prefix i
 
 ### Node-level `anchor` declarations
 
-A node's own top-level `anchor` field (`string | list | object`) is a distinct concept from the `next`-element `anchor` attribute above: it declares an anchor *name* that `[Anchor]X` references resolve against, not a reference itself.
+A node's own top-level `anchor` field (`string | list | object`) is a distinct concept from the `next`-element `anchor` attribute above: it declares an anchor _name_ that `[Anchor]X` references resolve against, not a reference itself.
 
 - `"anchor": "Cooking"` — anchor `Cooking` now targets this node.
 - `"anchor": ["A", "B"]` — several anchors now target this node.

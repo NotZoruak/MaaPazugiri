@@ -38,8 +38,20 @@
                 "template": "region/体力恢复页面.png"
             }
         },
-        "next": ["BattleSettlement_UseDailyStaminaRecovery"],
+        "next": [
+            "BattleSettlement_UseDailyStaminaRecovery",
+            "BattleSettlement_NoStaminaRecoveryItems"
+        ],
         "on_error": ["[Anchor]Hub"]
+    },
+    "BattleSettlement_NoStaminaRecoveryItems": {
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "CompleteCurrentTaskAction",
+                "custom_action_param": {"reason": "无可用体力回复道具"}
+            }
+        }
     },
     "BattleSettlement_UseDailyStaminaRecovery": {
         "enabled": false,
@@ -74,7 +86,7 @@
                 "target": [456, 1174, 114, 57]
             }
         },
-        "next": ["BattleSettlement_DailyStaminaRecoverySucceeded"],
+        "next": ["BattleSettlement_ConfirmDailyStaminaRecovery", "BattleSettlement_DailyStaminaRecoverySucceeded"],
         "on_error": ["[Anchor]Hub"]
     },
     "BattleSettlement_DailyStaminaRecoverySucceeded": {
@@ -86,7 +98,6 @@
             }
         },
         "inverse": true,
-        "next": ["[Anchor]Hub"],
         "focus": {
             "Node.Recognition.Succeeded": "已成功使用当日限定体力回复。"
         }
@@ -100,7 +111,58 @@
             }
         }
     },
+    "BattleSettlement_SuccessConfirm": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [88, 294, 197, 141],
+                "template": "region/战斗结算评级.png"
+            }
+        },
+        "next": ["BattleSettlement_SuccessConfirmClick"],
+        "on_error": ["[Anchor]Hub"],
+        "focus": {
+            "Node.Recognition.Succeeded": "已确认战斗胜利"
+        }
+    },
+    "BattleSettlement_SuccessConfirmClick": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [270, 1141, 190, 76],
+                "template": "button/确认.png"
+            }
+        },
+        "action": {"type": "Click"},
+        "next": ["BattleSettlement_SuccessConfirmClick", "BattleSettlement_SuccessConfirmClickDone"],
+        "on_error": ["[Anchor]Hub"]
+    },
+    "BattleSettlement_SuccessConfirmClickDone": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [270, 1141, 190, 76],
+                "template": "button/确认.png"
+            }
+        },
+        "inverse": true,
+        "action": {"type": "Click"}
+    },
     "BattleSettlement_FailureConfirm": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [64, 432, 601, 142],
+                "template": "region/战斗失败确认.png"
+            }
+        },
+        "next": ["BattleSettlement_FailureConfirmClick"],
+        "on_error": ["[Anchor]Hub"],
+        "focus": {
+            "Node.Recognition.Succeeded": "已确认战斗失败"
+        }
+    },
+    "BattleSettlement_FailureConfirmClick": {
         "recognition": {
             "type": "TemplateMatch",
             "param": {
@@ -114,7 +176,8 @@
                 "target": [140, 1175, 135, 57]
             }
         },
-        "next": ["BattleSettlement_FailureConfirm", "BattleSettlement_FailureRetreat"]
+        "next": ["BattleSettlement_FailureConfirmClick", "BattleSettlement_FailureRetreat"],
+        "on_error": ["[Anchor]Hub"]
     },
     "BattleSettlement_FailureRetreat": {
         "recognition": {
@@ -122,6 +185,19 @@
             "param": {
                 "roi": [102, 1172, 210, 58],
                 "template": "button/战斗失败撤退.png"
+            }
+        },
+        "action": {"type": "Click"},
+        "next": ["BattleSettlement_FailureRetreat", "BattleSettlement_FailureRetreatDone"],
+        "on_error": ["[Anchor]Hub"]
+    },
+
+    "BattleSettlement_FailureRetreatDone": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [270, 1141, 190, 76],
+                "template": "button/确认.png"
             }
         },
         "action": {"type": "Click"}

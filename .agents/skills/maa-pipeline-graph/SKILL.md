@@ -40,13 +40,13 @@ rg --no-ignore --files -g '!.git/**' -g '!.venv/**' |
 
 如果项目已有图谱脚本，通常会产出这些文件；如果项目没有脚本，本 skill 只负责设计这些产物或生成临时草图，不默认创建工具：
 
-| 文件 | 用途 | 语法 |
-|------|------|------|
-| `index.html` | 主目录(卡片导航 + 全局统计) | HTML 卡片 |
-| `pipeline_overview.html` | 全局状态机，按实际文件数生成复合状态 | `stateDiagram-v2` |
-| `pipeline_external_entries.html` | Python → Pipeline 调用图 | `flowchart` |
-| `pipeline_utility_usage.html` | 工具节点反向引用图 | `flowchart` |
-| `pipeline_<file>.html` × N | 每个实际 Pipeline 文件的状态机细节 | `stateDiagram-v2` |
+| 文件                             | 用途                                 | 语法              |
+| -------------------------------- | ------------------------------------ | ----------------- |
+| `index.html`                     | 主目录(卡片导航 + 全局统计)          | HTML 卡片         |
+| `pipeline_overview.html`         | 全局状态机，按实际文件数生成复合状态 | `stateDiagram-v2` |
+| `pipeline_external_entries.html` | Python → Pipeline 调用图             | `flowchart`       |
+| `pipeline_utility_usage.html`    | 工具节点反向引用图                   | `flowchart`       |
+| `pipeline_<file>.html` × N       | 每个实际 Pipeline 文件的状态机细节   | `stateDiagram-v2` |
 
 多文件图谱应带顶部导航栏和主页；是否支持 `--open` / `--watch` 取决于真实脚本能力。
 
@@ -82,12 +82,14 @@ python tools/pipeline_to_mermaid.py
 ### 1️⃣ 状态机 ≠ 子例程调用:用不同语义
 
 **坑**:MaaFramework Pipeline 不是纯 FSM,有 2 种边:
+
 - `next: "X"` — 真·状态转移,`A` → `X` 后,`X` 接管
 - `[JumpBack]X` — 子例程调用,执行 `X`,**自动返回 `A`**,X 不接管
 
 **为什么重要**:如果用同一种箭头画两种边,看图的人会误以为有环。状态机会被画成"循环依赖"。
 
 **解法**:
+
 - `flowchart` 用 `==>`(粗箭头)画 `[JumpBack]`,`-->`(细箭头)画 `next`
 - `stateDiagram-v2` 用显式标签 `: calls` / `: returns`(画成两条边:调用方 → 被调方 → 调用方)
 - 永远不要把 `[JumpBack]` 画成"返回当前节点"的回环——它本就是临时离开
@@ -97,12 +99,14 @@ python tools/pipeline_to_mermaid.py
 **坑**:Pipeline 里很多节点没 `next` 指向它们(无入边),新手以为是 bug。
 
 **真相**:这些节点是**外部入口**,被两个地方调用:
+
 - Python 代码里的 `context.run_task("X")`
 - 主 Interface bundle（含 `import[]`）的 `task[].entry`（MaaPiCli 暴露给用户的入口）
 
 **解法**:扫描这两处,把调用边也画进图。
 
 **怎么扫**:
+
 - **Python**:用 `ast` 解析 `agent/**/*.py`,在 `ast.Call` 里找 `func.attr == "run_task"`,记录 `Class.method` 调用方
 - **Interface bundle**:读主 Interface 与 import 合并后的 `task[]`,每个 `entry` 字段就是用户级入口
 
@@ -113,6 +117,7 @@ python tools/pipeline_to_mermaid.py
 **举例**:`auto_task.json` 按字母序排第一,里面有 `OpenCityTaskPanel.next = ["FindCityTask_OCR"]`,但 `FindCityTask_OCR` 定义在 `city.json`(字母序更后)。处理 `auto_task.json` 时,目标还没解析,直接 `continue` 跳过这条边。
 
 **解法**:**两遍解析**:
+
 ```
 Pass 1: 扫所有文件,建立 name → file 索引
 Pass 2: 扫所有文件的 next,根据完整索引解析目标
@@ -120,12 +125,12 @@ Pass 2: 扫所有文件的 next,根据完整索引解析目标
 
 ### 4️⃣ Mermaid 语法选型:stateDiagram vs flowchart
 
-| 场景 | 选 | 为什么 |
-|------|-----|--------|
-| 真·FSM(节点 + 转移 + 初始/终止) | **`stateDiagram-v2`** | 原生支持 `[*]` 初始/终止、复合状态、转移标签 |
-| 调用图 / 反向引用图 | **`flowchart`** | stateDiagram 不支持"被谁调用"这种语义 |
-| 节点形状区分(Stadium / Circle) | **`flowchart`** | stateDiagram 形状统一,只能用 classDef 染色 |
-| 跨文件复杂关系 | **`stateDiagram-v2` + 复合状态** | `state X { ... }` 把每个文件折叠起来 |
+| 场景                            | 选                               | 为什么                                       |
+| ------------------------------- | -------------------------------- | -------------------------------------------- |
+| 真·FSM(节点 + 转移 + 初始/终止) | **`stateDiagram-v2`**            | 原生支持 `[*]` 初始/终止、复合状态、转移标签 |
+| 调用图 / 反向引用图             | **`flowchart`**                  | stateDiagram 不支持"被谁调用"这种语义        |
+| 节点形状区分(Stadium / Circle)  | **`flowchart`**                  | stateDiagram 形状统一,只能用 classDef 染色   |
+| 跨文件复杂关系                  | **`stateDiagram-v2` + 复合状态** | `state X { ... }` 把每个文件折叠起来         |
 
 **口诀**:**状态机用 stateDiagram,其他用 flowchart**。
 
@@ -136,6 +141,7 @@ Pass 2: 扫所有文件的 next,根据完整索引解析目标
 中文/emoji 节点名(如 `📲 启动游戏` 和 `📲 推年计划`)用 `re.sub(r'[^A-Za-z0-9_]', '_', name)` 过滤后,**都会变成 `iface________`**,Mermaid 解析失败,图直接黑屏。
 
 **解法**:
+
 ```python
 def mid(file: str, name: str) -> str:
     h = hash((file, name)) & 0xFFFF
@@ -149,6 +155,7 @@ def mid(file: str, name: str) -> str:
 **坑**:自动生成的 HTML 会被 git 当成"新增文件"跟踪,每次重生都会改 commit,PR diff 爆掉。
 
 **解法**:
+
 - `docs/zh_cn/graph/` 加入 `.gitignore`
 - 脚本每次**全量清空再重生**(无缓存、无 diff)
 - 队友各跑各的,互不冲突
@@ -158,6 +165,7 @@ def mid(file: str, name: str) -> str:
 **坑**:第一次版就只输出每张图,**没导航**。用户要从一个文件跳到另一个,得手动记路径或重新打开 IDE。
 
 **解法**(用户视角):
+
 - 每张 HTML 顶部固定深色 navbar(4 个常驻链接 + 当前页高亮橙色)
 - 一个 `index.html` 主目录,卡片网格展示所有图
 - 卡片显示节点数、入边/出边数(让人快速判断要不要点开看)
@@ -173,6 +181,7 @@ def mid(file: str, name: str) -> str:
 **症状**:总边数比手动数少,某些 `next` 字段在图里看不到。
 
 **排查**:
+
 1. 跑脚本时打印 `next count = 67, jumpback = 32`,如果比预期少,基本是双遍解析没做
 2. 临时加个 `assert all(target in all_names for target in nexts)` 找未解析的悬挂引用
 3. 目标节点在另一个文件且字母序靠前 → 字母序靠后的文件 `next` 引用它会丢
@@ -182,6 +191,7 @@ def mid(file: str, name: str) -> str:
 **症状**:浏览器控制台报 `SyntaxError: Duplicate id` 或图直接空白。
 
 **排查**:
+
 1. 节点名包含中文/emoji
 2. 多个节点规范化后 ASCII 形式相同
 3. **解决**:用 hash 后缀,见 5️⃣
@@ -191,6 +201,7 @@ def mid(file: str, name: str) -> str:
 **症状**:`stateDiagram-v2` 不允许节点名带 `.` 或 `-`,会解析失败。
 
 **排查**:
+
 - 节点名如 `CastleMarry_AgeCheck`(`_` 合法) OK
 - 节点名如 `BigMap-MarketStart`(`-` 非法) 必须转成 `BigMap_MarketStart`
 - **解决**:用 `re.sub(r'[^A-Za-z0-9_]', '_', name)` 转换
@@ -200,6 +211,7 @@ def mid(file: str, name: str) -> str:
 **症状**:`git status` 出现一堆 `pipeline_*.html` untracked。
 
 **排查**:
+
 1. `.gitignore` 加了 `docs/zh_cn/graph/` 吗
 2. `git check-ignore -v docs/zh_cn/graph/pipeline_marry.html` 看是否被忽略
 3. 如果没忽略,加完 gitignore 后 `git rm --cached docs/zh_cn/graph/*.html` 清理已跟踪文件
@@ -211,6 +223,7 @@ def mid(file: str, name: str) -> str:
 **不要假设参考实现一定在项目里。** 先用上面的忽略规则无关目录的发现命令查找真实脚本；只有脚本存在时才把它当实现参考。若脚本不存在，下列结构是未来实现图谱工具时的建议设计。
 
 **结构速览**:
+
 ```
 load_pipeline()         # Pass 1: 建 name→file 索引;Pass 2: 解析 next
 scan_python_calls()     # ast 扫 agent/**/*.py 的 context.run_task()
@@ -225,6 +238,7 @@ main()                  # --open / --watch 处理
 ```
 
 **改本 skill 时**:
+
 - **删改**:7️⃣ 经验任意一条 → 改对应章节
 - **新增场景**:如果要给别的项目类型(非 MaaFramework)用,把"4️⃣ Mermaid 语法"和"3️⃣ 双遍解析"通用化即可,其他都是 MaaFramework 特化
 
@@ -233,6 +247,7 @@ main()                  # --open / --watch 处理
 ## 移植到其他项目
 
 如果你的项目是其他"声明式 + 命令式"系统(比如 Airflow DAG + Python、Terraform resources + tfvars、Ansible playbook + roles),**核心思路一致**:
+
 1. 把声明式部分当 FSM(节点 + 边)
 2. 把命令式部分当外部触发器(扫 `context.run_task()` 类似物)
 3. 用双遍解析处理跨文件引用

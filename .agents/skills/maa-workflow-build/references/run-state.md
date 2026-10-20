@@ -9,21 +9,21 @@ status: success | warning | error
 summary: one-line current result
 
 current_state:
-  project: known project facts
-  runtime: observed UI or device state
-  verification: current acceptance coverage
+    project: known project facts
+    runtime: observed UI or device state
+    verification: current acceptance coverage
 
 exploration:
-  gate: open | closed
-  guessed_states: []
-  round_trip_complete: false
-  observed_transitions:
-    - state: stable-state-name
-      artifact: screenshot path or capture identifier
-      recognized: {text: read text, box: [x, y, w, h], source: ocr | template | color | manual-read}
-      action: what was done to leave this state
-      next_state: state observed after the action
-  unreachable_states: []
+    gate: open | closed
+    guessed_states: []
+    round_trip_complete: false
+    observed_transitions:
+        - state: stable-state-name
+          artifact: screenshot path or capture identifier
+          recognized: {text: read text, box: [x, y, w, h], source: ocr | template | color | manual-read}
+          action: what was done to leave this state
+          next_state: state observed after the action
+    unreachable_states: []
 
 observations: []
 assumptions: []
@@ -34,10 +34,10 @@ artifacts: []
 evidence: []
 
 recovery:
-  root_cause_hint: null
-  retry_count: 0
-  safe_retry: null
-  stop_condition: null
+    root_cause_hint: null
+    retry_count: 0
+    safe_retry: null
+    stop_condition: null
 
 stop_reason: null
 ```

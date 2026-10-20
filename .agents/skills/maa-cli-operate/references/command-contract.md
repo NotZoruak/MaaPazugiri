@@ -11,14 +11,14 @@ The package requires Python 3.10 or later and is currently alpha software. Keep 
 
 ## Runtime selection
 
-| Need | Command shape |
-| --- | --- |
-| Check local models | `--json resource status` |
+| Need                 | Command shape                                                      |
+| -------------------- | ------------------------------------------------------------------ |
+| Check local models   | `--json resource status`                                           |
 | Discover controllers | `--json device adb`, `--json device win32`, or `--json device all` |
-| Connect ADB | `--on NAME --json connect adb ADDRESS --size short:720` |
-| Connect Win32 | `--on NAME --json connect win32 TITLE_OR_HWND --size short:720` |
-| List sessions | `--json session list` |
-| Inspect daemon | `--json daemon status` |
+| Connect ADB          | `--on NAME --json connect adb ADDRESS --size short:720`            |
+| Connect Win32        | `--on NAME --json connect win32 TITLE_OR_HWND --size short:720`    |
+| List sessions        | `--json session list`                                              |
+| Inspect daemon       | `--json daemon status`                                             |
 
 Put global options such as `--json` and `--on NAME` before the subcommand.
 

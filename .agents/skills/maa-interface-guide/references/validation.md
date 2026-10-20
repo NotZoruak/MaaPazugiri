@@ -52,10 +52,10 @@ interface_version: 2
 protocol_source: <项目 schema、tag、commit 或官方 URL>
 changed_files: []
 checks:
-  - name: <检查名>
-    command: <命令或 null>
-    result: pass | warning | fail | skipped
-    evidence: <简要证据>
+    - name: <检查名>
+      command: <命令或 null>
+      result: pass | warning | fail | skipped
+      evidence: <简要证据>
 blocking_issues: []
 warnings: []
 unverified: []

@@ -15,34 +15,34 @@ failure_owner: generate | option | testing | workflow-design | workflow-implemen
 stop_reason: null
 ```
 
-| Field | Rule |
-| --- | --- |
-| `status` | `success` when the owner is attributed from complete evidence; `warning` when the view was bounded, truncated, or the runtime reported gaps; `error` when the runtime was unavailable, incompatible, or failed |
-| `summary` | One line naming the observed failure and the attributed owner |
-| `findings` | Observed facts plus the attribution reasoning, each traceable to an evidence entry |
-| `evidence` | Runtime evidence ids with the source locators the runtime returned - file, line, timestamp, task, node - plus the source log and project paths that were read |
-| `artifacts` | Every produced report path, saved structured result, referenced screenshot path, and the resolved runtime surface and version |
-| `next_actions` | Bounded, non-mutating steps for the named owner |
-| `failure_owner` | Exactly one value from the enumeration |
-| `stop_reason` | `null` unless the diagnosis stopped early; then a stable reason such as `diagnostic-runtime-unavailable`, `diagnostic-contract-unsupported`, `diagnostic-inputs-insufficient`, or `authority-boundary` |
+| Field           | Rule                                                                                                                                                                                                           |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`        | `success` when the owner is attributed from complete evidence; `warning` when the view was bounded, truncated, or the runtime reported gaps; `error` when the runtime was unavailable, incompatible, or failed |
+| `summary`       | One line naming the observed failure and the attributed owner                                                                                                                                                  |
+| `findings`      | Observed facts plus the attribution reasoning, each traceable to an evidence entry                                                                                                                             |
+| `evidence`      | Runtime evidence ids with the source locators the runtime returned - file, line, timestamp, task, node - plus the source log and project paths that were read                                                  |
+| `artifacts`     | Every produced report path, saved structured result, referenced screenshot path, and the resolved runtime surface and version                                                                                  |
+| `next_actions`  | Bounded, non-mutating steps for the named owner                                                                                                                                                                |
+| `failure_owner` | Exactly one value from the enumeration                                                                                                                                                                         |
+| `stop_reason`   | `null` unless the diagnosis stopped early; then a stable reason such as `diagnostic-runtime-unavailable`, `diagnostic-contract-unsupported`, `diagnostic-inputs-insufficient`, or `authority-boundary`         |
 
 Preserve the runtime's evidence ids verbatim so the owner can reopen the same fact with the runtime's lookup commands instead of re-running the analysis.
 
 ## Owner map
 
-| Observed failure class | `failure_owner` | Safe next action to recommend |
-| --- | --- | --- |
-| Recognition never matched, wrong candidate won, ROI or threshold contradicts the observed candidates | `generate` | Re-tune the named recognition node against the cited candidate evidence, then rerun the focused test |
-| Action reported success but the expected state change is absent | `generate` | Add or correct the post-action observable check on the named node |
-| Runtime override or option surface changed behavior away from the static definition | `option` | Repair the option default, override path, or parameter wiring, then test enabled and disabled behavior |
-| The failing node exists but nothing in the run proves the acceptance criterion was ever checked | `testing` | Add the missing focused check before further repair |
-| The run reached a state the designed state machine does not model, or a loop had no reachable exit candidate | `workflow-design` | Add or correct the missing start, no-op, failure, recovery, or stop state |
-| A referenced node, entry, Custom registration, or file placement is missing from the static definition | `workflow-implement` | Repair the cross-node link or registration, then rerun structural checks |
-| Resource or schema load failure, managed project file drift, or a template or scaffold inconsistency | `project-create` | Run `$maa-project-create` doctor on the cited path before editing anything by hand |
-| Environment or dependency failure, incompatible runtime version, missing binary or model | `user` | State the smallest explicit unblock request; do not install anything |
-| Device, emulator, permission, or connection failure | `user` | Ask for the device or permission state to be restored, then re-collect the run |
-| Diagnostic runtime unavailable, unsupported, or unparsable | `user` | Report the discovered state and the smallest install or version action the user could take |
-| Evidence is genuinely insufficient to attribute an owner | `testing` | Name the one additional bounded observation that would attribute it, and set `stop_reason: diagnostic-inputs-insufficient` |
+| Observed failure class                                                                                       | `failure_owner`      | Safe next action to recommend                                                                                              |
+| ------------------------------------------------------------------------------------------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Recognition never matched, wrong candidate won, ROI or threshold contradicts the observed candidates         | `generate`           | Re-tune the named recognition node against the cited candidate evidence, then rerun the focused test                       |
+| Action reported success but the expected state change is absent                                              | `generate`           | Add or correct the post-action observable check on the named node                                                          |
+| Runtime override or option surface changed behavior away from the static definition                          | `option`             | Repair the option default, override path, or parameter wiring, then test enabled and disabled behavior                     |
+| The failing node exists but nothing in the run proves the acceptance criterion was ever checked              | `testing`            | Add the missing focused check before further repair                                                                        |
+| The run reached a state the designed state machine does not model, or a loop had no reachable exit candidate | `workflow-design`    | Add or correct the missing start, no-op, failure, recovery, or stop state                                                  |
+| A referenced node, entry, Custom registration, or file placement is missing from the static definition       | `workflow-implement` | Repair the cross-node link or registration, then rerun structural checks                                                   |
+| Resource or schema load failure, managed project file drift, or a template or scaffold inconsistency         | `project-create`     | Run `$maa-project-create` doctor on the cited path before editing anything by hand                                         |
+| Environment or dependency failure, incompatible runtime version, missing binary or model                     | `user`               | State the smallest explicit unblock request; do not install anything                                                       |
+| Device, emulator, permission, or connection failure                                                          | `user`               | Ask for the device or permission state to be restored, then re-collect the run                                             |
+| Diagnostic runtime unavailable, unsupported, or unparsable                                                   | `user`               | Report the discovered state and the smallest install or version action the user could take                                 |
+| Evidence is genuinely insufficient to attribute an owner                                                     | `testing`            | Name the one additional bounded observation that would attribute it, and set `stop_reason: diagnostic-inputs-insufficient` |
 
 ## Required coverage
 

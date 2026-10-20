@@ -57,14 +57,14 @@ def handle_sailing_festival(context):
 
 ### 4. 不要混淆字段路径
 
-| 用途 | 字段路径 | 备注 |
-|------|---------|------|
-| `select` | `data["recognition"]["param"]["expected"][0]` | 节点必须 `recognition: "OCR"` |
-| `input` 注入 CustomAction | `data["action"]["param"]["custom_action_param"][key]` 或执行时的 `argv.custom_action_param` | 取决于参数消费位置 |
-| `input` 注入普通节点字段 | 读取被占位符覆盖的真实路径，如 `recognition.param.expected` | input 不限定注入目标 |
-| `switch` / `checkbox` | `data["enabled"]` | 最简单 |
-| 历史 `enable` 开关 | `data.get("enable", data.get("enabled", default))` | 仅在项目已有该字段时使用 |
-| 模式 E 不读 | （不读，直接看 override 后节点的运行时行为） | pure override 模式，Python 拿不到也不需要 flag |
+| 用途                      | 字段路径                                                                                    | 备注                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `select`                  | `data["recognition"]["param"]["expected"][0]`                                               | 节点必须 `recognition: "OCR"`                  |
+| `input` 注入 CustomAction | `data["action"]["param"]["custom_action_param"][key]` 或执行时的 `argv.custom_action_param` | 取决于参数消费位置                             |
+| `input` 注入普通节点字段  | 读取被占位符覆盖的真实路径，如 `recognition.param.expected`                                 | input 不限定注入目标                           |
+| `switch` / `checkbox`     | `data["enabled"]`                                                                           | 最简单                                         |
+| 历史 `enable` 开关        | `data.get("enable", data.get("enabled", default))`                                          | 仅在项目已有该字段时使用                       |
+| 模式 E 不读               | （不读，直接看 override 后节点的运行时行为）                                                | pure override 模式，Python 拿不到也不需要 flag |
 
 ### 5. 不要用非 `Yes`/`No` 的 switch case 名
 
@@ -176,6 +176,7 @@ def enter_growth_trial(context):
 ```
 
 **自检问题**：
+
 - 我的 Python 代码里是否在**调 `run_task` 把控制权交给 pipeline**？是 → 考虑改用 `next` 链
 - 我的"流程推进"是否依赖**显式的状态变量**（如 `found`）？是 → 改用 `[JumpBack]` 让框架自动回退
 - 我的"流程"是否**可以画成状态机图**？是 → 用 JSON `next` 链

@@ -27,16 +27,16 @@ Preserve the latest upstream Skill or README's non-interactive, JSON-report, ver
 
 Choose the smallest operation that matches the user's intent:
 
-| Intent | MCP tool | Mutation |
-| --- | --- | --- |
-| Create a project | `create_project` | Yes |
-| Check project health | `doctor` | No |
-| Change supported metadata | `sync` | Yes |
-| Add Agent, resource pack, CI, or dev tooling | `add` | Yes |
-| Update schema, MaaFW, runtime, OCR, or dependencies | `update` | Yes |
-| Inspect backups | `list_backups` / `show_backup` | No |
-| Restore a backup | `restore` | Yes, potentially destructive |
-| Remove local cache | `clean_cache` | Yes |
+| Intent                                              | MCP tool                       | Mutation                     |
+| --------------------------------------------------- | ------------------------------ | ---------------------------- |
+| Create a project                                    | `create_project`               | Yes                          |
+| Check project health                                | `doctor`                       | No                           |
+| Change supported metadata                           | `sync`                         | Yes                          |
+| Add Agent, resource pack, CI, or dev tooling        | `add`                          | Yes                          |
+| Update schema, MaaFW, runtime, OCR, or dependencies | `update`                       | Yes                          |
+| Inspect backups                                     | `list_backups` / `show_backup` | No                           |
+| Restore a backup                                    | `restore`                      | Yes, potentially destructive |
+| Remove local cache                                  | `clean_cache`                  | Yes                          |
 
 Prefer MCP when it is configured. Use the latest CLI fallback in [references/cli-and-reports.md](references/cli-and-reports.md) when MCP is unavailable or when a follow-up command must run with a different working directory. See [references/upstream-skill-discovery.md](references/upstream-skill-discovery.md) for the latest-version handoff.
 
@@ -44,13 +44,13 @@ Prefer MCP when it is configured. Use the latest CLI fallback in [references/cli
 
 1. Resolve the target directory and inspect whether it already exists. Do not use force flags or allow a non-Git non-empty directory without explicit user approval.
 2. Collect the choices that materially affect the result:
-   - project folder/path;
-   - `pipeline` or `agent` template;
-   - ASCII kebab-case slug and human display name when they differ;
-   - controller targets (`Adb`, `Win32`, `MacOS`, `PlayCover`, `Gamepad`, `WlRoots`);
-   - license;
-   - add-ons and optional resource-pack slug;
-   - whether the tool may initialize Git and create the initial commit.
+    - project folder/path;
+    - `pipeline` or `agent` template;
+    - ASCII kebab-case slug and human display name when they differ;
+    - controller targets (`Adb`, `Win32`, `MacOS`, `PlayCover`, `Gamepad`, `WlRoots`);
+    - license;
+    - add-ons and optional resource-pack slug;
+    - whether the tool may initialize Git and create the initial commit.
 3. Default to `pipeline` only when the user does not need Python custom logic. Choose `agent` when they ask for CustomAction, CustomRecognition, AgentServer, or Python business logic.
 4. For a normal maintained repository, recommend `dev-tools` and `github`; do not silently add them when the user asked for a minimal resource-only project.
 5. Require `resourcePackSlug` whenever `resource-pack` is selected. Keep it ASCII kebab-case; use the label for localized display text.

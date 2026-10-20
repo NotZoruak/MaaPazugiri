@@ -26,15 +26,15 @@
 
 逐类建立 declaration/reference 表并检查唯一性、存在性和适用性：
 
-| 声明 | 常见引用位置 | 重点检查 |
-| --- | --- | --- |
-| controller | resource、task、option、pretask | 名称唯一，过滤条件有交集 |
-| resource | task、option、preset、配置 | 路径存在，controller 组合有效 |
-| group | task.group、展示顺序 | 声明存在，分组不悬空 |
-| task | task entry、preset、setting | entry 在适用资源中存在 |
-| option | 全局/controller/resource/task/setting/preset | 类型、case/input、过滤条件一致 |
-| case/input | default、preset、占位符 | 名称和取值类型匹配所属 option |
-| locale key | 所有支持国际化的字符串 | 每种声明语言均存在 |
+| 声明       | 常见引用位置                                 | 重点检查                       |
+| ---------- | -------------------------------------------- | ------------------------------ |
+| controller | resource、task、option、pretask              | 名称唯一，过滤条件有交集       |
+| resource   | task、option、preset、配置                   | 路径存在，controller 组合有效  |
+| group      | task.group、展示顺序                         | 声明存在，分组不悬空           |
+| task       | task entry、preset、setting                  | entry 在适用资源中存在         |
+| option     | 全局/controller/resource/task/setting/preset | 类型、case/input、过滤条件一致 |
+| case/input | default、preset、占位符                      | 名称和取值类型匹配所属 option  |
+| locale key | 所有支持国际化的字符串                       | 每种声明语言均存在             |
 
 对每个 controller/resource 组合分别求解，不能只看全局合并后的“存在”。某个引用在另一资源中存在，不代表当前组合有效。
 

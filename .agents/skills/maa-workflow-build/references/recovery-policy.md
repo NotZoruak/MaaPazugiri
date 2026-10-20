@@ -28,15 +28,15 @@ fallback: replan | use-another-tool | request-user | stop
 
 Classify test evidence before retrying. Do not restart every specialist for a local defect.
 
-| Failure class | Return to | Required response |
-|---|---|---|
-| Recognition or action-node failure | `$maa-pipeline-generate` | Adjust the recognition/action node, ROI, asset, or screenshot-derived evidence, then rerun the focused test. |
-| Option-surface or override-wiring failure | `$maa-pipeline-option` | Repair the user-facing option, default, override path, or Python parameter wiring, then test enabled and disabled behavior. |
-| Unexplored-scene or assumed-precondition failure | `EXPLORE` in `$maa-workflow-build` | Reset the state's `evidence_status` to `guessed`, reopen the exploration gate, and observe the real screens and the reused component's entry precondition before writing more nodes or Custom code. |
-| State-model failure | `DESIGN` in `$maa-workflow-build` | Add or correct start, success, no-op, failure, recovery, or stop states before changing more nodes. |
-| Integration or control-flow failure | `IMPLEMENT` in `$maa-workflow-build` | Repair cross-node links, file placement, Custom registration, or specialist-output assembly, then rerun structural checks. |
-| Environment, device, permission, or authority failure | `RECOVER` or user handoff | Gather a safe observation, use an authorized fallback, or stop with the smallest explicit unblock request. |
-| Unknown failure class after focused testing | `$maa-diagnose` | Request read-only cross-tool evidence, then route from the returned `failure_owner`. |
+| Failure class                                         | Return to                            | Required response                                                                                                                                                                                   |
+| ----------------------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Recognition or action-node failure                    | `$maa-pipeline-generate`             | Adjust the recognition/action node, ROI, asset, or screenshot-derived evidence, then rerun the focused test.                                                                                        |
+| Option-surface or override-wiring failure             | `$maa-pipeline-option`               | Repair the user-facing option, default, override path, or Python parameter wiring, then test enabled and disabled behavior.                                                                         |
+| Unexplored-scene or assumed-precondition failure      | `EXPLORE` in `$maa-workflow-build`   | Reset the state's `evidence_status` to `guessed`, reopen the exploration gate, and observe the real screens and the reused component's entry precondition before writing more nodes or Custom code. |
+| State-model failure                                   | `DESIGN` in `$maa-workflow-build`    | Add or correct start, success, no-op, failure, recovery, or stop states before changing more nodes.                                                                                                 |
+| Integration or control-flow failure                   | `IMPLEMENT` in `$maa-workflow-build` | Repair cross-node links, file placement, Custom registration, or specialist-output assembly, then rerun structural checks.                                                                          |
+| Environment, device, permission, or authority failure | `RECOVER` or user handoff            | Gather a safe observation, use an authorized fallback, or stop with the smallest explicit unblock request.                                                                                          |
+| Unknown failure class after focused testing           | `$maa-diagnose`                      | Request read-only cross-tool evidence, then route from the returned `failure_owner`.                                                                                                                |
 
 Report the latest stable state, attempted recoveries, preserved artifacts, and the smallest action that could unblock the task.
 
@@ -60,13 +60,13 @@ Do not request diagnosis when:
 
 `$maa-diagnose` returns a read-only result with `status`, `summary`, `findings`, `evidence`, `artifacts`, `next_actions`, one `failure_owner`, and `stop_reason`. Treat it as evidence, not as a decision:
 
-| Returned `failure_owner` | `RECOVER` decision |
-|---|---|
-| `generate` or `option` | Delegate the repair to that specialist, then rerun the focused test. |
-| `testing` | Add the missing focused check before any repair. |
-| `workflow-design` | Replan in `DESIGN` before changing more nodes. |
-| `workflow-implement` | Repair assembly, links, or registration in `IMPLEMENT`, then rerun structural checks. |
-| `project-create` | Delegate the authorized project repair to `$maa-project-create`. |
-| `user` | Stop with the smallest explicit unblock request. |
+| Returned `failure_owner` | `RECOVER` decision                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| `generate` or `option`   | Delegate the repair to that specialist, then rerun the focused test.                  |
+| `testing`                | Add the missing focused check before any repair.                                      |
+| `workflow-design`        | Replan in `DESIGN` before changing more nodes.                                        |
+| `workflow-implement`     | Repair assembly, links, or registration in `IMPLEMENT`, then rerun structural checks. |
+| `project-create`         | Delegate the authorized project repair to `$maa-project-create`.                      |
+| `user`                   | Stop with the smallest explicit unblock request.                                      |
 
 A `status: error` result with a `stop_reason` such as `diagnostic-runtime-unavailable` means the diagnosis did not happen. Keep the original failure unattributed, do not install the diagnostic runtime, and continue recovery without it. Never apply a `next_actions` entry as an automatic repair; each one still passes through the owning specialist and this control loop.

@@ -17,9 +17,9 @@ Treat acceptance as a mapping from every required criterion to observable eviden
 criterion: AC-1
 status: pass | fail | blocked
 evidence:
-  type: file | test | graph | screenshot | log | runtime-trace | exploration-trace
-  artifact: path, command result, or stable identifier
-  observation: what the evidence demonstrates
+    type: file | test | graph | screenshot | log | runtime-trace | exploration-trace
+    artifact: path, command result, or stable identifier
+    observation: what the evidence demonstrates
 limitations: []
 ```
 

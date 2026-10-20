@@ -68,8 +68,8 @@ MaaFramework 协议推荐 v2 object 形态，但本仓库不少历史 pipeline �
         "recognition": "OCR",
         "expected": "探索信息",
         "roi": [32, 964, 214, 103],
-        "action": "DoNothing"
-    }
+        "action": "DoNothing",
+    },
 }
 ```
 
@@ -328,7 +328,6 @@ Universal pipeline 使用 v2 格式，recognition 和 action 放入二级字典�
 | `CloseButtonType2`         | 右上角 X（兼容 ESC 菜单，推荐） |
 | `TeleportButton`           | 右下角传送按钮                  |
 | `CloseRewardsButton`       | 奖励界面对号关闭                |
-
 
 ### Custom 节点
 

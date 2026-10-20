@@ -9,7 +9,7 @@ from pathlib import Path
 
 import cv2
 from vision.image_io import Image, write_image, write_text_atomic
-from vision.model import BoardResult
+from vision.model import BoardResult, ChainEndpointResult
 from vision.recognizer import BoardRecognizer
 from vision.report import DRAW_COLORS, annotate_board
 
@@ -70,11 +70,28 @@ class BoardPreviewer:
         self.destination = destination
         self._recognizer: BoardRecognizer | None = None
 
-    def analyze(self, image: Image, frame_id: str, *, lightweight: bool = False, stem: str = "latest") -> RoutePreview:
-        """识别本帧并保存预演，原图和棋盘识别的触控许可均不修改。"""
+    def recognize_board(self, image: Image, frame_id: str, *, lightweight: bool = False) -> BoardResult:
+        """只识别当前帧棋盘对象，不生成路线或修改触控许可。"""
         if self._recognizer is None:
             self._recognizer = BoardRecognizer(self.profile_path)
-        board = self._recognizer.analyze(image, frame_id=frame_id, lightweight=lightweight)
+        return self._recognizer.analyze(image, frame_id=frame_id, lightweight=lightweight)
+
+    def preview_routes(self, image: Image, board: BoardResult, *, stem: str = "latest") -> RoutePreview:
+        """根据已经识别的当前帧棋盘单独生成候选路线预演。"""
         preview = build_route_preview(board)
         write_preview_report(image, board, preview, self.destination, stem)
         return preview
+
+    def recognize_chain_endpoint(self, image: Image, board: BoardResult) -> ChainEndpointResult | None:
+        """只在当前截图中查找连线菱形，不重新定位或复用动态棋子。"""
+        if self._recognizer is None:
+            self._recognizer = BoardRecognizer(self.profile_path)
+        endpoint_recognizer = self._recognizer.endpoint_recognizer
+        if endpoint_recognizer is None:
+            return None
+        return endpoint_recognizer.analyze(image, board)
+
+    def analyze(self, image: Image, frame_id: str, *, lightweight: bool = False, stem: str = "latest") -> RoutePreview:
+        """兼容旧接口，依次识别棋盘并生成路线预演。"""
+        board = self.recognize_board(image, frame_id, lightweight=lightweight)
+        return self.preview_routes(image, board, stem=stem)

@@ -19,35 +19,35 @@ Pipeline 由 Node 组成。本 skill 针对**OCR 文本识别节点**，按 Pipe
 
 **自带脚本**（位于本 skill 的 `scripts/` 目录）：
 
-| 脚本 | 用途 |
-|------|------|
-| `scripts/generate_node.py` | 单节点生成（默认 `expand=20`） |
+| 脚本                        | 用途                           |
+| --------------------------- | ------------------------------ |
+| `scripts/generate_node.py`  | 单节点生成（默认 `expand=20`） |
 | `scripts/generate_sweep.py` | 多 expand 变体扫描，找最佳 ROI |
 
 ## MCP 工具绑定
 
 依赖 `maa-mcp` MCP 服务。
 
-| 工具 | 说明 |
-|------|------|
-| `find_adb_device_list` / `connect_adb_device` | 连接设备 |
-| `ocr` | **截图 + OCR 一步完成**（内部已调 screencap，外部不要再调） |
-| `load_pipeline` / `save_pipeline` | 读/写 pipeline JSON |
-| `check_and_download_ocr` | 首次需下载 OCR 模型 |
-| `run_pipeline` | 测试 pipeline 节点 |
+| 工具                                          | 说明                                                        |
+| --------------------------------------------- | ----------------------------------------------------------- |
+| `find_adb_device_list` / `connect_adb_device` | 连接设备                                                    |
+| `ocr`                                         | **截图 + OCR 一步完成**（内部已调 screencap，外部不要再调） |
+| `load_pipeline` / `save_pipeline`             | 读/写 pipeline JSON                                         |
+| `check_and_download_ocr`                      | 首次需下载 OCR 模型                                         |
+| `run_pipeline`                                | 测试 pipeline 节点                                          |
 
 ## 输入参数
 
-| 参数 | 必填 | 默认 | 说明 |
-|------|------|------|------|
-| `target_text` | ✅ | — | 要识别的目标中文文字 |
-| `node_name` | ✅ | — | 节点名（PascalCase） |
-| `pipeline_file` | ✅ | — | 目标 pipeline 路径（推荐传主 Interface 声明资源根下的项目相对或绝对路径；`assets/resource/base/pipeline/xxx.json` 是 boilerplate-family 项目示例） |
-| `action_type` | ❌ | `Click` | Click / DoNothing / LongPress / Swipe / ClickKey / InputText |
-| `expand_offset` | ❌ | `20` | ROI 扩边像素（**推荐先用 sweep 找最佳**） |
-| `post_delay` | ❌ | `500` | |
-| `timeout` | ❌ | `2000` | |
-| `overwrite` | ❌ | `False` | 节点名冲突时是否覆盖 |
+| 参数            | 必填 | 默认    | 说明                                                                                                                                               |
+| --------------- | ---- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `target_text`   | ✅   | —       | 要识别的目标中文文字                                                                                                                               |
+| `node_name`     | ✅   | —       | 节点名（PascalCase）                                                                                                                               |
+| `pipeline_file` | ✅   | —       | 目标 pipeline 路径（推荐传主 Interface 声明资源根下的项目相对或绝对路径；`assets/resource/base/pipeline/xxx.json` 是 boilerplate-family 项目示例） |
+| `action_type`   | ❌   | `Click` | Click / DoNothing / LongPress / Swipe / ClickKey / InputText                                                                                       |
+| `expand_offset` | ❌   | `20`    | ROI 扩边像素（**推荐先用 sweep 找最佳**）                                                                                                          |
+| `post_delay`    | ❌   | `500`   |                                                                                                                                                    |
+| `timeout`       | ❌   | `2000`  |                                                                                                                                                    |
+| `overwrite`     | ❌   | `False` | 节点名冲突时是否覆盖                                                                                                                               |
 
 ## 3 步工作流（伪代码）
 
@@ -158,9 +158,9 @@ python "<skill-dir>/scripts/generate_node.py" "角色" UI_RoleListPage resource/
 5. **OCR 非确定性**：同一 ROI 不同次结果可能不同，`timeout: 2000` 期间会重试。
 6. **OCR 失败不要立刻换 TemplateMatch**：先看截图、扫 ROI、检查 `expected` 与颜色干扰；如果目标本质是稳定图标/按钮，TemplateMatch 本来就是正确选择，不必死守 OCR。
 7. **可滚动 UI 用大 ROI + 父级 orchestrator**（**重要**）：
-   - **不要**在 Click 节点的 `next` 里放 `[JumpBack]CastleSwipeDown/Up` —— 找不到文字时会**死循环滑动**！
-   - 正确模式参考 marry.json 里的 `CastleHall` 节点：父级 orchestrator 节点的 `next` 列表里放 `[JumpBack]XXXEntry` + `[JumpBack]XXXSwipeDown` + `[JumpBack]XXXSwipeUp` 等
-   - 滚动容错 ROI 范围参考 `CastleHallEntry`: `[60, 391, 609, 795]`
+    - **不要**在 Click 节点的 `next` 里放 `[JumpBack]CastleSwipeDown/Up` —— 找不到文字时会**死循环滑动**！
+    - 正确模式参考 marry.json 里的 `CastleHall` 节点：父级 orchestrator 节点的 `next` 列表里放 `[JumpBack]XXXEntry` + `[JumpBack]XXXSwipeDown` + `[JumpBack]XXXSwipeUp` 等
+    - 滚动容错 ROI 范围参考 `CastleHallEntry`: `[60, 391, 609, 795]`
 8. **`run_pipeline` 必须有手动超时意识**：超过 ~10 秒不返回要主动停止，可能 ROI/expected 配错或 OCR 引擎卡住。
 9. **改完 pipeline 文件后调 `load_pipeline(path)` 即可**：**不需要重启 server**。`run_pipeline` 每次都按 `pipeline_path` 从磁盘读最新内容，reload 后立即生效。
 10. **可滚动 UI 用统一大 ROI**：当多个目标在同一个可滚动列表（如城堡建筑列表）时，**所有节点共用同一 ROI** `[x, top_y, w, full_h]`，覆盖整个滚动区域。避免每个节点各自 ROI 滚动后失效。前提：每个节点的 `expected` 文字是唯一的（OCR 按 expected 匹配不会冲突）。
@@ -176,13 +176,13 @@ python "<skill-dir>/scripts/generate_node.py" "角色" UI_RoleListPage resource/
 
 ### 已验证最优 expand（5 节点实测）
 
-| 节点 | expand | score | 备注 |
-|------|--------|-------|------|
-| `UI_RoleListPage` | **20** | 0.9997 | 中部偏左 |
-| `UI_RoleFormationPage` | **20** | 0.998 | 角色右边 |
-| `UI_CastlePage` | **3** | 0.997 | ⚠️ 仅 0-15 |
-| `UI_TeamPage` | **20** | 0.997 | 城堡右边 |
-| `ClickGoToArchipelago` | **20** | 0.991 | 中间大地图按钮 |
+| 节点                   | expand | score  | 备注           |
+| ---------------------- | ------ | ------ | -------------- |
+| `UI_RoleListPage`      | **20** | 0.9997 | 中部偏左       |
+| `UI_RoleFormationPage` | **20** | 0.998  | 角色右边       |
+| `UI_CastlePage`        | **3**  | 0.997  | ⚠️ 仅 0-15     |
+| `UI_TeamPage`          | **20** | 0.997  | 城堡右边       |
+| `ClickGoToArchipelago` | **20** | 0.991  | 中间大地图按钮 |
 
 ### 用 `color_filter` 减少 OCR 干扰(实战技巧)
 
@@ -212,6 +212,7 @@ python "<skill-dir>/scripts/generate_node.py" "角色" UI_RoleListPage resource/
 ```
 
 **取色技巧**(用截图工具):
+
 - 目标区域:取目标**装饰/边框**色(非文字色,文字一般会变色)
 - RGB 范围要**宽松**一些(±20),覆盖光照变化
 - method=4 是 RGB(0=HSV)
@@ -220,20 +221,21 @@ python "<skill-dir>/scripts/generate_node.py" "角色" UI_RoleListPage resource/
 
 ### 已验证：可滚动 UI 统一 ROI（10 城堡建筑）
 
-| 节点 | 统一 ROI | score | 备注 |
-|------|----------|-------|------|
-| `CastleManage` | `[100, 400, 520, 880]` | 0.999 | 顶部 |
-| `Market` | 同上 | 0.999 | 顶部 |
-| `Blacksmith` | 同上 | 0.998 | 顶部 |
-| `AlchemyWorkshop` | 同上 | 0.999 | 顶部 |
-| `TrainingCenter` | 同上 | 1.000 | 顶部 |
-| `CastleMainHall` | 同上 | 0.876 | 顶部只露 25px |
-| `Shrine` | 同上 | 0.999 | 中段 |
-| `Family` | 同上 | 0.999 | 中段 |
-| `Museum` | 同上 | 0.999 | 底部 |
-| `Manor` | 同上 | 0.999 | 底部 |
+| 节点              | 统一 ROI               | score | 备注          |
+| ----------------- | ---------------------- | ----- | ------------- |
+| `CastleManage`    | `[100, 400, 520, 880]` | 0.999 | 顶部          |
+| `Market`          | 同上                   | 0.999 | 顶部          |
+| `Blacksmith`      | 同上                   | 0.998 | 顶部          |
+| `AlchemyWorkshop` | 同上                   | 0.999 | 顶部          |
+| `TrainingCenter`  | 同上                   | 1.000 | 顶部          |
+| `CastleMainHall`  | 同上                   | 0.876 | 顶部只露 25px |
+| `Shrine`          | 同上                   | 0.999 | 中段          |
+| `Family`          | 同上                   | 0.999 | 中段          |
+| `Museum`          | 同上                   | 0.999 | 底部          |
+| `Manor`           | 同上                   | 0.999 | 底部          |
 
 **关键设计**：
+
 - 所有节点 ROI 完全相同（`[100, 400, 520, 880]`，覆盖 y=400-1280）
 - 不靠 expand 微调，靠 `expected` 文字差异让 OCR 区分
 - 不放 `next` 链（避免死循环）
@@ -250,20 +252,20 @@ python "<skill-dir>/scripts/generate_node.py" "角色" UI_RoleListPage resource/
 {
     "MyActivity_Start": {
         "next": [
-            "MyActivity_TeamReady",                      // 已在队伍配置页 → 点击"进入战斗"
-            "[JumpBack]MyActivity_Difficulty_Select",     // 在难度选择页 → 选难度
-            "[JumpBack]MyActivity_Enter"                 // 在大地图 → 找入口
+            "MyActivity_TeamReady", // 已在队伍配置页 → 点击"进入战斗"
+            "[JumpBack]MyActivity_Difficulty_Select", // 在难度选择页 → 选难度
+            "[JumpBack]MyActivity_Enter", // 在大地图 → 找入口
         ],
-        "timeout": 10000
+        "timeout": 10000,
     },
 
     "MyActivity_Enter": {
         "next": [
-            "MyActivity_Enter_Click",                    // 找到图标 → 点击
-            "[JumpBack]BigMap_Activity_Resident",         // 切"常驻"tab
-            "[JumpBack]BigMap_Activity"                  // 打开活动页
+            "MyActivity_Enter_Click", // 找到图标 → 点击
+            "[JumpBack]BigMap_Activity_Resident", // 切"常驻"tab
+            "[JumpBack]BigMap_Activity", // 打开活动页
         ],
-        "timeout": 10000
+        "timeout": 10000,
     },
 
     "MyActivity_EnterBattle": {
@@ -271,25 +273,25 @@ python "<skill-dir>/scripts/generate_node.py" "角色" UI_RoleListPage resource/
         "expected": ["进入战斗"],
         "action": "Click",
         "next": [
-            "MyActivity_FightStart",                       // 战斗开始
-            "[JumpBack]MyActivity_TravelSelect_Boat",      // 乘船
-            "[JumpBack]MyActivity_TravelSelect_Walk"       // 步行 fallback
-        ]
+            "MyActivity_FightStart", // 战斗开始
+            "[JumpBack]MyActivity_TravelSelect_Boat", // 乘船
+            "[JumpBack]MyActivity_TravelSelect_Walk", // 步行 fallback
+        ],
     },
 
     "MyActivity_TravelSelect_Boat": {
         "recognition": "OCR",
         "expected": ["确定"],
-        "roi": [490, 740, 100, 80],                     // 窄 ROI 限定乘船行
-        "action": "Click"
+        "roi": [490, 740, 100, 80], // 窄 ROI 限定乘船行
+        "action": "Click",
     },
 
     "MyActivity_TravelSelect_Walk": {
         "recognition": "OCR",
         "expected": ["确定"],
-        "roi": [490, 590, 100, 80],                     // 窄 ROI 限定步行行
-        "action": "Click"
-    }
+        "roi": [490, 590, 100, 80], // 窄 ROI 限定步行行
+        "action": "Click",
+    },
 }
 ```
 
@@ -302,11 +304,11 @@ python "<skill-dir>/scripts/generate_node.py" "角色" UI_RoleListPage resource/
 
 ### 与 Python orchestration 的本质区别
 
-| 状态机（推荐） | Python orchestration（次选） |
-|--------------|--------------------------|
-| 流程推进由 MaaFramework 调度 | 自己写 `for/if` 调度 |
-| 每个节点 `next` 显式声明后继 | Python 函数串行 `run_task` |
-| `[JumpBack]` 自动状态回退 | 手动实现回退逻辑 |
-| 跨页面异常有自然路径 | 需手动 try/except |
+| 状态机（推荐）               | Python orchestration（次选） |
+| ---------------------------- | ---------------------------- |
+| 流程推进由 MaaFramework 调度 | 自己写 `for/if` 调度         |
+| 每个节点 `next` 显式声明后继 | Python 函数串行 `run_task`   |
+| `[JumpBack]` 自动状态回退    | 手动实现回退逻辑             |
+| 跨页面异常有自然路径         | 需手动 try/except            |
 
 详见 [option 反模式](../maa-pipeline-option/references/anti-patterns.md) 和 [maa-pipeline-guide](../maa-pipeline-guide/SKILL.md) 的「跨页面状态机」典型模式。

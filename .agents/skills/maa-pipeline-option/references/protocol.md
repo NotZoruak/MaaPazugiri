@@ -14,10 +14,8 @@
 ```jsonc
 {
     "interface_version": 2,
-    "option": { /* 所有选项定义 */ },
-    "task": [
-        { "name": "...", "entry": "...", "option": ["引用的选项名"] }
-    ]
+    "task": [{"name": "...", "entry": "...", "option": ["引用的选项名"]}],
+    "option": {/* 所有选项定义 */},
 }
 ```
 
@@ -25,38 +23,38 @@
 
 ## type 合法值
 
-| type | 说明 |
-|------|------|
-| `select` | 下拉选项框，用户从预定义选项中选择**一个** |
-| `checkbox` | 多选框，用户从预定义选项中选择**多个** |
-| `input` | 用户输入框，允许手动输入内容 |
-| `switch` | 选择框，**Yes** or **No** |
+| type       | 说明                                       |
+| ---------- | ------------------------------------------ |
+| `select`   | 下拉选项框，用户从预定义选项中选择**一个** |
+| `checkbox` | 多选框，用户从预定义选项中选择**多个**     |
+| `input`    | 用户输入框，允许手动输入内容               |
+| `switch`   | 选择框，**Yes** or **No**                  |
 
 ---
 
 ## option 顶层字段
 
-| 字段 | 类型 | 必选 | 说明 |
-|-----|------|-----|-----|
-| `type` | string | ✅ | `select` / `checkbox` / `input` / `switch` |
-| `controller` | string[] | ❌ | 适用的控制器类型列表（v2.3.0） |
-| `resource` | string[] | ❌ | 适用的资源包列表（v2.3.0） |
-| `label` | string | ❌ | UI 显示标签，支持国际化（`$`开头） |
-| `icon` | string | ❌ | 图标文件路径，相对于项目根目录 |
-| `description` | string | ❌ | 详细描述，支持 Markdown |
-| `default_case` | string \| string[] | ❌ | 默认选项（见下方说明） |
-| `cases` | object[] | ❌ | 选项列表（`select`/`checkbox`/`switch` 使用） |
-| `inputs` | object[] | ❌ | 输入字段（`input` 使用） |
-| `pipeline_override` | pipeline | ❌ | `input` 类型的替换模板 |
+| 字段                | 类型               | 必选 | 说明                                          |
+| ------------------- | ------------------ | ---- | --------------------------------------------- |
+| `type`              | string             | ✅   | `select` / `checkbox` / `input` / `switch`    |
+| `controller`        | string[]           | ❌   | 适用的控制器类型列表（v2.3.0）                |
+| `resource`          | string[]           | ❌   | 适用的资源包列表（v2.3.0）                    |
+| `label`             | string             | ❌   | UI 显示标签，支持国际化（`$`开头）            |
+| `icon`              | string             | ❌   | 图标文件路径，相对于项目根目录                |
+| `description`       | string             | ❌   | 详细描述，支持 Markdown                       |
+| `default_case`      | string \| string[] | ❌   | 默认选项（见下方说明）                        |
+| `cases`             | object[]           | ❌   | 选项列表（`select`/`checkbox`/`switch` 使用） |
+| `inputs`            | object[]           | ❌   | 输入字段（`input` 使用）                      |
+| `pipeline_override` | pipeline           | ❌   | `input` 类型的替换模板                        |
 
 ### default_case 类型
 
-| type | default_case 类型 | 说明 |
-|------|------------------|------|
-| `select` | `string` | 单个选项 name |
-| `switch` | `string` | 单个选项 name（推荐 `Yes` 或 `No`） |
-| `checkbox` | `string[]` | 字符串数组（v2.3.0+） |
-| `input` | — | 不使用 `default_case`，在 `inputs[].default` 设置 |
+| type       | default_case 类型 | 说明                                              |
+| ---------- | ----------------- | ------------------------------------------------- |
+| `select`   | `string`          | 单个选项 name                                     |
+| `switch`   | `string`          | 单个选项 name（推荐 `Yes` 或 `No`）               |
+| `checkbox` | `string[]`        | 字符串数组（v2.3.0+）                             |
+| `input`    | —                 | 不使用 `default_case`，在 `inputs[].default` 设置 |
 
 ---
 
@@ -73,11 +71,11 @@
             {
                 "name": "主线",
                 "label": "主线关卡",
-                "pipeline_override": { "SomeNode": { "expected": ["主线"] } }
+                "pipeline_override": {"SomeNode": {"expected": ["主线"]}},
             },
-            { "name": "资源", "pipeline_override": { "SomeNode": { "expected": ["资源"] } } }
-        ]
-    }
+            {"name": "资源", "pipeline_override": {"SomeNode": {"expected": ["资源"]}}},
+        ],
+    },
 }
 ```
 
@@ -98,12 +96,12 @@
 
 **仅支持两个 cases**，且 name 必须严格匹配：
 
-| 合法匹配 | 推荐 |
-|---------|------|
-| `Yes` / `No` | ✅ |
-| `yes` / `no` | ❌（大小写不一致） |
-| `Y` / `N` | ❌ |
-| `true` / `false` | ❌ |
+| 合法匹配         | 推荐               |
+| ---------------- | ------------------ |
+| `Yes` / `No`     | ✅                 |
+| `yes` / `no`     | ❌（大小写不一致） |
+| `Y` / `N`        | ❌                 |
+| `true` / `false` | ❌                 |
 
 Client 会根据 case 的 name 来匹配用户的 Y/N 输入，其他输入会被要求重新输入。**建议使用 `"Yes"` 和 `"No"` 以保证跨 Client 的一致性。**
 
@@ -113,10 +111,10 @@ Client 会根据 case 的 name 来匹配用户的 Y/N 输入，其他输入会�
         "type": "switch",
         "default_case": "Yes",
         "cases": [
-            { "name": "Yes", "pipeline_override": { "EatCandy": { "enabled": true } } },
-            { "name": "No",  "pipeline_override": { "EatCandy": { "enabled": false } } }
-        ]
-    }
+            {"name": "Yes", "pipeline_override": {"EatCandy": {"enabled": true}}},
+            {"name": "No", "pipeline_override": {"EatCandy": {"enabled": false}}},
+        ],
+    },
 }
 ```
 
@@ -130,10 +128,10 @@ Client 会根据 case 的 name 来匹配用户的 Y/N 输入，其他输入会�
         "type": "checkbox",
         "default_case": ["选项A"],
         "cases": [
-            { "name": "选项A", "pipeline_override": { "节点A": { "enabled": true } } },
-            { "name": "选项B", "pipeline_override": { "节点B": { "enabled": true } } }
-        ]
-    }
+            {"name": "选项A", "pipeline_override": {"节点A": {"enabled": true}}},
+            {"name": "选项B", "pipeline_override": {"节点B": {"enabled": true}}},
+        ],
+    },
 }
 ```
 
@@ -152,29 +150,29 @@ Client 会根据 case 的 name 来匹配用户的 Y/N 输入，其他输入会�
                 "default": "2",
                 "pipeline_type": "string",
                 "verify": "^(\\d+)$",
-                "pattern_msg": "请输入数字"
-            }
+                "pattern_msg": "请输入数字",
+            },
         ],
         "pipeline_override": {
             "SelectStage": {
-                "expected": ["{章节号}"]
-            }
-        }
-    }
+                "expected": ["{章节号}"],
+            },
+        },
+    },
 }
 ```
 
 ### inputs[] 字段说明
 
-| 字段 | 类型 | 必选 | 说明 |
-|-----|------|-----|-----|
-| `name` | string | ✅ | 输入字段唯一标识符（用于 `{name}` 占位符） |
-| `label` | string | ❌ | UI 显示名称，不设置则显示 name |
-| `description` | string | ❌ | 输入字段描述 |
-| `default` | string | ❌ | 默认值 |
-| `pipeline_type` | string | ❌ | `string` / `int` / `bool` |
-| `verify` | string | ❌ | 正则验证表达式 |
-| `pattern_msg` | string | ❌ | 验证失败提示 |
+| 字段            | 类型   | 必选 | 说明                                       |
+| --------------- | ------ | ---- | ------------------------------------------ |
+| `name`          | string | ✅   | 输入字段唯一标识符（用于 `{name}` 占位符） |
+| `label`         | string | ❌   | UI 显示名称，不设置则显示 name             |
+| `description`   | string | ❌   | 输入字段描述                               |
+| `default`       | string | ❌   | 默认值                                     |
+| `pipeline_type` | string | ❌   | `string` / `int` / `bool`                  |
+| `verify`        | string | ❌   | 正则验证表达式                             |
+| `pattern_msg`   | string | ❌   | 验证失败提示                               |
 
 ### 占位符注入
 
@@ -192,14 +190,14 @@ Client 会根据 case 的 name 来匹配用户的 Y/N 输入，其他输入会�
 
 ## cases 字段说明
 
-| 字段 | 类型 | 说明 |
-|-----|------|------|
-| `name` | string | 选项唯一标识符（选项 ID） |
-| `label` | string | UI 显示名称 |
-| `description` | string | 选项描述，支持 Markdown |
-| `icon` | string | 选项图标路径 |
-| `option` | string[] | 子配置项列表（嵌套） |
-| `pipeline_override` | pipeline | 选项激活时的覆盖配置 |
+| 字段                | 类型     | 说明                      |
+| ------------------- | -------- | ------------------------- |
+| `name`              | string   | 选项唯一标识符（选项 ID） |
+| `label`             | string   | UI 显示名称               |
+| `description`       | string   | 选项描述，支持 Markdown   |
+| `icon`              | string   | 选项图标路径              |
+| `option`            | string[] | 子配置项列表（嵌套）      |
+| `pipeline_override` | pipeline | 选项激活时的覆盖配置      |
 
 ---
 
@@ -212,10 +210,10 @@ Client 会根据 case 的 name 来匹配用户的 Y/N 输入，其他输入会�
     "自定义作战关卡": {
         "type": "switch",
         "cases": [
-            { "name": "No",  "pipeline_override": {}, "option": ["关卡类型"] },
-            { "name": "Yes", "pipeline_override": {}, "option": ["自定义关卡", "关卡难度"] }
-        ]
-    }
+            {"name": "No", "pipeline_override": {}, "option": ["关卡类型"]},
+            {"name": "Yes", "pipeline_override": {}, "option": ["自定义关卡", "关卡难度"]},
+        ],
+    },
 }
 ```
 
@@ -328,9 +326,9 @@ Client 会根据 case 的 name 来匹配用户的 Y/N 输入，其他输入会�
         {
             "name": "常规作战",
             "entry": "Combat",
-            "option": ["关卡选择", "作战次数"]
-        }
-    ]
+            "option": ["关卡选择", "作战次数"],
+        },
+    ],
 }
 ```
 
