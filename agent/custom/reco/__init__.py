@@ -1,6 +1,6 @@
 from importlib import import_module
 
-RECO_MODULES = ("general", "board")
+RECO_MODULES = ("general", "board", "jade_balance", "stamina_recovery_count")
 
 
 def register_all() -> None:

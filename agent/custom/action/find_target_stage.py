@@ -122,16 +122,41 @@ class FindTargetStageAction(CustomAction):
             match = STAGE_PATTERN.fullmatch(item.text)
             if match is None:
                 continue
+            position = self._box_origin(item.box)
+            if position is None:
+                continue
             results.append(
                 StageResult(
                     chapter=int(match.group(1)),
                     stage=int(match.group(2)),
                     text=f"{int(match.group(1))}-{int(match.group(2))}",
-                    x=item.box.x,
-                    y=item.box.y,
+                    x=position[0],
+                    y=position[1],
                 )
             )
         return sorted(results, key=lambda stage: (stage.y, stage.x, stage.chapter, stage.stage))
+
+    @staticmethod
+    def _box_origin(box: object) -> tuple[int, int] | None:
+        if isinstance(box, (list, tuple)):
+            if not box:
+                return None
+            if len(box) >= 2:
+                try:
+                    return int(box[0]), int(box[1])
+                except (TypeError, ValueError):
+                    pass
+            for value in box:
+                position = FindTargetStageAction._box_origin(value)
+                if position is not None:
+                    return position
+            return None
+
+        x = getattr(box, "x", None)
+        y = getattr(box, "y", None)
+        if isinstance(x, int) and isinstance(y, int):
+            return x, y
+        return None
 
     @staticmethod
     def _parse_stage(value: object) -> tuple[int, int] | None:

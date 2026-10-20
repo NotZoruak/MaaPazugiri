@@ -1,13 +1,14 @@
 {
     "ResidentBattle": {
-        "anchor": "Hub",
+        "anchor": {"Hub": "ResidentBattle", "BackToMainPage": "RB_BackToMainPage"},
         "next": ["RB_DetectWhereAmI"]
     },
     "RB_DetectWhereAmI": {
         "timeout": 120000,
         "next": [
+            "[Anchor]BackToMainPage",
             "[JumpBack]BattleSettlement_NoStamina",
-            "[JumpBack]AutoHeadPat_MainPage",
+            "[JumpBack]MainPage_AutoHeadPat",
             "[JumpBack]MainPage_EnterSortie",
             "RB_CheckTargetChapter",
             "[JumpBack]ChapterMap_ChangeChapter",
@@ -28,6 +29,20 @@
         ],
         "on_error": ["[JumpBack]RestartGame"]
     },
+    "RB_BackToMainPage": {
+        "enabled": false,
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [9, 1155, 91, 89],
+                "template": ["button/回主页.png", "button/关闭.png"]
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "next": ["RB_DetectWhereAmI"]
+    },
     "RB_CheckTargetChapter": {
         "recognition": {
             "type": "TemplateMatch",
@@ -38,7 +53,7 @@
         },
         "next": ["RB_FindTargetStage"],
         "focus": {
-            "Node.Recognition.Succeeded": "已确认位于目标章节。"
+            "Node.Recognition.Succeeded": "已确认位于目标章节"
         }
     },
     "RB_SelectTargetChapter": {
@@ -58,7 +73,7 @@
         "next": ["RB_SelectTargetChapter", "RB_CheckTargetChapter"],
         "on_error": ["RB_DetectWhereAmI"],
         "focus": {
-            "Node.Action.Starting": "正在选择目标章节。"
+            "Node.Action.Starting": "正在选择目标章节"
         }
     },
     "RB_FindTargetStage": {
@@ -72,7 +87,7 @@
         "next": ["RB_ClickStageDecision"],
         "on_error": ["RB_DetectWhereAmI"],
         "focus": {
-            "Node.Action.Starting": "正在寻找目标关卡。"
+            "Node.Action.Starting": "正在寻找目标关卡"
         }
     },
     "RB_ClickStageDecision": {
@@ -114,7 +129,7 @@
         "next": ["RB_CheckTargetTeam", "RB_SelectTargetTeam"],
         "on_error": ["RB_DetectWhereAmI"],
         "focus": {
-            "Node.Recognition.Succeeded": "已确认位于目标关卡准备页面。"
+            "Node.Recognition.Succeeded": "已确认位于目标关卡准备页面"
         }
     },
     "RB_CheckTargetTeam": {
@@ -130,7 +145,7 @@
         "next": ["RB_EnterBattle"],
         "on_error": ["RB_DetectWhereAmI"],
         "focus": {
-            "Node.Recognition.Succeeded": "已选中目标部队,准备进入战斗。"
+            "Node.Recognition.Succeeded": "已选中目标部队,准备进入战斗"
         }
     },
     "RB_EnterBattle": {
@@ -155,7 +170,7 @@
         },
         "next": ["RB_RunBattle"],
         "focus": {
-            "Node.Recognition.Succeeded": "已进入战斗。"
+            "Node.Recognition.Succeeded": "已进入战斗"
         }
     },
     "RB_RunBattle": {
@@ -192,7 +207,7 @@
         "next": ["RB_CheckTargetTeam", "RB_SelectTargetTeam"],
         "on_error": ["RB_DetectWhereAmI"],
         "focus": {
-            "Node.Action.Starting": "正在切换为目标部队。"
+            "Node.Action.Starting": "正在切换为目标部队"
         }
     },
     "RB_ExitNonTargetStage": {
@@ -208,7 +223,7 @@
         },
         "next": ["RB_DetectWhereAmI"],
         "focus": {
-            "Node.Action.Starting": "正在离开非目标关卡准备页面。"
+            "Node.Action.Starting": "正在离开非目标关卡准备页面"
         }
     }
 }

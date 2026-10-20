@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import time
+from dataclasses import replace
 
 from battle.execution import MaaBattleExecutor
 from battle.observation import BattleObserver
 from battle.preview import BoardPreviewer
+from battle.progress import BattleProgressReporter
+from battle.ranbu import choose_ranbu_start, ranbu_short_link_points
 from battle.recognition import BattleFrameRecognizer, Image
 from battle.session import BattleSession, BattleState
 from battle.strategy import BattlePhase, StrategyRuntime, decide_action, load_strategy
@@ -33,6 +36,7 @@ class BattleAction(CustomAction):
             strategy_id = parameters.get("strategy_id", "default")
             strategy = load_strategy(strategy_id, paths.config_dir)
             strategy_runtime = StrategyRuntime(strategy)
+            progress = BattleProgressReporter(strategy)
             previewer = BoardPreviewer(
                 paths.resource_dir / "base/image/board/development/profile.json",
                 paths.debug_dir / "battle-preview",
@@ -89,7 +93,7 @@ class BattleAction(CustomAction):
                 if state in (BattleState.OPERABLE, BattleState.RANBU):
                     current_image = image
                 if state != last_state:
-                    logger.info("战斗内部状态：{}", state.value)
+                    logger.debug("战斗内部状态：{}", state.value)
                     last_state = state
                 return state
 
@@ -117,7 +121,7 @@ class BattleAction(CustomAction):
                         if observation.board is None:
                             return ()
                         route_preview = previewer.preview_routes(image, observation.board)
-                        logger.info(
+                        logger.debug(
                             "路线预演：候选边={}，不确定边={}，拟选编号={}。",
                             len(route_preview.candidate_edges),
                             len(route_preview.uncertain_edges),
@@ -134,7 +138,18 @@ class BattleAction(CustomAction):
                         route_provider=provide_normal_routes,
                         stage_resolution=resolution,
                     )
-                    logger.info(
+                    if decision.kind == "ranbu_link" and (
+                        observation.board is None
+                        or choose_ranbu_start(observation.board, decision.reserved_color) is None
+                    ):
+                        if (
+                            observation.board is not None
+                            and ranbu_short_link_points(observation.board, decision.reserved_color) is not None
+                        ):
+                            decision = replace(decision, kind="ranbu_short_link", reason="当前帧普通饿鬼全部为保留色")
+                        else:
+                            decision = replace(decision, kind="wait", reason="当前帧没有符合保留颜色规则的乱舞起点")
+                    logger.debug(
                         "战斗决策：阶段={}，转变链={}，状态={}，整场普通手数={}，本阶段普通手数={}，敌方血量={}%，我方血量={}%，奥义={}，炸弹等级={}，行动={}。",
                         resolution.stage.id,
                         resolution.transition_chain,
@@ -152,21 +167,27 @@ class BattleAction(CustomAction):
                         decision,
                     )
                     if (
-                        decision.kind == "ranbu_link"
+                        decision.kind in ("ranbu_link", "ranbu_short_link")
                         and ranbu_deadline is not None
                         and time.monotonic() >= ranbu_deadline
                     ):
-                        logger.info("乱舞已超过新一轮启动期限，不再开始扫动。")
+                        logger.debug("乱舞已超过新一轮启动期限，不再开始扫动。")
+                        progress.report(
+                            phase,
+                            resolution,
+                            replace(decision, kind="wait", reason="本轮乱舞启动期限已过，等待新画面"),
+                        )
                     else:
+                        progress.report(phase, resolution, decision)
                         executor.execute_once(observation, resolution, decision)
                         force_next_decision = decision.kind in ("ultimate", "bomb", "normal_link")
-                        if decision.kind == "ranbu_link":
+                        if decision.kind in ("ranbu_link", "ranbu_short_link"):
                             ranbu_observe_after = time.monotonic() + 1.0
                     last_decision_at = time.monotonic()
                 finally:
                     current_image = None
 
-            logger.info("进入战斗动作：已载入策略{}，每轮观测后最多执行一个动作。", strategy.id)
+            logger.debug("进入战斗动作：已载入策略{}，每轮观测后最多执行一个动作。", strategy.id)
             outcome = BattleSession().run(
                 observe,
                 stopped=lambda: context.tasker.stopping,
@@ -176,5 +197,5 @@ class BattleAction(CustomAction):
         except Exception:
             logger.exception("战斗自定义动作发生运行错误")
             return CustomAction.RunResult(success=False)
-        logger.info("战斗动作结束：{}，正常完成={}", outcome.value, outcome.completed)
+        logger.debug("战斗动作结束：{}，正常完成={}", outcome.value, outcome.completed)
         return CustomAction.RunResult(success=outcome.completed)

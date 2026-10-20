@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -14,14 +15,17 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "agent"))
 
 from battle.candidates import RoutePreview  # noqa: E402
-from battle.session import BattleSession  # noqa: E402
+from battle.session import BattleSession, BattleState  # noqa: E402
+from battle.strategy import StrategyDocument  # noqa: E402
 from custom.action.battle import BattleAction  # noqa: E402
 from maa.controller import CustomController  # noqa: E402
 from maa.library import Library  # noqa: E402
 from maa.resource import Resource  # noqa: E402
 from maa.tasker import Tasker  # noqa: E402
 from maa.toolkit import Toolkit  # noqa: E402
+from utils import logger  # noqa: E402
 from vision.image_io import Image, read_image  # noqa: E402
+from vision.model import BoardObject, BoardResult  # noqa: E402
 
 
 class ImageOnlyController(CustomController):
@@ -47,8 +51,17 @@ class ImageOnlyController(CustomController):
 class BattleActionNativeTests(unittest.TestCase):
     """在真实Maa任务中检查CustomAction返回后的分支。"""
 
-    def run_case(self, image: Image, expected: str, *, next_image: Image | None = None) -> None:
-        """只替换计时长度加快测试，其他执行真实动作与原生识别。"""
+    def run_case(
+        self,
+        image: Image,
+        expected: str,
+        *,
+        next_image: Image | None = None,
+        expected_state: str = "可操作",
+        expected_operation: str | None = None,
+        board_objects: list[BoardObject] | None = None,
+    ) -> None:
+        """保留真实 Maa 调度和页面识别，仅回放棋盘识别与设备输入边界。"""
         # 导入动作会初始化AgentServer；本进程离线测试明确切回框架接口。
         Library.open(Path(maa.__file__).resolve().parent / "bin", agent_server=False)
         Toolkit.init_option(ROOT / "debug/battle-action-tests")
@@ -65,21 +78,33 @@ class BattleActionNativeTests(unittest.TestCase):
             "Battle_TestNext": {},
             "Battle_TestError": {},
         }
-        session = BattleSession(timeout_seconds=0.05, poll_interval=0.005)
+        session = BattleSession(timeout_seconds=5.0 if next_image is not None else 0.05, poll_interval=0.005)
         observed_images: list[Image] = []
+        gui_messages: list[str] = []
+        sink = logger.add(lambda message: gui_messages.append(message.record["message"]), level="INFO")
+        self.addCleanup(logger.remove, sink)
 
-        def preview_current(current: Image, frame_id: str, **kwargs: object) -> RoutePreview:
-            """记录实际交给预演的图像，再让测试控制器展示终局。"""
+        def recognize_current(current: Image, frame_id: str, **kwargs: object) -> BoardResult:
+            """记录交给当前棋盘识别入口的图像，再让测试控制器展示终局。"""
             observed_images.append(current.copy())
             if next_image is not None:
                 controller.image = next_image
-            return RoutePreview(frame_id)
+            return BoardResult(
+                frame_id,
+                (current.shape[1], current.shape[0]),
+                (0, 0, 720, 1280),
+                "离线测试",
+                {},
+                objects=board_objects or [],
+            )
 
         with (
             patch("custom.action.battle.BattleSession", return_value=session),
             patch("custom.action.battle.BoardPreviewer") as previewer,
+            patch("custom.action.battle.MaaBattleExecutor"),
         ):
-            previewer.return_value.analyze.side_effect = preview_current
+            previewer.return_value.recognize_board.side_effect = recognize_current
+            previewer.return_value.preview_routes.return_value = RoutePreview("离线测试")
             detail = tasker.post_task("RB_RunBattle", override).wait().get()
         self.assertIsNotNone(detail)
         assert detail is not None
@@ -90,8 +115,16 @@ class BattleActionNativeTests(unittest.TestCase):
         if next_image is not None:
             self.assertEqual(len(observed_images), 1)
             self.assertTrue(np.array_equal(observed_images[0], image))
+            self.assertEqual(len(gui_messages), 1)
+            self.assertIn(f"当前状态：{expected_state}", gui_messages[0])
+            self.assertIn("所属阶段：全程作战", gui_messages[0])
+            self.assertIn("进行操作：", gui_messages[0])
+            self.assertNotIn("StrategyDecision", gui_messages[0])
+            if expected_operation is not None:
+                self.assertIn(f"进行操作：{expected_operation}", gui_messages[0])
         else:
             self.assertEqual(observed_images, [])
+            self.assertEqual(gui_messages, [])
 
     def test_victory_goes_to_next(self) -> None:
         """识别胜利后正常交还next，不点击结算页面。"""
@@ -131,6 +164,53 @@ class BattleActionNativeTests(unittest.TestCase):
         if not sources:
             self.skipTest("需要本地已确认的不可操作截图")
         self.run_case(read_image(sources[0]), "Battle_TestError")
+
+    def test_ranbu_without_a_trusted_start_reports_wait(self) -> None:
+        """没有可信起点的乱舞帧应显示等待，不能声称实际开始扫动。"""
+        image = np.zeros((1280, 720, 3), dtype=np.uint8)
+        with patch(
+            "custom.action.battle.BattleFrameRecognizer.analyze", side_effect=[BattleState.RANBU, BattleState.VICTORY]
+        ):
+            self.run_case(image, "Battle_TestNext", next_image=image, expected_state="乱舞", expected_operation="等待")
+
+    def test_ranbu_all_reserved_uses_the_short_link_action(self) -> None:
+        """真实战斗入口在全为保留色时改派两点短连，不误报等待或全屏扫动。"""
+        image = np.zeros((1280, 720, 3), dtype=np.uint8)
+        strategy = StrategyDocument.builtin_default()
+        stage = strategy.stages[0]
+        strategy = replace(strategy, stages=(replace(stage, frenzy=replace(stage.frenzy, reserved_color="red")),))
+        objects = [
+            BoardObject(
+                identifier,
+                "ghoul",
+                "red",
+                None,
+                "ghoul_red",
+                "红色饿鬼",
+                point,
+                (point[0] - 5, point[1] - 5, 10, 10),
+                {},
+                [],
+                point,
+                "identified",
+            )
+            for identifier, point in ((1, (20, 30)), (2, (50, 60)))
+        ]
+        with (
+            patch("custom.action.battle.load_strategy", return_value=strategy),
+            patch(
+                "custom.action.battle.BattleFrameRecognizer.analyze",
+                side_effect=[BattleState.RANBU, BattleState.VICTORY],
+            ),
+        ):
+            self.run_case(
+                image,
+                "Battle_TestNext",
+                next_image=image,
+                expected_state="乱舞",
+                expected_operation="乱舞短连",
+                board_objects=objects,
+            )
 
 
 if __name__ == "__main__":

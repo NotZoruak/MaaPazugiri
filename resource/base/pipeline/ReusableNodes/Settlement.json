@@ -27,7 +27,10 @@
                 "target": [237, 33, 18, 24]
             }
         },
-        "next": ["BattleSettlement_CheckStaminaRecovery", "BattleSettlement_OpenStaminaRecovery"],
+        "next": [
+            "BattleSettlement_CheckStaminaRecovery",
+            "BattleSettlement_OpenStaminaRecovery"
+        ],
         "on_error": ["[Anchor]Hub"]
     },
     "BattleSettlement_CheckStaminaRecovery": {
@@ -40,9 +43,120 @@
         },
         "next": [
             "BattleSettlement_UseDailyStaminaRecovery",
+            "BattleSettlement_CheckJadeBalanceThreshold",
+            "BattleSettlement_CheckBrokenJadeStaminaRecoveryCount",
+            "BattleSettlement_UseBrokenJadeStaminaRecovery",
             "BattleSettlement_NoStaminaRecoveryItems"
         ],
         "on_error": ["[Anchor]Hub"]
+    },
+    "BattleSettlement_CheckJadeBalanceThreshold": {
+        "enabled": false,
+        "recognition": {
+            "type": "Custom",
+            "param": {
+                "custom_recognition": "JadeBalanceThresholdRecognition",
+                "custom_recognition_param": {
+                    "template_node": "__BattleSettlement_MatchBrokenJadeRecovery",
+                    "ocr_node": "__BattleSettlement_ReadJadeBalance",
+                    "roi_offset": [471, 2, -319, -89],
+                    "threshold": 54000
+                }
+            }
+        },
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "CompleteCurrentTaskAction",
+                "custom_action_param": {"reason": "剩余宝玉数量已达到宝玉保留量"}
+            }
+        }
+    },
+    "__BattleSettlement_MatchBrokenJadeRecovery": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [42, 538, 472, 521],
+                "template": "region/碎玉回体.png"
+            }
+        }
+    },
+    "__BattleSettlement_ReadJadeBalance": {
+        "recognition": {
+            "type": "OCR",
+            "param": {"roi": [0, 0, 0, 0]}
+        }
+    },
+    "BattleSettlement_UseBrokenJadeStaminaRecovery": {
+        "enabled": false,
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [42, 538, 472, 521],
+                "template": "region/碎玉回体.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target_offset": [506, 59, -386, -88]
+            }
+        },
+        "next": [
+            "BattleSettlement_ConfirmBrokenJadeStaminaRecovery",
+            "BattleSettlement_UseBrokenJadeStaminaRecovery"
+        ],
+        "on_error": ["[Anchor]Hub"]
+    },
+    "BattleSettlement_ConfirmBrokenJadeStaminaRecovery": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [121, 559, 473, 123],
+                "template": "region/确认碎玉换体.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [456, 1174, 114, 57]
+            }
+        },
+        "next": [
+            "BattleSettlement_ConfirmBrokenJadeStaminaRecovery",
+            "BattleSettlement_BrokenJadeStaminaRecoverySucceeded"
+        ],
+        "on_error": ["[Anchor]Hub"]
+    },
+    "BattleSettlement_BrokenJadeStaminaRecoverySucceeded": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [121, 559, 473, 123],
+                "template": "region/确认碎玉换体.png"
+            }
+        },
+        "inverse": true,
+        "focus": {
+            "Node.Recognition.Succeeded": "已成功碎玉换体"
+        }
+    },
+    "BattleSettlement_CheckBrokenJadeStaminaRecoveryCount": {
+        "enabled": false,
+        "recognition": {
+            "type": "Custom",
+            "param": {
+                "custom_recognition": "BrokenJadeStaminaRecoveryCountRecognition",
+                "custom_recognition_param": {"maximum": 1}
+            }
+        },
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "CompleteCurrentTaskAction",
+                "custom_action_param": {"reason": "已达到碎玉换体最大次数"}
+            }
+        }
     },
     "BattleSettlement_NoStaminaRecoveryItems": {
         "action": {
@@ -69,7 +183,10 @@
                 "target_offset": [506, 59, -386, -88]
             }
         },
-        "next": ["BattleSettlement_ConfirmDailyStaminaRecovery", "BattleSettlement_UseDailyStaminaRecovery"],
+        "next": [
+            "BattleSettlement_ConfirmDailyStaminaRecovery",
+            "BattleSettlement_UseDailyStaminaRecovery"
+        ],
         "on_error": ["[Anchor]Hub"]
     },
     "BattleSettlement_ConfirmDailyStaminaRecovery": {
@@ -86,7 +203,10 @@
                 "target": [456, 1174, 114, 57]
             }
         },
-        "next": ["BattleSettlement_ConfirmDailyStaminaRecovery", "BattleSettlement_DailyStaminaRecoverySucceeded"],
+        "next": [
+            "BattleSettlement_ConfirmDailyStaminaRecovery",
+            "BattleSettlement_DailyStaminaRecoverySucceeded"
+        ],
         "on_error": ["[Anchor]Hub"]
     },
     "BattleSettlement_DailyStaminaRecoverySucceeded": {
@@ -99,7 +219,7 @@
         },
         "inverse": true,
         "focus": {
-            "Node.Recognition.Succeeded": "已成功使用当日限定体力回复。"
+            "Node.Recognition.Succeeded": "已成功使用当日限定体力回复"
         }
     },
     "BattleSettlement_CompleteCurrentTask": {

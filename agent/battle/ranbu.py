@@ -1,6 +1,9 @@
-"""检查已核对布局中乱舞计时圈顶部偏左竖条的固定颜色。"""
+"""识别已核对布局的乱舞状态，并从当前帧选择乱舞触点。"""
 
 from __future__ import annotations
+
+import math
+from itertools import combinations
 
 import numpy as np
 from vision.image_io import Image
@@ -44,6 +47,32 @@ def choose_ranbu_start(board: BoardResult, reserved_color: str | None) -> tuple[
     chosen = min(candidates, key=lambda entry: entry[0])[1]
     point = chosen.candidate_point if chosen.kind == "ghoul" and chosen.candidate_point is not None else chosen.center
     return round(point[0]), round(point[1])
+
+
+def ranbu_short_link_points(
+    board: BoardResult, reserved_color: str | None
+) -> tuple[tuple[int, int], tuple[int, int]] | None:
+    """普通饿鬼全部为保留色时，选当前帧内距离最近的两个可信触点。"""
+    if reserved_color not in COLORS or any(item.kind == "special_ghoul" for item in board.objects):
+        return None
+    ghouls = sorted((item for item in board.objects if item.kind == "ghoul"), key=lambda item: item.id)
+    if len(ghouls) < 2 or len({item.id for item in ghouls}) != len(ghouls):
+        return None
+    x, y, width, height = board.board_region
+    source_width, source_height = board.source_size
+    points: list[tuple[int, int]] = []
+    for item in ghouls:
+        if item.color != reserved_color or item.quality not in ("identified", "single_feature"):
+            return None
+        point = item.candidate_point or item.center
+        if not all(math.isfinite(value) for value in point):
+            return None
+        px, py = round(point[0]), round(point[1])
+        if not (0 <= px < source_width and 0 <= py < source_height and x <= px < x + width and y <= py < y + height):
+            return None
+        points.append((px, py))
+    pairs = [pair for pair in combinations(points, 2) if pair[0] != pair[1]]
+    return min(pairs, key=lambda pair: math.dist(*pair)) if pairs else None
 
 
 def ranbu_sweep_points(board: BoardResult) -> tuple[tuple[int, int], ...]:

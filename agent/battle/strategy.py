@@ -155,6 +155,7 @@ class StageResolution:
     stage: StrategyStage
     transition_chain: tuple[str, ...] = ()
     transition_loop: bool = False
+    applied_transitions: tuple[StageTransition, ...] = ()
 
 
 _ID_PATTERN = re.compile(r"^[0-9a-fA-F]{32}$")
@@ -449,15 +450,17 @@ class StrategyRuntime:
         previous_stage_id = stage.id
         seen = {stage.id}
         chain: list[str] = []
+        applied: list[StageTransition] = []
         for _ in range(len(stage_by_id)):
             transition = next(
                 (item for item in stage.transitions if evaluate_condition(item.condition, context) is True), None
             )
             if transition is None:
-                return StageResolution(previous_stage_id, stage, tuple(chain), False)
+                return StageResolution(previous_stage_id, stage, tuple(chain), False, tuple(applied))
             if transition.target_stage_id in seen:
-                return StageResolution(previous_stage_id, stage, tuple(chain), True)
+                return StageResolution(previous_stage_id, stage, tuple(chain), True, tuple(applied))
             chain.append(transition.target_stage_id)
+            applied.append(transition)
             seen.add(transition.target_stage_id)
             self.current_stage_id = transition.target_stage_id
             if metrics is None:
@@ -465,7 +468,7 @@ class StrategyRuntime:
             context = replace(context, stage_normal_links=0)
             stage = stage_by_id[self.current_stage_id]
         looped = any(item.target_stage_id in seen for item in stage.transitions)
-        return StageResolution(previous_stage_id, stage, tuple(chain), looped)
+        return StageResolution(previous_stage_id, stage, tuple(chain), looped, tuple(applied))
 
     def resolve_stage(self, metrics: StrategyMetrics | None = None) -> tuple[StrategyStage, tuple[str, ...], bool]:
         """兼容旧调用方，返回阶段、转变链和循环标志。"""

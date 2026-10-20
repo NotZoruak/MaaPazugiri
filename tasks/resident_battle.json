@@ -4,8 +4,8 @@
             "name": "ResidentBattle",
             "label": "常驻作战",
             "entry": "ResidentBattle",
-            "option": ["选择章节", "选择部队", "选择作战策略", "使用体力回复药", "碎玉换体"],
-            "doc": ["重复次数可在任务设置中调整；选择章节后，可在对应的关卡下拉框中选择目标关卡，并选择目标部队和作战策略。使用体力回复药和碎玉换体默认关闭。"],
+            "option": ["选择章节", "选择部队", "选择作战策略", "出战前返回主页面", "使用体力回复药", "碎玉换体"],
+            "doc": ["自动进行主线关卡作战。"],
             "repeatable": true,
             "repeat_count": 1
         }
@@ -834,7 +834,7 @@
         "选择作战策略": {
             "type": "select",
             "label": "选择作战策略",
-            "description": "选择用于常驻作战的策略。策略列表从 config/strategies 文件读取；default 为内置策略。",
+            "description": "在侧边栏编辑并保存策略后，可在此处选择要使用的策略。",
             "cases": [
                 {
                     "name": "default",
@@ -851,6 +851,26 @@
                 }
             ],
             "default_case": "default"
+        },
+        "出战前返回主页面": {
+            "type": "switch",
+            "label": "出战前返回主页面",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "开启",
+                    "pipeline_override": {
+                        "RB_BackToMainPage": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "label": "关闭"
+                }
+            ],
+            "default_case": "No"
         },
         "使用体力回复药": {
             "type": "switch",
@@ -896,11 +916,26 @@
         "碎玉换体": {
             "type": "switch",
             "label": "碎玉换体",
+            "description": "达到最大换体次数或剩余宝玉数量小于等于宝玉保留量时，任一条件满足即结束任务。",
             "cases": [
                 {
                     "name": "Yes",
                     "label": "开启",
-                    "option": ["最大次数"]
+                    "option": ["最大次数", "宝玉保留量"],
+                    "pipeline_override": {
+                        "BattleSettlement_OpenStaminaRecovery": {
+                            "enabled": true
+                        },
+                        "BattleSettlement_UseBrokenJadeStaminaRecovery": {
+                            "enabled": true
+                        },
+                        "BattleSettlement_CheckJadeBalanceThreshold": {
+                            "enabled": true
+                        },
+                        "BattleSettlement_CheckBrokenJadeStaminaRecoveryCount": {
+                            "enabled": true
+                        }
+                    }
                 },
                 {
                     "name": "No",
@@ -910,21 +945,51 @@
             "default_case": "No"
         },
         "最大次数": {
-            "type": "select",
+            "type": "input",
             "label": "最大次数",
-            "cases": [
-                {"name": "1", "label": "1"},
-                {"name": "2", "label": "2"},
-                {"name": "3", "label": "3"},
-                {"name": "4", "label": "4"},
-                {"name": "5", "label": "5"},
-                {"name": "6", "label": "6"},
-                {"name": "7", "label": "7"},
-                {"name": "8", "label": "8"},
-                {"name": "9", "label": "9"},
-                {"name": "10", "label": "10"}
+            "description": "达到此碎玉换体次数后结束任务；-1 表示不限制次数。",
+            "inputs": [
+                {
+                    "name": "最大次数",
+                    "label": "碎玉换体最大次数",
+                    "default": "1",
+                    "pipeline_type": "int",
+                    "verify": "^(-1|[0-9]+)$",
+                    "pattern_msg": "请输入 -1 或非负整数"
+                }
             ],
-            "default_case": "1"
+            "pipeline_override": {
+                "BattleSettlement_CheckBrokenJadeStaminaRecoveryCount": {
+                    "recognition": {
+                        "param": {
+                            "custom_recognition_param": {"maximum": "{最大次数}"}
+                        }
+                    }
+                }
+            }
+        },
+        "宝玉保留量": {
+            "type": "input",
+            "label": "宝玉保留量",
+            "inputs": [
+                {
+                    "name": "宝玉保留量",
+                    "label": "剩余宝玉数量",
+                    "default": "54000",
+                    "pipeline_type": "int",
+                    "verify": "^[0-9]+$",
+                    "pattern_msg": "请输入非负整数"
+                }
+            ],
+            "pipeline_override": {
+                "BattleSettlement_CheckJadeBalanceThreshold": {
+                    "recognition": {
+                        "param": {
+                            "custom_recognition_param": {"threshold": "{宝玉保留量}"}
+                        }
+                    }
+                }
+            }
         }
     }
 }
