@@ -22,7 +22,6 @@ from .ranbu import (
     ranbu_sweep_points,
 )
 from .ranbu_feedback import RanbuHoldFeedback
-from .session import BattleState
 from .strategy import StageResolution, StrategyDecision
 
 
@@ -67,6 +66,11 @@ class MaaBattleExecutor:
         self._last_gesture_started = False
         self._last_ranbu_sweep_started = False
         self.last_gesture_released_at: float | None = None
+
+    @property
+    def last_ranbu_color(self) -> str | None:
+        """返回上一次乱舞起手颜色，用于当前帧候选轮换。"""
+        return self._last_ranbu_color
 
     def execute_once(
         self,
@@ -191,6 +195,7 @@ class MaaBattleExecutor:
             gesture_duration=0.4,
             capture_ranbu=True,
             ranbu_color=color,
+            ranbu_body_size=decision.ranbu_body_size,
         )
         # 预演图写盘移到松手后，避免颜色确认后再消耗一帧时间才按下。
         try:
@@ -234,6 +239,7 @@ class MaaBattleExecutor:
         gesture_duration: float | None = None,
         capture_ranbu: bool = False,
         ranbu_color: str | None = None,
+        ranbu_body_size: tuple[float, float] | None = None,
     ) -> bool:
         """整笔连续移动；普通连线只在松手前截图一次，出现菱形即确认一手。"""
         self._last_gesture_started = False
@@ -284,94 +290,36 @@ class MaaBattleExecutor:
                 self._sleep(hold_start_seconds)
             if gesture_duration is not None and capture_ranbu:
                 self._last_ranbu_sweep_started = True
-                maximum_passes = 2 if self._inspect_ranbu_hold is not None else 1
-                sweep = points[1:]
-                for index in range(maximum_passes):
-                    current_points = points if index == 0 else (tuple(reversed(sweep)) if index % 2 else sweep)
-                    pass_started = self._clock()
-                    completed = False
-                    stop_reason = "input_failed"
-                    try:
-                        completed = self._move_timed_path(
-                            current_points,
-                            observation,
-                            pass_started,
-                            gesture_duration,
-                            events=events,
-                            event_origin=gesture_started,
-                        )
-                    finally:
-                        movement_finished_at = self._clock()
-                    if not completed or self._is_stopping():
-                        stop_reason = "stopped"
-                        break
-                    held, capture_status, capture_ms = self._capture_ranbu_hold()
-                    capture_elapsed_ms += capture_ms
-                    if held is not None:
-                        pass_images.append(held.copy())
-                    feedback = None
-                    feedback_started = self._clock()
-                    can_supplement = index + 1 < maximum_passes
-                    if held is None:
-                        stop_reason = "capture_failed"
-                    elif self._is_stopping():
-                        stop_reason = "stopped"
-                    elif not can_supplement:
-                        # 已无后续补扫机会，末尾截图完成后直接释放，不再检查无法改变动作的反馈。
-                        stop_reason = "pass_limit"
-                    elif self._inspect_ranbu_hold is not None and observation.board is not None:
-                        try:
-                            feedback = self._inspect_ranbu_hold(held, observation.board, ranbu_color)
-                        except Exception as exc:
-                            stop_reason = "feedback_exception"
-                            logger.warning("乱舞按住反馈识别失败，释放触点：{}。", exc)
-                    count = feedback.count if feedback else None
-                    passes.append(
-                        {
-                            "index": index + 1,
-                            "direction": "forward" if index % 2 == 0 else "reverse",
-                            "movement_elapsed_ms": round((movement_finished_at - pass_started) * 1000, 3),
-                            "capture_elapsed_ms": capture_ms,
-                            "state": feedback.state.value if feedback is not None and feedback.state_checked else None,
-                            "state_checked": feedback.state_checked if feedback else False,
-                            "count": count,
-                            "residual_status": feedback.residual_status if feedback else "unknown",
-                            "residual_details": feedback.residual_details if feedback else {},
-                            "feedback_checked": feedback is not None,
-                            "feedback_skip_reason": "pass_limit" if not can_supplement else None,
-                            "feedback_elapsed_ms": round((self._clock() - feedback_started) * 1000, 3)
-                            if can_supplement
-                            else 0.0,
-                        }
+                pass_started = self._clock()
+                try:
+                    completed = self._move_timed_path(
+                        points,
+                        observation,
+                        pass_started,
+                        gesture_duration,
+                        events=events,
+                        event_origin=gesture_started,
+                        body_size=ranbu_body_size,
                     )
-                    if not can_supplement:
-                        if self._is_stopping():
-                            stop_reason = "stopped"
-                        break
-                    if feedback is None or self._is_stopping():
-                        if self._is_stopping():
-                            stop_reason = "stopped"
-                        elif self._inspect_ranbu_hold is None:
-                            stop_reason = "feedback_unavailable"
-                        break
-                    if feedback.state_checked and feedback.state != BattleState.RANBU:
-                        stop_reason = "phase_exit"
-                        break
-                    if feedback.residual_status != "present":
-                        stop_reason = (
-                            "no_residual_evidence" if feedback.residual_status == "absent" else "residual_unknown"
-                        )
-                        break
-                    if not feedback.state_checked:
-                        stop_reason = "phase_unconfirmed"
-                        break
-                    stop_reason = "residual_present"
-                    logger.debug(
-                        "乱舞按住反馈：第{}遍，残留证据={}，状态={}。",
-                        index + 1,
-                        feedback.residual_details,
-                        feedback.state.value,
-                    )
+                finally:
+                    movement_finished_at = self._clock()
+                stop_reason = "single_sweep_complete" if completed and not self._is_stopping() else "stopped"
+                passes.append(
+                    {
+                        "index": 1,
+                        "direction": "forward",
+                        "movement_elapsed_ms": round((movement_finished_at - pass_started) * 1000, 3),
+                        "capture_elapsed_ms": 0.0,
+                        "state": None,
+                        "state_checked": False,
+                        "count": None,
+                        "residual_status": "not_checked",
+                        "residual_details": {},
+                        "feedback_checked": False,
+                        "feedback_skip_reason": "single_sweep",
+                        "feedback_elapsed_ms": 0.0,
+                    }
+                )
             elif gesture_duration is not None:
                 completed = self._move_timed_path(points, observation, gesture_started, gesture_duration, events=events)
                 movement_finished_at = self._clock()
@@ -441,6 +389,8 @@ class MaaBattleExecutor:
                     ),
                     "passes": passes,
                     "start_selection_check": "disabled",
+                    "touch_sampling": "body_relative_dense_points",
+                    "start_body_size": ranbu_body_size,
                     "stop_reason": stop_reason,
                     "events": events,
                 }
@@ -482,23 +432,6 @@ class MaaBattleExecutor:
             )
         return succeeded and not self._is_stopping()
 
-    def _capture_ranbu_hold(self) -> tuple[Image | None, str, float]:
-        """按住时取得一张新图，失败时返回未知并交由调用方释放。"""
-        started = self._clock()
-        image = None
-        status = "failed"
-        try:
-            job = self._controller.post_screencap().wait()
-            if job.succeeded:
-                current = job.get()
-                status = "empty"
-                if current.size:
-                    image, status = current, "captured"
-        except Exception as exc:
-            status = "exception"
-            logger.warning("乱舞按住截图失败，继续释放触点：{}。", exc)
-        return image, status, round((self._clock() - started) * 1000, 3)
-
     def _move_timed_path(
         self,
         points: tuple[tuple[int, int], ...],
@@ -508,8 +441,9 @@ class MaaBattleExecutor:
         *,
         events: list[dict[str, object]] | None = None,
         event_origin: float | None = None,
+        body_size: tuple[float, float] | None = None,
     ) -> bool:
-        """整轮共享目标时间表；输入较慢时仍保留全部采样，避免跳过目标身体。"""
+        """按普通连线密度插入中间触点，整轮共享时间表，落后时也不省略触点。"""
         dimensions = (
             [
                 size
@@ -520,33 +454,26 @@ class MaaBattleExecutor:
             if observation.board is not None
             else []
         )
-        step = max(4.0, min(96.0, min(dimensions) * 0.75)) if dimensions else 64.0
+        if body_size is not None:
+            if not all(math.isfinite(size) and size > 0 for size in body_size):
+                raise ValueError("乱舞触点采样尺寸必须为有限正数")
+            dimensions.extend(body_size)
+        # 确认帧对象表为空时仍使用当次确认尺寸，避免回退成跨度过大的坐标跳跃。
+        step = max(2.0, min(32.0, min(dimensions) * 0.2)) if dimensions else 32.0
         segments = list(zip(points, points[1:], strict=False))
         total_distance = sum(math.dist(start, end) for start, end in segments)
         if total_distance <= 0:
             return True
         travelled = 0.0
+        pending_moves: list[tuple[Any, tuple[int, int], float]] = []
 
-        def allowed() -> bool:
-            """停止和本帧乱舞许可均按每个采样点检查。"""
-            return not self._is_stopping() and self._can_start_ranbu_link()
-
-        for start, end in segments:
-            distance = math.dist(start, end)
-            count = max(1, math.ceil(distance / step))
-            for index in range(1, count + 1):
-                if not allowed():
-                    return False
-                due = started + duration * (travelled + distance * index / count) / total_distance
-                now = self._clock()
-                # 设备调用耗时计入时间表，超时只省去等待，不省去触点。
-                if due > now:
-                    self._sleep(due - now)
-                if not allowed():
-                    return False
-                point = tuple(round(a + (b - a) * index / count) for a, b in zip(start, end, strict=True))
-                sent_at = self._clock()
-                move = self._controller.post_touch_move(*point).wait()
+        def finish_pending_moves() -> None:
+            """等待当前小批触点完成，并按提交顺序检查执行结果。"""
+            if not pending_moves:
+                return
+            pending_moves[-1][0].wait()
+            for move, point, sent_at in pending_moves:
+                move_succeeded = bool(move.succeeded)
                 if events is not None:
                     events.append(
                         {
@@ -558,12 +485,46 @@ class MaaBattleExecutor:
                             "finished_ms": round(
                                 (self._clock() - (event_origin if event_origin is not None else started)) * 1000, 3
                             ),
-                            "succeeded": bool(move.succeeded),
+                            "succeeded": move_succeeded,
                         }
                     )
-                if not move.succeeded:
+                if not move_succeeded:
                     raise RuntimeError("移动连线触点失败")
+            pending_moves.clear()
+
+        def allowed() -> bool:
+            """停止和本帧乱舞许可均按每个采样点检查。"""
+            return not self._is_stopping() and self._can_start_ranbu_link()
+
+        for start, end in segments:
+            distance = math.dist(start, end)
+            count = max(1, math.ceil(distance / step))
+            for index in range(1, count + 1):
+                if not allowed():
+                    if not self._is_stopping():
+                        finish_pending_moves()
+                    return False
+                due = started + duration * (travelled + distance * index / count) / total_distance
+                now = self._clock()
+                # 设备调用耗时计入时间表，超时只省去等待，不省去触点。
+                if due > now:
+                    self._sleep(due - now)
+                    # 等待期间可能收到停止；没有等待时复用本触点刚核对的许可。
+                    if not allowed():
+                        if not self._is_stopping():
+                            finish_pending_moves()
+                        return False
+                point = (
+                    round(start[0] + (end[0] - start[0]) * index / count),
+                    round(start[1] + (end[1] - start[1]) * index / count),
+                )
+                sent_at = self._clock()
+                move = self._controller.post_touch_move(*point)
+                pending_moves.append((move, point, sent_at))
+                if len(pending_moves) >= 8:
+                    finish_pending_moves()
             travelled += distance
+        finish_pending_moves()
         return True
 
     def _move_continuously(

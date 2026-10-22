@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import math
+from dataclasses import replace
+from statistics import median
 
 from vision.model import BoardObject, BoardResult
 
@@ -65,21 +67,27 @@ def _can_pair(first: BoardObject, second: BoardObject, screen_tolerance: float) 
     return True
 
 
-def _compare_boards(previous: BoardResult, current: BoardResult) -> tuple[bool, str]:
+def _bottom_band_top(board: BoardResult) -> float:
+    """根据本帧饿鬼尺寸限定底部容差带，不预设角色位置或棋盘格。"""
+    heights = [item.body_box[3] for item in board.objects if item.kind == "ghoul"]
+    _, by, _, bh = board.board_region
+    depth = min(bh * 0.2, median(heights) * 1.25) if heights else 0.0
+    return by + bh - depth
+
+
+def _compare_boards(previous: BoardResult, current: BoardResult) -> tuple[bool, str, float | None]:
     """逐项比较并保留拒绝原因，不能用总数或平均位置代替对象匹配。"""
     if previous.frame_id == current.frame_id:
-        return False, "重复使用同一帧，尚未取得两帧独立结果"
+        return False, "重复使用同一帧，尚未取得两帧独立结果", None
     if (
         previous.source_size != current.source_size
         or previous.board_region != current.board_region
         or previous.profile != current.profile
         or previous.coverage != current.coverage
     ):
-        return False, "截图尺寸、棋盘区域或识别范围发生变化"
-    if len(previous.objects) != len(current.objects):
-        return False, f"棋盘对象数量变化：{len(previous.objects)} → {len(current.objects)}"
+        return False, "截图尺寸、棋盘区域或识别范围发生变化", None
     if not _valid_board(previous) or not _valid_board(current):
-        return False, "存在无效对象几何或触点超出当前对象范围"
+        return False, "存在无效对象几何或触点超出当前对象范围", None
     tolerance = min(current.source_size) * 8.0 / 720.0
     candidates = [
         [index for index, target in enumerate(current.objects) if _can_pair(item, target, tolerance)]
@@ -99,14 +107,39 @@ def _compare_boards(previous: BoardResult, current: BoardResult) -> tuple[bool, 
         return False
 
     for index in sorted(range(len(candidates)), key=lambda index: len(candidates[index])):
-        if not pair(index, set()):
-            item = previous.objects[index]
-            return False, f"上一帧对象 {item.id}（{item.label}）未找到位置、类别和尺寸均相近的独立对应项"
-    return True, "连续两帧对象几何稳定"
+        pair(index, set())
+    paired_previous = set(matched.values())
+    missing = [item for index, item in enumerate(previous.objects) if index not in paired_previous]
+    added = [item for index, item in enumerate(current.objects) if index not in matched]
+    if not missing and not added:
+        return True, "连续两帧对象几何稳定", None
+
+    band_top = _bottom_band_top(current)
+    # 每帧至多一个底部普通四色饿鬼存在差异，且必须有其余对象的独立稳定证据。
+    tolerated = (
+        len(matched) >= 2
+        and len(missing) <= 1
+        and len(added) <= 1
+        and all(
+            item.kind == "ghoul" and item.color in {"red", "yellow", "green", "blue"} and item.center[1] >= band_top
+            for item in (*missing, *added)
+        )
+    )
+    if tolerated and missing and added:
+        # 不能把底部相隔很远的消失与新增当作同一只饿鬼的检测抖动。
+        tolerated = (
+            math.dist(missing[0].center, added[0].center) <= min(*missing[0].body_box[2:], *added[0].body_box[2:]) * 0.5
+        )
+    if tolerated:
+        return True, "底部单只饿鬼识别差异，其余对象稳定；本轮连线避开底部", band_top
+    if len(previous.objects) != len(current.objects):
+        return False, f"棋盘对象数量变化：{len(previous.objects)} → {len(current.objects)}", None
+    item = missing[0]
+    return False, f"上一帧对象 {item.id}（{item.label}）未找到位置、类别和尺寸均相近的独立对应项", None
 
 
 def boards_are_similar(previous: BoardResult, current: BoardResult) -> bool:
-    """要求同范围的两张独立结果中全部对象一一对应。"""
+    """比较同范围独立结果，仅允许底部单只普通饿鬼的局部误差。"""
     return _compare_boards(previous, current)[0]
 
 
@@ -146,26 +179,47 @@ class NormalLinkStability:
 
     def __init__(self) -> None:
         self._previous: BoardResult | None = None
+        self.route_board: BoardResult | None = None
         self.last_report: dict[str, object] = {}
 
     def reset(self) -> None:
         """状态中断或操作后，必须重新取得两帧稳定证据。"""
         self._previous = None
+        self.route_board = None
 
     def observe(self, board: BoardResult | None) -> bool:
         """每次以当前帧替换比较基准，只判断相邻两次结果。"""
         previous = self._previous
+        self.route_board = None
+        band_top = None
         if board is None or not _valid_board(board):
             self.reset()
             stable, reason = False, "当前棋盘缺失或存在无效对象几何、触点"
         else:
-            stable, reason = (
-                _compare_boards(previous, board) if previous is not None else (False, "仅取得一帧有效棋盘，等待下一帧")
+            stable, reason, band_top = (
+                _compare_boards(previous, board)
+                if previous is not None
+                else (False, "仅取得一帧有效棋盘，等待下一帧", None)
             )
             self._previous = board
+            if stable:
+                self.route_board = board
+                if band_top is not None:
+                    bx, by, bw, _ = board.board_region
+                    # 只从本帧生成规划视图；裁剪区域保证路线的直线段也不会穿入不确定带。
+                    self.route_board = replace(
+                        board,
+                        board_region=(bx, by, bw, band_top - by),
+                        objects=[
+                            item
+                            for item in board.objects
+                            if item.kind != "ghoul" or item.body_box[1] + item.body_box[3] < band_top
+                        ],
+                    )
         self.last_report = {
             "stable": stable,
             "reason": reason,
+            "bottom_exclusion_y": band_top,
             "previous": _board_summary(previous),
             "current": _board_summary(board),
         }

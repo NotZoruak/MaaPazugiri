@@ -118,10 +118,10 @@ def choose_ranbu_start(
     return candidates[0][2] if candidates else None
 
 
-def _choose_pixel_start(
-    board: BoardResult, image: Image, reserved_color: str | None, previous_color: str | None
+def choose_ranbu_pixel_start(
+    board: BoardResult, image: Image, reserved_color: str | None, previous_color: str | None = None
 ) -> tuple[tuple[int, int], str, tuple[float, float]] | None:
-    """同色内优先本帧颜色余量更大的点，确认帧仍只核对原落点。"""
+    """按当前帧颜色余量选择可信的非保留色起点。"""
     objects = {item.id: item for item in board.objects}
     best: tuple[tuple[int, int], str, tuple[float, float]] | None = None
     best_margin = -1
@@ -258,7 +258,7 @@ class RanbuStartConfirmation:
         color = ghoul_color_at_point(board, start) if start is not None else None
         size = None
         if image is not None:
-            selected = _choose_pixel_start(board, image, reserved_color, self._last_color)
+            selected = choose_ranbu_pixel_start(board, image, reserved_color, self._last_color)
             if selected is not None:
                 start, color, size = selected
             else:

@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import time
-from dataclasses import asdict, replace
+from dataclasses import replace
 
 from battle.execution import MaaBattleExecutor
 from battle.observation import BattleObserver
 from battle.preview import BoardPreviewer
 from battle.progress import BattleProgressReporter
-from battle.ranbu import RanbuStartConfirmation
-from battle.ranbu_feedback import RanbuHoldFeedback
+from battle.ranbu import choose_ranbu_pixel_start
 from battle.recognition import BattleFrameRecognizer, Image
 from battle.session import BattleSession, BattleState
 from battle.stability import NormalLinkStability
@@ -22,8 +21,6 @@ from maa.custom_action import CustomAction
 from utils import logger
 from utils.params import parse_params
 from utils.runtime_paths import get_runtime_paths
-from vision.model import BoardResult
-from vision.ranbu_coverage import inspect_ranbu_coverage
 
 
 @AgentServer.custom_action("BattleAction")
@@ -54,32 +51,18 @@ class BattleAction(CustomAction):
             )
             last_state: BattleState | None = None
 
-            def inspect_ranbu_hold(image: Image, board: BoardResult, color: str | None) -> RanbuHoldFeedback:
-                """先检查残留，仅在确实需要补扫时核对同帧状态。"""
-                if context.tasker.stopping:
-                    return RanbuHoldFeedback(BattleState.UNKNOWN, None, state_checked=False)
-                coverage = inspect_ranbu_coverage(image, board.board_region, color)
-                if coverage.status != "present" or context.tasker.stopping:
-                    return RanbuHoldFeedback(
-                        BattleState.UNKNOWN, None, coverage.status, asdict(coverage), state_checked=False
-                    )
-                state = recognizer.analyze(image)
-                return RanbuHoldFeedback(state, None, coverage.status, asdict(coverage))
-
             executor = MaaBattleExecutor(
                 controller,
                 previewer,
                 observer.record_normal_link_success,
                 lambda: last_state == BattleState.RANBU,
                 lambda: context.tasker.stopping,
-                inspect_ranbu_hold=inspect_ranbu_hold,
             )
             current_image: Image | None = None
             last_decision_at = float("-inf")
             force_next_decision = False
             observe_after: float | None = None
             normal_link_stability = NormalLinkStability()
-            ranbu_start_confirmation = RanbuStartConfirmation()
 
             def observe() -> BattleState:
                 """重新截图并核对状态，不在本阶段发送棋盘输入。"""
@@ -97,15 +80,12 @@ class BattleAction(CustomAction):
                 job = controller.post_screencap().wait()
                 if not job.succeeded:
                     normal_link_stability.reset()
-                    ranbu_start_confirmation.reset()
                     last_state = BattleState.UNKNOWN
                     return BattleState.UNKNOWN
                 image = job.get()
                 state = BattleState.UNKNOWN if not image.size else recognizer.analyze(image)
                 if state != BattleState.OPERABLE:
                     normal_link_stability.reset()
-                if state != BattleState.RANBU:
-                    ranbu_start_confirmation.reset()
                 if state in (BattleState.OPERABLE, BattleState.RANBU):
                     current_image = image
                 if state != last_state:
@@ -129,15 +109,11 @@ class BattleAction(CustomAction):
                     lightweight = configuration.get("enabled", False) if configuration is not None else False
                     if not isinstance(lightweight, bool):
                         raise ValueError("轻量识别配置的enabled必须为布尔值")
-                    ranbu_layout = (
-                        ranbu_start_confirmation.pending_layout_for(image) if phase == BattlePhase.RANBU else None
-                    )
                     required_metrics = strategy_runtime.required_visual_metrics(phase)
                     observation = observer.observe(
                         image,
                         phase,
                         lightweight=lightweight,
-                        ranbu_layout=ranbu_layout,
                         required_metrics=required_metrics,
                     )
                     if phase == BattlePhase.RANBU:
@@ -149,8 +125,6 @@ class BattleAction(CustomAction):
                         logger.debug("普通连线棋盘稳定检查：{}。", normal_link_stability.last_report["reason"])
                     resolution = strategy_runtime.evaluate_stage(observation.metrics)
                     observation = observer.apply_stage_resolution(observation, resolution)
-                    if resolution.applied_transitions:
-                        ranbu_start_confirmation.reset()
                     route_preview = None
                     waiting_for_stability = False
 
@@ -160,9 +134,10 @@ class BattleAction(CustomAction):
                         if not board_stable:
                             waiting_for_stability = True
                             return ()
-                        if observation.board is None:
+                        route_board = normal_link_stability.route_board
+                        if route_board is None:
                             return ()
-                        route_preview = previewer.preview_routes(image, observation.board)
+                        route_preview = previewer.preview_routes(image, route_board)
                         logger.debug(
                             "路线预演：候选边={}，不确定边={}，拟选编号={}。",
                             len(route_preview.candidate_edges),
@@ -184,25 +159,28 @@ class BattleAction(CustomAction):
                         waiting_for_stability = True
                         decision = replace(decision, kind="wait", route=None, reason="等待棋盘稳定")
                     if decision.kind == "ranbu_link":
-                        confirmed = ranbu_start_confirmation.observe(
-                            observation.board, decision.reserved_color, image=image
+                        selected = (
+                            choose_ranbu_pixel_start(
+                                observation.board,
+                                image,
+                                decision.reserved_color,
+                                executor.last_ranbu_color,
+                            )
+                            if observation.board is not None
+                            else None
                         )
-                        previewer.save_stability_report(
-                            {"phase": phase.value, "check": "ranbu_start", **ranbu_start_confirmation.last_report}
-                        )
-                        logger.debug("乱舞预选点颜色检查：{}。", ranbu_start_confirmation.last_report)
-                        if confirmed is not None:
+                        logger.debug("乱舞当前帧起点颜色检查：{}。", selected)
+                        if selected is not None:
                             decision = replace(
                                 decision,
-                                ranbu_start=confirmed[0],
-                                ranbu_color=confirmed[1],
+                                ranbu_start=selected[0],
+                                ranbu_color=selected[1],
                                 ranbu_frame_id=observation.frame_id,
-                                ranbu_body_size=ranbu_start_confirmation.confirmed_body_size,
+                                ranbu_body_size=selected[2],
                             )
                         else:
-                            decision = replace(decision, kind="wait", reason="等待起点颜色确认")
+                            decision = replace(decision, kind="wait", reason="当前帧没有可信的非保留色起点")
                     elif phase == BattlePhase.RANBU:
-                        ranbu_start_confirmation.reset()
                         if decision.kind == "ranbu_short_link":
                             decision = replace(decision, kind="wait", reason="当前帧没有非保留色乱舞起点")
                     logger.debug(
@@ -226,7 +204,6 @@ class BattleAction(CustomAction):
                     executor.execute_once(observation, resolution, decision)
                     if decision.kind != "wait":
                         normal_link_stability.reset()
-                        ranbu_start_confirmation.reset()
                     force_next_decision = waiting_for_stability or decision.kind in (
                         "ultimate",
                         "bomb",

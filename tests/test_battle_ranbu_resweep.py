@@ -104,7 +104,10 @@ class RanbuResweepTests(unittest.TestCase):
 
     def test_stop_during_the_reverse_pass_releases_without_another_capture(self) -> None:
         """用户停止可中断补扫，也不继续读取画面。"""
-        controller, preview, calls = self.replay([RanbuHoldFeedback(BattleState.RANBU, 4, "present")], stop_after=300)
+        _, _, first_pass = self.replay([RanbuHoldFeedback(BattleState.RANBU, None, "unknown")])
+        controller, preview, calls = self.replay(
+            [RanbuHoldFeedback(BattleState.RANBU, 4, "present")], stop_after=first_pass[0] + 20
+        )
         self.assertEqual(len(calls), 1)
         self.assertEqual(controller.actions[-1], ("up", ()))
         self.assertFalse(preview.ranbu_reports[0]["dispatch_completed"])
@@ -115,8 +118,9 @@ class RanbuResweepTests(unittest.TestCase):
 
         fixture = fixtures.BattleExecutionTests()
         fixture.setUp()
+        _, _, first_pass = self.replay([RanbuHoldFeedback(BattleState.RANBU, None, "unknown")])
         controller, clock, preview = (
-            fixtures.ReplayController(fail_move=300),
+            fixtures.ReplayController(fail_move=first_pass[0] + 1),
             fixtures.ReplayClock(),
             fixtures.MarkerReplay(0),
         )

@@ -293,8 +293,7 @@
                 "template": "button/确认.png"
             }
         },
-        "inverse": true,
-        "action": {"type": "Click"}
+        "inverse": true
     },
     "BattleSettlement_FailureConfirm": {
         "recognition": {
