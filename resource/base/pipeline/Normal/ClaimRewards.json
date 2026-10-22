@@ -121,6 +121,10 @@
                 "target": [670, 689, 1, 1]
             }
         },
+        "post_wait_freezes": {
+            "time": 200,
+            "target": [606, 660, 72, 80]
+        },
         "focus": {
             "Node.Action.Starting": "正在打开课题界面"
         }
@@ -141,8 +145,8 @@
     },
     "CR_ClaimTopicRewardsHub": {
         "next": [
-            "[JumpBack]CR_ClaimTopicRewards",
-            "[JumpBack]Pump_RewardReceived",
+            "CR_ClaimTopicRewards",
+            "CR_TopicRewardsReceived",
             "[JumpBack]CR_RouteDailyTask",
             "[JumpBack]CR_RouteWeeklyTask",
             "[JumpBack]CR_RouteMainTask",
@@ -240,7 +244,29 @@
         "post_wait_freezes": {
             "time": 200,
             "target": [279, 1184, 157, 41]
-        }
+        },
+        "next": ["CR_ClaimTopicRewards", "CR_TopicRewardsReceived"],
+        "on_error": ["CR_ClaimTopicRewardsHub"]
+    },
+    "CR_TopicRewardsReceived": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [29, 40, 656, 657],
+                "template": "pump/获得奖励.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [294, 1168, 131, 63]
+            }
+        },
+        "post_wait_freezes": {
+            "time": 200,
+            "target": [294, 1168, 131, 63]
+        },
+        "next": ["CR_ClaimTopicRewardsHub"]
     },
     "CR_RouteDailyTask": {
         "enabled": false,
