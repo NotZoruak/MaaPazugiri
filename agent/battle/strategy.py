@@ -60,6 +60,7 @@ class FrenzySettings:
     allow_ultimates: bool
     allow_bombs: bool
     reserved_color: str | None
+    continue_on_unknown_color: bool = False
 
 
 @dataclass(frozen=True)
@@ -150,6 +151,7 @@ class StrategyDecision:
     ranbu_color: str | None = None
     ranbu_frame_id: str | None = None
     ranbu_body_size: tuple[float, float] | None = None
+    ranbu_continue_on_unknown_color: bool = False
 
 
 @dataclass(frozen=True)
@@ -366,7 +368,10 @@ def _parse_document(data: Any, requested_id: str) -> StrategyDocument:
         )
 
         raw_frenzy = _object(
-            stage["frenzy"], {"allow_ultimates", "allow_bombs"}, {"reserved_color"}, f"{prefix}.frenzy"
+            stage["frenzy"],
+            {"allow_ultimates", "allow_bombs"},
+            {"reserved_color", "continue_on_unknown_color"},
+            f"{prefix}.frenzy",
         )
         reserved = raw_frenzy.get("reserved_color")
         if reserved is not None and reserved not in _COLORS:
@@ -375,6 +380,7 @@ def _parse_document(data: Any, requested_id: str) -> StrategyDocument:
             _boolean(raw_frenzy["allow_ultimates"], f"{prefix}.frenzy.allow_ultimates"),
             _boolean(raw_frenzy["allow_bombs"], f"{prefix}.frenzy.allow_bombs"),
             reserved,
+            _boolean(raw_frenzy.get("continue_on_unknown_color", False), f"{prefix}.frenzy.continue_on_unknown_color"),
         )
 
         raw_transitions = stage["transitions"]
@@ -699,6 +705,9 @@ def decide_action(
             "ranbu_link",
             stage.id,
             reserved_color=stage.frenzy.reserved_color,
+            ranbu_continue_on_unknown_color=(
+                stage.frenzy.reserved_color is not None and stage.frenzy.continue_on_unknown_color
+            ),
             transition_chain=transitions,
             reason="乱舞按当前帧颜色选点并扫动",
         )

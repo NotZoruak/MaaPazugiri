@@ -11,6 +11,7 @@ from typing import Any, Protocol
 from utils import logger
 from vision.image_io import Image
 from vision.model import BoardResult, ChainEndpointResult, ChainMovePositions, is_black_ghoul, is_linkable_ghoul
+from vision.ranbu_point import identify_ranbu_point_color
 
 from .candidates import preferred_ghoul_touch_point
 from .observation import BattleObservation
@@ -55,6 +56,7 @@ class MaaBattleExecutor:
         can_start_ranbu_link: Callable[[], bool],
         is_stopping: Callable[[], bool],
         *,
+        confirm_normal_link_success: Callable[[], bool] | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
         inspect_ranbu_hold: Callable[[Image, BoardResult, str | None], RanbuHoldFeedback] | None = None,
@@ -64,6 +66,7 @@ class MaaBattleExecutor:
         self._record_normal_link_success = record_normal_link_success
         self._can_start_ranbu_link = can_start_ranbu_link
         self._is_stopping = is_stopping
+        self._confirm_normal_link_success = confirm_normal_link_success
         self._clock = clock
         self._sleep = sleep
         self._inspect_ranbu_hold = inspect_ranbu_hold
@@ -162,7 +165,7 @@ class MaaBattleExecutor:
         logger.debug("已点击{}级炸弹对象{}，回到主循环重新截图。", decision.level, target.id)
 
     def _normal_link(self, observation: BattleObservation, decision: StrategyDecision) -> None:
-        """按当前帧路线整笔连线，仅在松手前检查一次菱形。"""
+        """按当前帧路线整笔连线，并在松手后确认是否成功。"""
         if observation.board is None or decision.route is None or len(decision.route.points) < 2:
             logger.warning("当前帧普通连线缺少可信棋盘或路线，跳过触控。")
             return
@@ -171,13 +174,23 @@ class MaaBattleExecutor:
             points = tuple(reversed(points))
             logger.debug("上次整笔未确认成功，本次使用新帧路线的另一端起步。")
         logger.debug("普通连线目标：颜色={}，对象序列={}。", decision.route.color, decision.route.object_ids)
-        found_marker = self._hold_and_move(points, observation)
-        self._reverse_next_normal_link = False if found_marker else not self._reverse_next_normal_link
-        if found_marker:
+        gesture_completed = self._hold_and_move(
+            points,
+            observation,
+            check_marker=self._confirm_normal_link_success is None,
+            return_dispatch_status=self._confirm_normal_link_success is not None,
+        )
+        link_succeeded = gesture_completed
+        if gesture_completed and self._confirm_normal_link_success is not None:
+            link_succeeded = self._confirm_normal_link_success()
+        self._reverse_next_normal_link = False if link_succeeded else not self._reverse_next_normal_link
+        if link_succeeded:
             self._record_normal_link_success()
-            logger.debug("松手前已识别到连线菱形，本次普通连线手数递增一次。")
+            logger.debug("普通连线成功，本次普通连线手数递增一次。")
+        elif gesture_completed:
+            logger.debug("普通连线松手后未确认成功，本次不递增普通连线手数。")
         else:
-            logger.debug("松手前未确认连线菱形，本次不递增普通连线手数。")
+            logger.debug("普通连线触控未完整派发，本次不递增普通连线手数。")
 
     def _black_link(self, observation: BattleObservation, decision: StrategyDecision) -> None:
         """只连接当前帧黑色对象，乱舞期间不累计普通连线手数。"""
@@ -272,7 +285,11 @@ class MaaBattleExecutor:
             capture_ranbu=True,
             ranbu_color=color,
             ranbu_body_size=decision.ranbu_body_size,
+            ranbu_reserved_color=decision.reserved_color,
+            ranbu_continue_on_unknown_color=decision.ranbu_continue_on_unknown_color,
         )
+        if self._last_ranbu_sweep_started:
+            color = self._last_ranbu_color
         # 预演图写盘移到松手后，避免颜色确认后再消耗一帧时间才按下。
         try:
             self._previewer.save_ranbu_report(
@@ -281,7 +298,6 @@ class MaaBattleExecutor:
         except Exception as exc:
             logger.warning("乱舞轨迹诊断保存失败：{}。", exc)
         if self._last_ranbu_sweep_started:
-            self._last_ranbu_color = color
             logger.debug("乱舞扫动已结束，回到主循环重新截图；乱舞连线不计入普通手数。")
         else:
             logger.debug("乱舞扫动未开始，回到主循环重新截图。")
@@ -310,14 +326,17 @@ class MaaBattleExecutor:
         observation: BattleObservation,
         *,
         check_marker: bool = True,
+        return_dispatch_status: bool = False,
         check_ranbu_allowed: bool = False,
         hold_start_seconds: float = 0.5,
         gesture_duration: float | None = None,
         capture_ranbu: bool = False,
         ranbu_color: str | None = None,
         ranbu_body_size: tuple[float, float] | None = None,
+        ranbu_reserved_color: str | None = None,
+        ranbu_continue_on_unknown_color: bool = False,
     ) -> bool:
-        """整笔连续移动；普通连线只在松手前截图一次，出现菱形即确认一手。"""
+        """整笔连续移动，并按菱形检查或触控派发状态返回结果。"""
         self._last_gesture_started = False
         self._last_ranbu_sweep_started = False
         self.last_gesture_released_at = None
@@ -344,6 +363,8 @@ class MaaBattleExecutor:
         movement_finished_at: float | None = None
         capture_elapsed_ms = 0.0
         capture_status = "not_attempted"
+        selected_color: str | None = None
+        selection_check = "not_required"
         passes: list[dict[str, object]] = []
         pass_images: list[Image] = []
         stop_reason = "input_failed"
@@ -362,10 +383,74 @@ class MaaBattleExecutor:
                 raise RuntimeError("按住连线起点失败")
             self._last_gesture_started = True
             stop_reason = "stopped"
+            selection_allowed = True
+            if capture_ranbu and ranbu_reserved_color is None:
+                selection_check = "not_required"
+                stop_reason = "no_reserved_color_check"
+                logger.debug("乱舞未设置保留颜色，跳过按下后的起点颜色识别，直接扫动。")
+            elif capture_ranbu:
+                selection_check = "capture_failed"
+                selection_started = self._clock()
+                selected = self._controller.post_screencap().wait()
+                capture_elapsed_ms += round((self._clock() - selection_started) * 1000, 3)
+                if not self._is_stopping() and selected.succeeded:
+                    selected_image: Image = selected.get()
+                    if selected_image.size and ranbu_body_size is not None:
+                        held = selected_image.copy()
+                        capture_status = "selection_captured"
+                        selected_color = identify_ranbu_point_color(
+                            selected_image, points[0], ranbu_body_size
+                        )
+                        if selected_color is None:
+                            selection_check = "unknown"
+                            if ranbu_continue_on_unknown_color:
+                                stop_reason = "selection_color_unknown_continue"
+                                logger.warning(
+                                    "乱舞按下后起点颜色无法分类；策略允许继续扫动。保留色={}。",
+                                    ranbu_reserved_color,
+                                )
+                            else:
+                                stop_reason = "selection_color_unknown"
+                                selection_allowed = False
+                                logger.warning(
+                                    "乱舞按下后起点颜色无法分类；策略要求原地松手，不执行扫动。保留色={}。",
+                                    ranbu_reserved_color,
+                                )
+                        elif selected_color == ranbu_reserved_color:
+                            selection_check = "reserved_color"
+                            stop_reason = "reserved_color_selected"
+                            selection_allowed = False
+                        else:
+                            selection_check = "accepted"
+                            logger.debug(
+                                "乱舞按下后起点颜色确认：预判={}，实选={}，保留色={}，允许扫动。",
+                                ranbu_color,
+                                selected_color,
+                                ranbu_reserved_color,
+                            )
+                    else:
+                        capture_status = "selection_capture_empty"
+                        selection_check = "unknown"
+                        stop_reason = "selection_capture_empty"
+                        selection_allowed = False
+                else:
+                    capture_status = "selection_capture_failed"
+                    selection_check = "capture_failed"
+                    stop_reason = "selection_capture_failed"
+                    selection_allowed = False
+                if not selection_allowed:
+                    logger.warning(
+                        "乱舞按下后起点颜色确认未通过：预判={}，实选={}，保留色={}，判定={}；原地松手，不执行扫动。",
+                        ranbu_color,
+                        selected_color,
+                        ranbu_reserved_color,
+                        selection_check,
+                    )
             if hold_start_seconds > 0:
                 self._sleep(hold_start_seconds)
-            if gesture_duration is not None and capture_ranbu:
+            if selection_allowed and gesture_duration is not None and capture_ranbu:
                 self._last_ranbu_sweep_started = True
+                self._last_ranbu_color = selected_color or ranbu_color
                 pass_started = self._clock()
                 stop_reason = "input_failed"
                 try:
@@ -397,10 +482,10 @@ class MaaBattleExecutor:
                         "feedback_elapsed_ms": 0.0,
                     }
                 )
-            elif gesture_duration is not None:
+            elif selection_allowed and gesture_duration is not None:
                 completed = self._move_timed_path(points, observation, gesture_started, gesture_duration, events=events)
                 movement_finished_at = self._clock()
-            else:
+            elif selection_allowed:
                 for index, point in enumerate(points[1:], 1):
                     if not self._move_continuously(
                         points[index - 1],
@@ -446,7 +531,9 @@ class MaaBattleExecutor:
                 report: dict[str, object] = {
                     "frame_id": observation.frame_id,
                     "start": list(points[0]),
-                    "start_color": ghoul_color_at_point(observation.board, points[0]) if observation.board else None,
+                    "start_color": selected_color
+                    if capture_ranbu
+                    else (ghoul_color_at_point(observation.board, points[0]) if observation.board else None),
                     "planned_points": points,
                     "target_duration_ms": round((gesture_duration or 0) * 1000),
                     "movement_elapsed_ms": round(
@@ -465,13 +552,19 @@ class MaaBattleExecutor:
                         for a, b in zip(passes, passes[1:], strict=False)
                     ),
                     "passes": passes,
-                    "start_selection_check": "disabled",
+                    "start_selection_check": selection_check,
+                    "predicted_start_color": ranbu_color,
+                    "selected_start_color": selected_color,
+                    "reserved_color": ranbu_reserved_color,
+                    "continue_on_unknown_color": ranbu_continue_on_unknown_color,
                     "touch_sampling": "body_relative_dense_points",
                     "start_body_size": ranbu_body_size,
                     "stop_reason": stop_reason,
                     "events": events,
                 }
-                if ranbu_color is not None:
+                if selected_color is not None:
+                    report["start_color"] = selected_color
+                elif ranbu_color is not None:
                     report["start_color"] = ranbu_color
                 try:
                     self._previewer.save_ranbu_execution_report(
@@ -507,7 +600,8 @@ class MaaBattleExecutor:
                 passes,
                 stop_reason,
             )
-        return succeeded and not self._is_stopping()
+        confirmed = succeeded if check_marker else return_dispatch_status and completed and bool(up.succeeded)
+        return confirmed and not self._is_stopping()
 
     def _move_timed_path(
         self,

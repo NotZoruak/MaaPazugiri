@@ -53,12 +53,34 @@ class BattleAction(CustomAction):
             )
             last_state: BattleState | None = None
 
+            def confirm_normal_link_success() -> bool:
+                """松手后等待100毫秒，并以不可操作状态确认普通连线成功。"""
+                if context.tasker.stopping:
+                    return False
+                time.sleep(0.1)
+                if context.tasker.stopping:
+                    return False
+                job = controller.post_screencap().wait()
+                if not job.succeeded:
+                    logger.warning("普通连线松手后状态确认截图失败。")
+                    return False
+                image = job.get()
+                state = BattleState.UNKNOWN if not image.size else recognizer.analyze(image)
+                succeeded = state == BattleState.INOPERABLE
+                logger.debug(
+                    "普通连线松手后状态确认：等待100毫秒，状态={}，结果={}。",
+                    state.value,
+                    "成功" if succeeded else "未确认成功",
+                )
+                return succeeded
+
             executor = MaaBattleExecutor(
                 controller,
                 previewer,
                 observer.record_normal_link_success,
                 lambda: last_state == BattleState.RANBU,
                 lambda: context.tasker.stopping,
+                confirm_normal_link_success=confirm_normal_link_success,
             )
             current_image: Image | None = None
             last_decision_at = float("-inf")

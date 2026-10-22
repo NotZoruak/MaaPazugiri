@@ -337,7 +337,7 @@
         },
         "action": {"type": "Click"},
         "post_wait_freezes": 200,
-        "next": ["BattleSettlement_FailureRetreat", "BattleSettlement_Failure"],
+        "next": ["BattleSettlement_FailureRetreat", "BattleSettlement_Failure", "BattleSettlement_FailureRetreatDone"],
         "on_error": ["[Anchor]Hub"]
     },
     "BattleSettlement_Failure": {
@@ -363,7 +363,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [270, 1141, 190, 76],
-                "template": "button/确认.png"
+                "template": "button/确认2.png"
             }
         },
         "action": {"type": "Click"}

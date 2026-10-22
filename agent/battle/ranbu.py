@@ -61,17 +61,12 @@ def _start_point(item: BoardObject, board: BoardResult) -> tuple[float, float] |
 
 
 def _start_candidates(board: BoardResult, reserved_color: str | None) -> list[tuple[int, str | None, tuple[int, int]]]:
-    """只收集本帧内具有有效落点的未保留对象，不使用历史坐标。"""
+    """只收集本帧内具有有效落点的四种普通颜色饿鬼，不使用历史坐标。"""
     candidates: list[tuple[int, str | None, tuple[int, int]]] = []
     for item in board.objects:
-        if item.kind == "ghoul":
-            if item.color not in COLORS or item.color == reserved_color:
-                continue
-            point = _start_point(item, board)
-        elif item.kind == "special_ghoul" and item.subtype == "black":
-            point = item.center
-        else:
+        if item.kind != "ghoul" or item.color not in COLORS or item.color == reserved_color:
             continue
+        point = _start_point(item, board)
         if item.quality not in ("identified", "single_feature"):
             continue
         x, y, width, height = board.board_region
@@ -94,19 +89,24 @@ def ranbu_start_color(board: BoardResult, start: tuple[int, int]) -> str | None:
 def _ordered_start_candidates(
     board: BoardResult, reserved_color: str | None, *, previous_color: str | None = None
 ) -> list[tuple[int, str | None, tuple[int, int]]]:
-    """为当前帧全部起点排序，避免首个不可读对象长期阻塞其他颜色。"""
+    """先按轮换顺序排列颜色，再在同色起点中从画面下方向上选择。"""
     candidates = _start_candidates(board, reserved_color)
     if not candidates:
         return []
     ordinary = [entry for entry in candidates if entry[1] in COLORS]
-    # 已确认的普通颜色优先；黑色仅作独立回退，不因编号靠前占用每一轮。
-    candidates = ordinary or candidates
+    # 按四种普通颜色轮换，特殊黑色饿鬼不作为乱舞起点。
+    candidates = ordinary
+    color_order = COLORS
     if previous_color in COLORS:
         offset = COLORS.index(previous_color) + 1
-        order = (*COLORS[offset:], *COLORS[:offset])
-        candidates.sort(key=lambda entry: (order.index(entry[1]) if entry[1] in order else len(order), entry[0]))
-    else:
-        candidates.sort(key=lambda entry: entry[0])
+        color_order = (*COLORS[offset:], *COLORS[:offset])
+    candidates.sort(
+        key=lambda entry: (
+            color_order.index(entry[1]) if entry[1] in color_order else len(color_order),
+            -entry[2][1],
+            entry[0],
+        )
+    )
     return candidates
 
 

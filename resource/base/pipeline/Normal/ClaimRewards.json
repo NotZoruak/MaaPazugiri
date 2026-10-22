@@ -7,7 +7,6 @@
         "timeout": 120000,
         "next": [
             "CR_RouteDailyFreeStaminaPotion",
-            "[JumpBack]BackToMainPage",
             "[JumpBack]MainPage_AutoHeadPat",
             "[JumpBack]MainPage_OpenMenu",
             "[JumpBack]CR_OpenTopicPage",
@@ -15,6 +14,7 @@
             "BattleSettlement_SuccessConfirm",
             "BattleSettlement_SuccessRewardClick",
             "BattleSettlement_FailureConfirm",
+            "[JumpBack]BackToMainPage",
             "[JumpBack]LoginGameIcon",
             "[JumpBack]Login_TitleScreen",
             "[JumpBack]Pump_DailyReport",
@@ -125,6 +125,8 @@
             "time": 200,
             "target": [606, 660, 72, 80]
         },
+        "next": ["CR_OpenTopicPage", "CR_IsInTopicPage"],
+        "on_error": ["CR_DetectWhereAmI"],
         "focus": {
             "Node.Action.Starting": "正在打开课题界面"
         }
@@ -187,9 +189,10 @@
     "CR_ClaimPassRewardsHub": {
         "next": [
             "[JumpBack]CR_ClaimPassReward",
-            "[JumpBack]Pump_RewardReceived",
+            "[JumpBack]CR_PassRewardsReceived",
             "CR_ClosePassPage"
-        ]
+        ],
+        "on_error": ["CR_DetectWhereAmI"]
     },
     "CR_ClosePassPage": {
         "recognition": {
@@ -204,6 +207,22 @@
         },
         "focus": {
             "Node.Action.Succeeded": "通行证奖励领取完成"
+        }
+    },
+    "CR_PassRewardsReceived": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [288, 1166, 145, 71],
+                "template": "button/关闭_底部按钮.png"
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "post_wait_freezes": {
+            "time": 200,
+            "target": [288, 1166, 145, 71]
         }
     },
     "CR_ClaimPassReward": {
@@ -252,19 +271,16 @@
         "recognition": {
             "type": "TemplateMatch",
             "param": {
-                "roi": [29, 40, 656, 657],
-                "template": "pump/获得奖励.png"
+                "roi": [288, 1166, 145, 71],
+                "template": "button/关闭_底部按钮.png"
             }
         },
         "action": {
-            "type": "Click",
-            "param": {
-                "target": [294, 1168, 131, 63]
-            }
+            "type": "Click"
         },
         "post_wait_freezes": {
             "time": 200,
-            "target": [294, 1168, 131, 63]
+            "target": [288, 1166, 145, 71]
         },
         "next": ["CR_ClaimTopicRewardsHub"]
     },
