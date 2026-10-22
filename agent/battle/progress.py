@@ -56,36 +56,47 @@ def _operation_text(decision: StrategyDecision) -> str:
         return f"乱舞扫动（保留{color}）" if color else "乱舞扫动"
     if decision.kind == "ranbu_short_link":
         return "乱舞短连后松手（当前棋盘全为保留色）"
-    return f"等待（{decision.reason}）" if decision.reason else "等待"
+    if decision.kind == "wait" and decision.reason in ("等待棋盘稳定", "等待起点颜色确认"):
+        return decision.reason
+    return "等待"
 
 
 class BattleProgressReporter:
-    """每个行动输出一条摘要，只有实际转阶段时才展示命中条件。"""
+    """合并连续相同的等待、奥义和乱舞摘要，实际转阶段时展示命中条件。"""
 
     def __init__(self, strategy: StrategyDocument) -> None:
         self._stages = strategy.stage_by_id
-        self._last_wait: tuple[BattlePhase, str, str] | None = None
+        self._last_summary: tuple[BattlePhase, str, str, int | None, str | None, str] | None = None
 
     def report(self, phase: BattlePhase | str, resolution: StageResolution, decision: StrategyDecision) -> None:
-        """仅展示可操作与乱舞进度，并合并连续相同的等待原因。"""
+        """仅展示可操作与乱舞进度，合并重复提示但保留普通连线与炸弹记录。"""
         try:
             confirmed_phase = BattlePhase(phase)
         except ValueError:
             return
         previous = self._stages[resolution.previous_stage_id]
+        if resolution.applied_transitions:
+            self._last_summary = None
         for transition in resolution.applied_transitions:
             target = self._stages[transition.target_stage_id]
             logger.info(
                 "阶段切换：{} → {}；条件：{}。", previous.name, target.name, _condition_text(transition.condition)
             )
             previous = target
-        if decision.kind == "wait":
-            signature = (confirmed_phase, resolution.stage.id, decision.reason)
-            if signature == self._last_wait:
+        if decision.kind in ("wait", "ultimate", "ranbu_link", "ranbu_short_link"):
+            signature = (
+                confirmed_phase,
+                resolution.stage.id,
+                decision.kind,
+                decision.slot,
+                decision.reserved_color,
+                decision.reason if decision.kind == "wait" else "",
+            )
+            if signature == self._last_summary:
                 return
-            self._last_wait = signature
+            self._last_summary = signature
         else:
-            self._last_wait = None
+            self._last_summary = None
         state = "可操作" if confirmed_phase == BattlePhase.OPERABLE else "乱舞"
         logger.info(
             "当前状态：{}；所属阶段：{}；进行操作：{}。", state, resolution.stage.name, _operation_text(decision)

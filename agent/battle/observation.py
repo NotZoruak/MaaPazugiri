@@ -25,6 +25,7 @@ class BattleObservation:
     metrics: StrategyMetrics
     available_bomb_levels: tuple[int, ...] = ()
     ultimate_click_points: dict[int, tuple[int, int]] = field(default_factory=dict)
+    unchecked_metrics: tuple[str, ...] = ()
 
 
 class BattleObserver:
@@ -50,32 +51,49 @@ class BattleObserver:
         phase: BattlePhase,
         *,
         lightweight: bool = False,
+        ranbu_layout: tuple[tuple[float, float, float, float], str] | None = None,
+        required_metrics: frozenset[str] | None = None,
     ) -> BattleObservation:
         """在普通可操作或乱舞时识别棋盘，并读取血量、炸弹和奥义。"""
         frame_id = uuid4().hex
-        board = self._board_previewer.recognize_board(
-            image,
-            frame_id,
-            lightweight=lightweight or phase == BattlePhase.RANBU,
-        )
+        if phase == BattlePhase.RANBU and ranbu_layout is not None:
+            region, profile = ranbu_layout
+            board = BoardResult(
+                frame_id,
+                (image.shape[1], image.shape[0]),
+                region,
+                profile,
+                {"mode": "ranbu_start_point_only", "skipped_kinds": ["ghoul", "special_ghoul", "bomb", "obstacle"]},
+            )
+        else:
+            board = self._board_previewer.recognize_board(
+                image,
+                frame_id,
+                lightweight=lightweight or phase == BattlePhase.RANBU,
+            )
 
-        enemy_hp = recognize_hp_percent(self._recognize, image, "enemy")
-        ally_hp = recognize_hp_percent(self._recognize, image, "ally")
-        ultimate = self._ultimate_recognizer.analyze(image, frame_id=frame_id, phase=BattleState(phase.value))
+        all_metrics = ("enemy_hp_percent", "ally_hp_percent", "ultimate_ready")
+        required = (
+            required_metrics if phase == BattlePhase.RANBU and required_metrics is not None else frozenset(all_metrics)
+        )
+        unchecked = tuple(name for name in all_metrics if name not in required)
+        enemy_hp = recognize_hp_percent(self._recognize, image, "enemy") if "enemy_hp_percent" in required else None
+        ally_hp = recognize_hp_percent(self._recognize, image, "ally") if "ally_hp_percent" in required else None
+        ultimate_slots = (
+            self._ultimate_recognizer.analyze(image, frame_id=frame_id, phase=BattleState(phase.value)).slots
+            if "ultimate_ready" in required
+            else []
+        )
         ultimate_states = {
-            slot.slot: True
-            if slot.state.value == "ready"
-            else False
-            if slot.state.value == "charging"
-            else None
-            for slot in ultimate.slots
+            slot.slot: True if slot.state.value == "ready" else False if slot.state.value == "charging" else None
+            for slot in ultimate_slots
         }
         ultimate_points = {
             slot.slot: (
                 round(slot.ready_box[0] + slot.ready_box[2] / 2),
                 round(slot.ready_box[1] + slot.ready_box[3] / 2),
             )
-            for slot in ultimate.slots
+            for slot in ultimate_slots
             if slot.state.value == "ready" and slot.ready_box is not None
         }
         bomb_levels = tuple(
@@ -99,7 +117,7 @@ class BattleObserver:
             ultimate_ready=ultimate_states,
             frenzy_active=phase == BattlePhase.RANBU,
         )
-        return BattleObservation(frame_id, phase, image, board, metrics, bomb_levels, ultimate_points)
+        return BattleObservation(frame_id, phase, image, board, metrics, bomb_levels, ultimate_points, unchecked)
 
     def apply_stage_resolution(
         self,

@@ -40,6 +40,7 @@ class NormalLinkSettings:
     prioritize_colors: bool
     long_link_threshold: int
     color_priority: tuple[str, ...]
+    color_priority_count: int = 4
 
 
 @dataclass(frozen=True)
@@ -145,6 +146,10 @@ class StrategyDecision:
     transition_chain: tuple[str, ...] = ()
     transition_loop: bool = False
     reason: str = ""
+    ranbu_start: tuple[int, int] | None = None
+    ranbu_color: str | None = None
+    ranbu_frame_id: str | None = None
+    ranbu_body_size: tuple[float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -342,7 +347,7 @@ def _parse_document(data: Any, requested_id: str) -> StrategyDocument:
         raw_normal = _object(
             raw_actions["normal_link"],
             {"prioritize_colors", "long_link_threshold", "color_priority"},
-            set(),
+            {"color_priority_count"},
             f"{prefix}.actions.normal_link",
         )
         colors = raw_normal["color_priority"]
@@ -353,6 +358,11 @@ def _parse_document(data: Any, requested_id: str) -> StrategyDocument:
             _boolean(raw_normal["prioritize_colors"], f"{prefix}.actions.normal_link.prioritize_colors"),
             threshold,
             tuple(colors),
+            _integer(
+                raw_normal.get("color_priority_count", 4),
+                f"{prefix}.actions.normal_link.color_priority_count",
+                maximum=4,
+            ),
         )
 
         raw_frenzy = _object(
@@ -442,6 +452,41 @@ class StrategyRuntime:
         self.metrics.battle_normal_links += 1
         self.metrics.stage_normal_links += 1
 
+    def required_visual_metrics(self, phase: BattlePhase) -> frozenset[str]:
+        """收集当前及所有可达阶段的视觉依赖，不改变条件评估或阶段转变。"""
+        visual_metrics = {"enemy_hp_percent", "ally_hp_percent", "ultimate_ready"}
+        if phase != BattlePhase.RANBU:
+            return frozenset(visual_metrics)
+        required: set[str] = set()
+
+        def collect(condition: dict[str, Any]) -> None:
+            """递归检查已经校验过的条件树，不根据当前值提前裁掉分支。"""
+            if condition["type"] == "group":
+                for item in condition["children"]:
+                    collect(item)
+            elif condition["metric"] in visual_metrics:
+                required.add(condition["metric"])
+
+        stage_by_id = self.strategy.stage_by_id
+        pending = [self.current_stage_id]
+        visited: set[str] = set()
+        while pending:
+            identifier = pending.pop()
+            if identifier in visited:
+                continue
+            visited.add(identifier)
+            stage = stage_by_id[identifier]
+            for transition in stage.transitions:
+                collect(transition.condition)
+                pending.append(transition.target_stage_id)
+            if stage.frenzy.allow_ultimates:
+                for rule in stage.actions.ultimates:
+                    if rule.enabled:
+                        required.add("ultimate_ready")
+                        if rule.condition is not None:
+                            collect(rule.condition)
+        return frozenset(required)
+
     def evaluate_stage(self, metrics: StrategyMetrics | None = None) -> StageResolution:
         """独立评估并应用当前观察中成立的阶段转变，阻断同帧循环。"""
         context = replace(metrics if metrics is not None else self.metrics)
@@ -529,6 +574,7 @@ def choose_normal_route(
     prioritize_colors: bool,
     long_link_threshold: int,
     color_priority: tuple[str, ...],
+    color_priority_count: int = 4,
 ) -> Any | None:
     """按已确认的七连门槛与颜色顺序，从当前帧候选路线中选择一路。"""
     if not routes:
@@ -538,7 +584,7 @@ def choose_normal_route(
         long_routes = [route for route in candidates if len(_value(route, "object_ids") or ()) >= long_link_threshold]
         if long_routes:
             candidates = long_routes
-        color_rank = {color: index for index, color in enumerate(color_priority)}
+        color_rank = {color: index for index, color in enumerate(color_priority[:color_priority_count])}
         candidates.sort(
             key=lambda route: (
                 color_rank.get(_value(route, "color"), len(color_rank)),
@@ -638,6 +684,7 @@ def decide_action(
         prioritize_colors=stage.actions.normal_link.prioritize_colors,
         long_link_threshold=stage.actions.normal_link.long_link_threshold,
         color_priority=stage.actions.normal_link.color_priority,
+        color_priority_count=stage.actions.normal_link.color_priority_count,
     )
     if route is None:
         return StrategyDecision("wait", stage.id, transition_chain=transitions, reason="当前帧没有可信候选路线")

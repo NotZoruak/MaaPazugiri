@@ -132,7 +132,44 @@ class FindTargetStageAction(CustomAction):
                     y=position[1],
                 )
             )
-        return sorted(results, key=lambda stage: (stage.y, stage.x, stage.chapter, stage.stage))
+        return self._filter_stage_order(results)
+
+    @staticmethod
+    def _filter_stage_order(stages: list[StageResult]) -> list[StageResult]:
+        """仅保留从左到右编号严格递增的唯一最长序列，歧义时停止本轮选关。"""
+        ordered = sorted(stages, key=lambda stage: (stage.x, stage.y, stage.chapter, stage.stage))
+        if not ordered:
+            return []
+
+        paths: list[tuple[int, ...]] = []
+        counts: list[int] = []
+        for index, stage in enumerate(ordered):
+            predecessors = [
+                previous
+                for previous in range(index)
+                if ordered[previous].x < stage.x
+                and (ordered[previous].chapter, ordered[previous].stage) < (stage.chapter, stage.stage)
+            ]
+            if not predecessors:
+                paths.append((index,))
+                counts.append(1)
+                continue
+            longest = max(len(paths[previous]) for previous in predecessors)
+            best = [previous for previous in predecessors if len(paths[previous]) == longest]
+            paths.append((*paths[best[0]], index))
+            counts.append(min(2, sum(counts[previous] for previous in best)))
+
+        longest = max(len(path) for path in paths)
+        best = [index for index, path in enumerate(paths) if len(path) == longest]
+        if sum(counts[index] for index in best) != 1:
+            logger.warning("关卡编号的横向递增关系存在歧义，本轮不采用识别结果")
+            return []
+
+        accepted = set(paths[best[0]])
+        rejected = [stage.text for index, stage in enumerate(ordered) if index not in accepted]
+        if rejected:
+            logger.debug(f"已排除不符合横向递增关系的关卡编号：{'、'.join(rejected)}")
+        return [stage for index, stage in enumerate(ordered) if index in accepted]
 
     @staticmethod
     def _box_origin(box: object) -> tuple[int, int] | None:

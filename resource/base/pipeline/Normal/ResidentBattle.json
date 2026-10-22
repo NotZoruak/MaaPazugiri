@@ -16,6 +16,7 @@
             "RB_CheckChallengeStagePage",
             "RB_CheckBattleStarted",
             "BattleSettlement_SuccessConfirm",
+            "BattleSettlement_SuccessRewardClick",
             "BattleSettlement_FailureConfirm",
             "[JumpBack]LoginGameIcon",
             "[JumpBack]Login_TitleScreen",
@@ -25,7 +26,8 @@
             "[JumpBack]Pump_NoPurchasableProducts",
             "[JumpBack]Pump_RewardReceived",
             "[JumpBack]Pump_DateChange",
-            "[JumpBack]Pump_NotificationAnnouncement"
+            "[JumpBack]Pump_NotificationAnnouncement",
+            "[JumpBack]UnknownPage_Close"
         ],
         "on_error": ["[JumpBack]RestartGame"]
     },
@@ -35,7 +37,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [9, 1155, 91, 89],
-                "template": ["button/回主页.png", "button/关闭.png"]
+                "template": ["button/回主页.png", "button/关闭_左侧按钮.png"]
             }
         },
         "action": {
@@ -215,7 +217,7 @@
             "type": "TemplateMatch",
             "param": {
                 "roi": [57, 1160, 85, 90],
-                "template": "button/关闭.png"
+                "template": "button/关闭_左侧按钮.png"
             }
         },
         "action": {

@@ -1,0 +1,100 @@
+{
+  "source_run_id": "cf0ddffb6de6464f9dcb0e53c4b908f5",
+  "source_size": [
+    720,
+    1280
+  ],
+  "evidence_stage": "held_after_sweep",
+  "samples": [
+    {
+      "stem": "seq-14",
+      "point": [
+        100,
+        100
+      ],
+      "body_size": [
+        96,
+        100
+      ],
+      "color": "blue",
+      "expected": "confirmed",
+      "source_point": [
+        196,
+        465
+      ],
+      "source_sequence": 14
+    },
+    {
+      "stem": "seq-15",
+      "point": [
+        100,
+        100
+      ],
+      "body_size": [
+        96,
+        100
+      ],
+      "color": "green",
+      "expected": "unknown",
+      "source_point": [
+        472,
+        417
+      ],
+      "source_sequence": 15
+    },
+    {
+      "stem": "seq-16",
+      "point": [
+        100,
+        100
+      ],
+      "body_size": [
+        96,
+        100
+      ],
+      "color": "yellow",
+      "expected": "confirmed",
+      "source_point": [
+        161,
+        396
+      ],
+      "source_sequence": 16
+    },
+    {
+      "stem": "seq-17",
+      "point": [
+        100,
+        100
+      ],
+      "body_size": [
+        96,
+        100
+      ],
+      "color": "blue",
+      "expected": "unknown",
+      "source_point": [
+        590,
+        417
+      ],
+      "source_sequence": 17
+    },
+    {
+      "stem": "seq-18",
+      "point": [
+        100,
+        100
+      ],
+      "body_size": [
+        96,
+        100
+      ],
+      "color": "green",
+      "expected": "confirmed",
+      "source_point": [
+        214,
+        700
+      ],
+      "source_sequence": 18
+    }
+  ]
+}

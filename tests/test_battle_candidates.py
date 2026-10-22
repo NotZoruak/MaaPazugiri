@@ -42,6 +42,34 @@ def board(*objects: BoardObject, frame_id: str = "测试当前帧") -> BoardResu
 class BattleCandidateTests(unittest.TestCase):
     """确保路线只来自当前帧可靠候选边。"""
 
+    def test_touch_points_use_current_body_centers_instead_of_eye_features(self) -> None:
+        """同一对象眼部触点切换不改变落点，滑动经过当前识别出的身体中心。"""
+        first, second = ghoul(1, 148, 386), ghoul(2, 234, 382)
+        first.candidate_point = (148, 368)
+        second.candidate_point = (234, 364)
+        result = build_route_preview(board(first, second))
+        self.assertIsNotNone(result.selected_route)
+        self.assertEqual(result.selected_route.points, ((148, 386), (234, 382)))
+
+    def test_body_center_covered_by_a_bomb_keeps_the_verified_visible_touch_point(self) -> None:
+        """身体中心被炸弹覆盖时，不能绕过原候选触点的炸弹排除。"""
+        first, second = ghoul(1, 100), ghoul(2, 190)
+        first.candidate_point = (100, 380)
+        bomb = ghoul(3, 100, 435)
+        bomb.kind = "bomb"
+        bomb.color = None
+        result = build_route_preview(board(first, second, bomb))
+        self.assertIsNotNone(result.selected_route)
+        self.assertEqual(result.selected_route.points, ((100, 380), (190, 400)))
+
+    def test_rounded_body_center_outside_the_image_keeps_the_visible_point(self) -> None:
+        """普通连线与乱舞共用身体落点时，也必须保证取整后仍在截图内。"""
+        edge = ghoul(1, 719.8)
+        edge.candidate_point = (700, 380)
+        result = build_route_preview(board(edge, ghoul(2, 630)))
+        self.assertIsNotNone(result.selected_route)
+        self.assertEqual(result.selected_route.points[0], (700, 380))
+
     def test_branching_route_keeps_constrained_endpoints(self) -> None:
         """局部余量更大的三角形不能挤掉两端受限的完整路线。"""
         links = {(1, 2): 0.1, (2, 3): 0.1, (3, 4): 0.9, (3, 5): 0.8, (4, 5): 0.8, (4, 6): 0.1}

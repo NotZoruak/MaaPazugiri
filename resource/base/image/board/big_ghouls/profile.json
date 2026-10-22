@@ -1,0 +1,778 @@
+{
+    "reference_size": [
+        720,
+        1280
+    ],
+    "aspect_tolerance": 0.015,
+    "merge_fraction": 0.28,
+    "bomb_margin": 0.035,
+    "name": "大讨伐：大小混杂的普通四色饿鬼",
+    "board_roi": [
+        0,
+        280,
+        720,
+        710
+    ],
+    "standard_object_roi": [
+        0,
+        280,
+        720,
+        710
+    ],
+    "scales": [
+        0.8,
+        0.9,
+        1.0,
+        1.1,
+        1.2,
+        1.3,
+        1.4,
+        1.5,
+        1.6,
+        1.7,
+        1.8,
+        1.9,
+        2.0,
+        2.1,
+        2.2
+    ],
+    "sample_role": "development",
+    "variable_ghoul_sizes": true,
+    "excluded_kinds": [
+        "obstacle",
+        "special_ghoul"
+    ],
+    "exclude_enhanced": true,
+    "notes": [
+        "仅用于用户提供的720×1280大讨伐战斗布局，不自动判断活动或导航。",
+        "依据两幅不同战斗画面核对，前三份附件字节相同，只保留一份。",
+        "只扩大普通饿鬼尺度，炸弹保持原0.9、1.0、1.1尺度与外焰掩码。",
+        "活动无障碍物、特殊黑色饿鬼和强化饿鬼是用户提供的场景约束；未检查不表示通用识别器已证明不存在。",
+        "同一局部特征跨尺度命中合并，身体中心只采用与最强证据尺寸相容的命中。",
+        "搜索区上缘依据两幅实机画面排除顶部敌人，主体框可伸出搜索区域。",
+        "尺寸仍为局部模板比例估计，未验证任意尺寸、动画帧、全部关卡或真实操作。",
+        "复用既有模板和来源哈希；两幅活动截图均为开发资料，不属于独立评估集。"
+    ],
+    "templates": [
+        {
+            "id": "blue_eye",
+            "kind": "ghoul",
+            "color": "blue",
+            "center_offset": [
+                18,
+                28
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "eye",
+            "threshold": 0.82,
+            "min_color_fraction": 0.35,
+            "image": "../development/blue_eye.png",
+            "mask": "../development/blue_eye.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    147.0,
+                    326.0,
+                    36.0,
+                    27.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "blue_mouth",
+            "kind": "ghoul",
+            "color": "blue",
+            "center_offset": [
+                22,
+                3
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "mouth",
+            "threshold": 0.8,
+            "min_color_fraction": 0.35,
+            "image": "../development/blue_mouth.png",
+            "mask": "../development/blue_mouth.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    143.0,
+                    351.0,
+                    44.0,
+                    28.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "red_eye",
+            "kind": "ghoul",
+            "color": "red",
+            "center_offset": [
+                21,
+                32
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "eye",
+            "threshold": 0.82,
+            "min_color_fraction": 0.35,
+            "image": "../development/red_eye.png",
+            "mask": "../development/red_eye.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    495.0,
+                    319.0,
+                    40.0,
+                    29.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "red_mouth",
+            "kind": "ghoul",
+            "color": "red",
+            "center_offset": [
+                23,
+                5
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "mouth",
+            "threshold": 0.8,
+            "min_color_fraction": 0.35,
+            "image": "../development/red_mouth.png",
+            "mask": "../development/red_mouth.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    493.0,
+                    346.0,
+                    49.0,
+                    31.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "yellow_eye",
+            "kind": "ghoul",
+            "color": "yellow",
+            "center_offset": [
+                19,
+                33
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "eye",
+            "threshold": 0.82,
+            "min_color_fraction": 0.35,
+            "image": "../development/yellow_eye.png",
+            "mask": "../development/yellow_eye.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    320.0,
+                    315.0,
+                    38.0,
+                    28.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "yellow_mouth",
+            "kind": "ghoul",
+            "color": "yellow",
+            "center_offset": [
+                22,
+                2
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "mouth",
+            "threshold": 0.8,
+            "min_color_fraction": 0.35,
+            "image": "../development/yellow_mouth.png",
+            "mask": "../development/yellow_mouth.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    317.0,
+                    346.0,
+                    49.0,
+                    28.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "green_eye",
+            "kind": "ghoul",
+            "color": "green",
+            "center_offset": [
+                21,
+                31
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "eye",
+            "threshold": 0.82,
+            "min_color_fraction": 0.35,
+            "image": "../development/green_eye.png",
+            "mask": "../development/green_eye.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    366.0,
+                    409.0,
+                    42.0,
+                    28.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "green_mouth",
+            "kind": "ghoul",
+            "color": "green",
+            "center_offset": [
+                26,
+                2
+            ],
+            "body_size": [
+                96,
+                100
+            ],
+            "part": "mouth",
+            "threshold": 0.8,
+            "min_color_fraction": 0.35,
+            "image": "../development/green_mouth.png",
+            "mask": "../development/green_mouth.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    361.0,
+                    438.0,
+                    51.0,
+                    28.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            }
+        },
+        {
+            "id": "bomb_1_flame",
+            "kind": "bomb",
+            "bomb_level": 1,
+            "center_offset": [
+                52,
+                87
+            ],
+            "body_size": [
+                92,
+                94
+            ],
+            "part": "flame",
+            "threshold": 0.82,
+            "image": "../development/bomb_1_flame.png",
+            "mask": "../development/bomb_1_flame.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    418.0,
+                    378.0,
+                    105.0,
+                    139.0
+                ],
+                "ignore_rects": [
+                    [
+                        20,
+                        57,
+                        63,
+                        62
+                    ]
+                ],
+                "include_polygons": [
+                    [
+                        [
+                            51,
+                            0
+                        ],
+                        [
+                            35,
+                            22
+                        ],
+                        [
+                            37,
+                            31
+                        ],
+                        [
+                            20,
+                            42
+                        ],
+                        [
+                            7,
+                            64
+                        ],
+                        [
+                            3,
+                            92
+                        ],
+                        [
+                            15,
+                            117
+                        ],
+                        [
+                            35,
+                            133
+                        ],
+                        [
+                            64,
+                            135
+                        ],
+                        [
+                            84,
+                            121
+                        ],
+                        [
+                            97,
+                            104
+                        ],
+                        [
+                            99,
+                            79
+                        ],
+                        [
+                            88,
+                            53
+                        ],
+                        [
+                            65,
+                            30
+                        ],
+                        [
+                            65,
+                            10
+                        ]
+                    ]
+                ]
+            },
+            "scales": [
+                0.9,
+                1.0,
+                1.1
+            ]
+        },
+        {
+            "id": "bomb_2_flame",
+            "kind": "bomb",
+            "bomb_level": 2,
+            "center_offset": [
+                73,
+                121
+            ],
+            "body_size": [
+                136,
+                138
+            ],
+            "part": "flame",
+            "threshold": 0.82,
+            "image": "../development/bomb_2_flame.png",
+            "mask": "../development/bomb_2_flame.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    286.0,
+                    614.0,
+                    146.0,
+                    182.0
+                ],
+                "ignore_rects": [
+                    [
+                        17,
+                        70,
+                        112,
+                        91
+                    ]
+                ],
+                "include_polygons": [
+                    [
+                        [
+                            67,
+                            1
+                        ],
+                        [
+                            50,
+                            15
+                        ],
+                        [
+                            58,
+                            31
+                        ],
+                        [
+                            42,
+                            42
+                        ],
+                        [
+                            22,
+                            57
+                        ],
+                        [
+                            6,
+                            84
+                        ],
+                        [
+                            2,
+                            120
+                        ],
+                        [
+                            11,
+                            146
+                        ],
+                        [
+                            32,
+                            164
+                        ],
+                        [
+                            63,
+                            176
+                        ],
+                        [
+                            96,
+                            169
+                        ],
+                        [
+                            123,
+                            152
+                        ],
+                        [
+                            139,
+                            125
+                        ],
+                        [
+                            139,
+                            94
+                        ],
+                        [
+                            124,
+                            66
+                        ],
+                        [
+                            103,
+                            45
+                        ],
+                        [
+                            88,
+                            29
+                        ],
+                        [
+                            81,
+                            8
+                        ]
+                    ]
+                ]
+            },
+            "scales": [
+                0.9,
+                1.0,
+                1.1
+            ]
+        },
+        {
+            "id": "bomb_1_tip",
+            "kind": "bomb",
+            "bomb_level": 1,
+            "center_offset": [
+                22,
+                83
+            ],
+            "body_size": [
+                92,
+                94
+            ],
+            "part": "flame_tip",
+            "threshold": 0.82,
+            "image": "../development/bomb_1_tip.png",
+            "mask": "../development/bomb_1_tip.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    448.0,
+                    382.0,
+                    45.0,
+                    54.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            },
+            "scales": [
+                0.9,
+                1.0,
+                1.1
+            ]
+        },
+        {
+            "id": "bomb_2_tip_main",
+            "kind": "bomb",
+            "bomb_level": 2,
+            "center_offset": [
+                32,
+                121
+            ],
+            "body_size": [
+                136,
+                138
+            ],
+            "part": "flame_tip",
+            "threshold": 0.82,
+            "image": "../development/bomb_2_tip_main.png",
+            "mask": "../development/bomb_2_tip_main.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    327.0,
+                    614.0,
+                    62.0,
+                    69.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            },
+            "scales": [
+                0.9,
+                1.0,
+                1.1
+            ]
+        },
+        {
+            "id": "bomb_2_tip_wave",
+            "kind": "bomb",
+            "bomb_level": 2,
+            "center_offset": [
+                30,
+                118
+            ],
+            "body_size": [
+                136,
+                138
+            ],
+            "part": "flame_tip",
+            "threshold": 0.82,
+            "image": "../development/bomb_2_tip_wave.png",
+            "mask": "../development/bomb_2_tip_wave.mask.png",
+            "provenance": {
+                "source_name": "001_bombs_lv1x1_lv2x4.png",
+                "source_sha256": "353413dd9b2981678b2052e657e1f0f693ee9a8244168009b13b725067b2b378",
+                "source_crop": [
+                    38.0,
+                    652.0,
+                    56.0,
+                    64.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": []
+            },
+            "scales": [
+                0.9,
+                1.0,
+                1.1
+            ]
+        },
+        {
+            "id": "bomb_3_tip",
+            "kind": "bomb",
+            "bomb_level": 3,
+            "center_offset": [
+                40,
+                151
+            ],
+            "body_size": [
+                174,
+                166
+            ],
+            "part": "flame_tip",
+            "threshold": 0.82,
+            "image": "../development/bomb_3_tip.png",
+            "mask": "../development/bomb_3_tip.mask.png",
+            "provenance": {
+                "source_name": "002_bombs_lv1x3_lv3x1.png",
+                "source_sha256": "e8d2f3364071313e6c27110bf354c7a79067889dc6c3e08991958d111aedc219",
+                "source_crop": [
+                    215.0,
+                    557.0,
+                    86.0,
+                    88.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            27,
+                            1
+                        ],
+                        [
+                            12,
+                            15
+                        ],
+                        [
+                            18,
+                            30
+                        ],
+                        [
+                            6,
+                            47
+                        ],
+                        [
+                            1,
+                            69
+                        ],
+                        [
+                            4,
+                            87
+                        ],
+                        [
+                            83,
+                            87
+                        ],
+                        [
+                            83,
+                            68
+                        ],
+                        [
+                            69,
+                            48
+                        ],
+                        [
+                            52,
+                            28
+                        ],
+                        [
+                            44,
+                            10
+                        ]
+                    ]
+                ]
+            },
+            "scales": [
+                0.9,
+                1.0,
+                1.1
+            ]
+        },
+        {
+            "id": "bomb_1_tip_curl",
+            "kind": "bomb",
+            "bomb_level": 1,
+            "center_offset": [
+                27,
+                81
+            ],
+            "body_size": [
+                94,
+                96
+            ],
+            "part": "flame_tip",
+            "threshold": 0.82,
+            "image": "../development/bomb_1_tip_curl.png",
+            "mask": "../development/bomb_1_tip_curl.mask.png",
+            "provenance": {
+                "source_name": "002_bombs_lv1x3_lv3x1.png",
+                "source_sha256": "e8d2f3364071313e6c27110bf354c7a79067889dc6c3e08991958d111aedc219",
+                "source_crop": [
+                    119.0,
+                    534.0,
+                    52.0,
+                    48.0
+                ],
+                "ignore_rects": [],
+                "include_polygons": [
+                    [
+                        [
+                            15,
+                            0
+                        ],
+                        [
+                            9,
+                            7
+                        ],
+                        [
+                            13,
+                            14
+                        ],
+                        [
+                            4,
+                            24
+                        ],
+                        [
+                            0,
+                            47
+                        ],
+                        [
+                            51,
+                            47
+                        ],
+                        [
+                            47,
+                            32
+                        ],
+                        [
+                            33,
+                            21
+                        ],
+                        [
+                            26,
+                            12
+                        ],
+                        [
+                            23,
+                            2
+                        ]
+                    ]
+                ]
+            },
+            "scales": [
+                0.9,
+                1.0,
+                1.1
+            ]
+        }
+    ]
+}

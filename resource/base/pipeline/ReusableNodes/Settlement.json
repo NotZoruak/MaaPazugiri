@@ -249,12 +249,40 @@
         "recognition": {
             "type": "TemplateMatch",
             "param": {
-                "roi": [270, 1141, 190, 76],
-                "template": "button/确认.png"
+                "roi": [88, 294, 197, 141],
+                "template": "region/战斗结算评级.png"
             }
         },
-        "action": {"type": "Click"},
-        "next": ["BattleSettlement_SuccessConfirmClick", "BattleSettlement_SuccessConfirmClickDone"],
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [270, 1141, 190, 76]
+            }
+        },
+        "next": [
+            "BattleSettlement_SuccessConfirmClick",
+            "BattleSettlement_SuccessRewardClick"
+        ],
+        "on_error": ["[Anchor]Hub"]
+    },
+    "BattleSettlement_SuccessRewardClick": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [74, 263, 118, 33],
+                "template": "region/获得报酬.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [296, 1152, 128, 57]
+            }
+        },
+        "next": [
+            "BattleSettlement_SuccessRewardClick",
+            "BattleSettlement_SuccessConfirmClickDone"
+        ],
         "on_error": ["[Anchor]Hub"]
     },
     "BattleSettlement_SuccessConfirmClickDone": {
@@ -296,6 +324,7 @@
                 "target": [140, 1175, 135, 57]
             }
         },
+        "post_wait_freezes": 200,
         "next": ["BattleSettlement_FailureConfirmClick", "BattleSettlement_FailureRetreat"],
         "on_error": ["[Anchor]Hub"]
     },
@@ -303,15 +332,33 @@
         "recognition": {
             "type": "TemplateMatch",
             "param": {
-                "roi": [102, 1172, 210, 58],
+                "roi": [421, 1173, 185, 63],
                 "template": "button/战斗失败撤退.png"
             }
         },
         "action": {"type": "Click"},
-        "next": ["BattleSettlement_FailureRetreat", "BattleSettlement_FailureRetreatDone"],
+        "post_wait_freezes": 200,
+        "next": ["BattleSettlement_FailureRetreat", "BattleSettlement_Failure"],
         "on_error": ["[Anchor]Hub"]
     },
-
+    "BattleSettlement_Failure": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [126, 482, 475, 88],
+                "template": "region/撤退结算.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [285, 1135, 141, 74]
+            }
+        },
+        "post_wait_freezes": 200,
+        "next": ["BattleSettlement_Failure", "BattleSettlement_FailureRetreatDone"],
+        "on_error": ["[Anchor]Hub"]
+    },
     "BattleSettlement_FailureRetreatDone": {
         "recognition": {
             "type": "TemplateMatch",

@@ -28,6 +28,16 @@ def load_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def checked_scales(value: Any) -> tuple[float, ...]:
+    """统一校验配置和单个模板的有限尺度列表。"""
+    if not isinstance(value, list) or not value or len(value) > 15:
+        raise ValueError("搜索尺度必须为包含 1 至 15 项的列表")
+    scales = numbers(value, len(value), "scales")
+    if any(not 0.1 <= item <= 4 for item in scales):
+        raise ValueError("搜索尺度必须位于 0.1 至 4 之间")
+    return scales
+
+
 @dataclass(frozen=True)
 class Profile:
     """声明适用尺寸、有效区域和有限尺度搜索范围。"""
@@ -42,6 +52,9 @@ class Profile:
     merge_fraction: float
     bomb_margin: float
     standard_object_roi: tuple[int, int, int, int] | None = None
+    excluded_kinds: tuple[str, ...] = ()
+    exclude_enhanced: bool = False
+    variable_ghoul_sizes: bool = False
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> Profile:
@@ -54,12 +67,15 @@ class Profile:
             raise ValueError("有效区域必须使用非负起点和正整数宽高")
         if roi[0] + roi[2] > size[0] or roi[1] + roi[3] > size[1]:
             raise ValueError("有效区域超出参考图片")
-        scales = value.get("scales", [0.9, 1.0, 1.1])
-        if not isinstance(scales, list) or not scales or len(scales) > 15:
-            raise ValueError("搜索尺度必须为包含 1 至 15 项的列表")
-        checked_scales = numbers(scales, len(scales), "scales")
-        if any(not 0.1 <= item <= 4 for item in checked_scales):
-            raise ValueError("搜索尺度必须位于 0.1 至 4 之间")
+        scales = checked_scales(value.get("scales", [0.9, 1.0, 1.1]))
+        excluded = value.get("excluded_kinds", [])
+        if not isinstance(excluded, list) or any(
+            not isinstance(kind, str) or kind not in ("ghoul", "bomb", "obstacle", "special_ghoul") for kind in excluded
+        ):
+            raise ValueError("排除类别必须为已登记对象大类的列表")
+        for key in ("exclude_enhanced", "variable_ghoul_sizes"):
+            if not isinstance(value.get(key, False), bool):
+                raise ValueError(f"{key} 必须为布尔值")
         templates = value.get("templates", [])
         if not isinstance(templates, list) or any(not isinstance(item, dict) for item in templates):
             raise ValueError("templates 必须为对象列表")
@@ -100,18 +116,23 @@ class Profile:
             str(value.get("name", "离线开发配置")),
             (int(size[0]), int(size[1])),
             (int(roi[0]), int(roi[1]), int(roi[2]), int(roi[3])),
-            checked_scales,
+            scales,
             templates,
             str(value.get("sample_role", "development")),
             parameters[0],
             parameters[1],
             parameters[2],
             standard_object_roi=checked_roi,
+            excluded_kinds=tuple(sorted(set(excluded))),
+            exclude_enhanced=value.get("exclude_enhanced", False),
+            variable_ghoul_sizes=value.get("variable_ghoul_sizes", False),
         )
 
 
 def validate_template(item: dict[str, Any]) -> None:
     """拒绝未定义颜色、等级和不合理的模板参数。"""
+    if "scales" in item:
+        checked_scales(item["scales"])
     if not isinstance(item.get("check_template_color", False), bool):
         raise ValueError("模板颜色核对开关必须为布尔值")
     if not isinstance(item.get("enhanced", False), bool):

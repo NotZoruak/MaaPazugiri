@@ -947,11 +947,11 @@
         "最大次数": {
             "type": "input",
             "label": "最大次数",
-            "description": "达到此碎玉换体次数后结束任务；-1 表示不限制次数。",
             "inputs": [
                 {
                     "name": "最大次数",
-                    "label": "碎玉换体最大次数",
+                    "label": "最大次数",
+                    "description": "达到此碎玉换体次数后结束任务；-1 表示不限制次数。",
                     "default": "1",
                     "pipeline_type": "int",
                     "verify": "^(-1|[0-9]+)$",

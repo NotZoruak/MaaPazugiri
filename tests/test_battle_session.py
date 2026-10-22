@@ -136,6 +136,26 @@ class BattleSessionTests(unittest.TestCase):
         )
         self.assertEqual(result, BattleOutcome.TIMEOUT)
 
+    def test_ranbu_confirmation_uses_short_polling_but_unknown_keeps_normal_polling(self) -> None:
+        """乱舞两帧之间只等二十毫秒，未知状态恢复原轮询间隔。"""
+        clock = FakeClock()
+        session = BattleSession(clock=clock.clock, sleep=clock.sleep)
+        states = iter((BattleState.RANBU, BattleState.RANBU, BattleState.UNKNOWN, BattleState.VICTORY))
+        observations = []
+        callbacks = []
+
+        def observe() -> BattleState:
+            """每次记录独立截图的开始时刻。"""
+            observations.append(clock.now)
+            return next(states)
+
+        result = session.run(observe, stopped=lambda: False, on_ranbu=lambda: callbacks.append(clock.now))
+        self.assertEqual(result, BattleOutcome.VICTORY)
+        npairs = tuple(zip(observations, (0.0, 0.02, 0.04, 0.24), strict=True))
+        for actual, expected in npairs:
+            self.assertAlmostEqual(actual, expected)
+        self.assertEqual(len(callbacks), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

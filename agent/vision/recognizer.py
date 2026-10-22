@@ -75,6 +75,10 @@ class BoardRecognizer:
         self.scaled_patterns: list[tuple[dict[str, Any], float, PreparedTemplate]] = []
         self.enhanced_supports: dict[int, tuple[BodyColorSupport, int]] = {}
         for item in self.profile.templates:
+            if item["kind"] in self.profile.excluded_kinds or (
+                self.profile.exclude_enhanced and item.get("enhanced", False)
+            ):
+                continue
             image = read_image(profile_path.parent / item["image"])
             mask_image = read_image(profile_path.parent / item["mask"])
             mask = cast(Image, cv2.cvtColor(mask_image, cv2.COLOR_BGR2GRAY))
@@ -82,7 +86,7 @@ class BoardRecognizer:
                 raise ValueError(f"模板与掩码大小不一致：{item['id']}")
             check_pattern(image, mask, item["id"])
             self.patterns.append((item, image, mask))
-            for scale in self.profile.scales:
+            for scale in item.get("scales", self.profile.scales):
                 tw, th = max(2, round(image.shape[1] * scale)), max(2, round(image.shape[0] * scale))
                 if tw > self.profile.board_roi[2] or th > self.profile.board_roi[3]:
                     continue
@@ -124,9 +128,12 @@ class BoardRecognizer:
         rx, ry, rw, rh = self.profile.board_roi
         known = {
             self._label(item["kind"], item.get("color"), item.get("bomb_level"), item.get("subtype"))
-            for item in self.profile.templates
+            for item, _, _ in self.patterns
         }
-        skipped_labels = sorted(label for label in EXPECTED_LABELS if lightweight and label.startswith("obstacle_"))
+        skipped_kinds = sorted(set(self.profile.excluded_kinds) | ({"obstacle"} if lightweight else set()))
+        skipped_labels = sorted(
+            label for label in EXPECTED_LABELS if any(label.startswith(kind + "_") for kind in skipped_kinds)
+        )
         missing = sorted(set(EXPECTED_LABELS) - known - set(skipped_labels))
         result = BoardResult(
             frame_id,
@@ -136,8 +143,10 @@ class BoardRecognizer:
             {
                 "missing_templates": missing,
                 "recognition_mode": "lightweight" if lightweight else "full",
-                "skipped_kinds": ["obstacle"] if lightweight else [],
+                "skipped_kinds": skipped_kinds,
                 "skipped_labels": skipped_labels,
+                "skipped_variants": ["enhanced_ghoul"] if self.profile.exclude_enhanced else [],
+                "variable_ghoul_sizes": self.profile.variable_ghoul_sizes,
                 "template_variants_enabled": sum(
                     1 for spec, _, _ in self.scaled_patterns if not lightweight or spec["kind"] != "obstacle"
                 ),
@@ -199,7 +208,7 @@ class BoardRecognizer:
             coarse_future = obstacle_future = regular_future = None
             if executor is not None and not self.full_search:
                 coarse_future = executor.submit(prepare_board, board)
-                if not lightweight:
+                if "obstacle" not in skipped_kinds:
                     obstacle_future = executor.submit(prepare_board, board, coarse_color=False)
                 if self.profile.standard_object_roi is not None:
                     ox, oy, ow, oh = self.profile.standard_object_roi
@@ -220,7 +229,7 @@ class BoardRecognizer:
             )
             obstacle_coarse = (
                 None
-                if self.full_search or lightweight
+                if self.full_search or "obstacle" in skipped_kinds
                 else (
                     obstacle_future.result()
                     if obstacle_future is not None
@@ -244,7 +253,7 @@ class BoardRecognizer:
                     else (regular_future.result() if regular_future is not None else prepare_board(regular_board))
                 )
 
-            extra_kinds = ("special_ghoul",) if lightweight else ("obstacle", "special_ghoul")
+            extra_kinds = tuple(kind for kind in ("obstacle", "special_ghoul") if kind not in skipped_kinds)
             searches = [
                 ("bomb", regular_board, regular_integrals, "bomb", regular_coarse, False),
                 ("regular", regular_board, regular_integrals, "ghoul", regular_coarse, False),
@@ -471,7 +480,7 @@ class BoardRecognizer:
                     hit.kind == first.kind
                     and hit.color == first.color
                     and hit.subtype == first.subtype
-                    and math.dist(hit.center, first.center) <= limit
+                    and (math.dist(hit.center, first.center) <= limit or self._same_ghoul_feature(hit, group))
                 ):
                     group.append(hit)
                     break
@@ -482,6 +491,19 @@ class BoardRecognizer:
             for group in groups
             if len({hit.part for hit in group if hit.accepted}) >= max(hit.minimum_parts for hit in group)
         ]
+
+    def _same_ghoul_feature(self, hit: Hit, group: list[Hit]) -> bool:
+        """活动中同一可见部位的多尺度命中只能支持同一个对象。"""
+        if not self.profile.variable_ghoul_sizes or hit.kind != "ghoul":
+            return False
+        first = group[0]
+        if math.dist(hit.center, first.center) > self.profile.merge_fraction * max(*hit.body_size, *first.body_size):
+            return False
+        return any(
+            other.template_id == hit.template_id
+            and math.dist(hit.anchor, other.anchor) <= 0.2 * min(*hit.body_size, *other.body_size)
+            for other in group
+        )
 
     @staticmethod
     def _label(kind: str, color: str | None, level: int | None, subtype: str | None) -> str:
@@ -516,6 +538,13 @@ class BoardRecognizer:
                 level = None
                 quality = "level_unknown"
         position_hits = [hit for hit in group if hit.accepted]
+        if self.profile.variable_ghoul_sizes and first.kind == "ghoul":
+            # 小尺度嘴巴可能命中大嘴内部，保留证据但不让它拉偏身体中心。
+            position_hits = [
+                hit
+                for hit in position_hits
+                if all(0.8 <= actual / reference <= 1.2 for actual, reference in zip(hit.body_size, first.body_size))
+            ]
         weights = [max(0.01, hit.score) ** 4 for hit in position_hits]
         cx = sum(hit.center[0] * weight for hit, weight in zip(position_hits, weights, strict=True)) / sum(weights)
         cy = sum(hit.center[1] * weight for hit, weight in zip(position_hits, weights, strict=True)) / sum(weights)
@@ -586,6 +615,12 @@ class BoardRecognizer:
         if not sizes:
             return
         min_area = float(np.median(sizes)) * 0.32
+        if self.profile.variable_ghoul_sizes:
+            min_area = min(
+                spec["body_size"][0] * spec["body_size"][1] * min(spec.get("scales", self.profile.scales)) ** 2 * 0.32
+                for spec in self.profile.templates
+                if spec["kind"] == "ghoul" and not spec.get("enhanced", False)
+            )
         for color, mask in masks.items():
             residual = mask.copy()
             for group in groups:

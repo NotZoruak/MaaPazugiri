@@ -35,6 +35,7 @@ class _Template:
 
     variant: str
     pattern: PreparedTemplate
+    grayscale: Image
     anchor: tuple[float, float]
     threshold: float
 
@@ -76,6 +77,7 @@ class ChainEndpointRecognizer:
                     _Template(
                         item["id"],
                         prepare_template(resized, resized_mask),
+                        cast(Image, cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)),
                         (item["anchor"][0] * width / original.shape[1], item["anchor"][1] * height / original.shape[0]),
                         threshold,
                     )
@@ -98,6 +100,7 @@ class ChainEndpointRecognizer:
                 "search_scope": "move_start_and_end" if move is not None else "current_frame_board_region",
                 "full_board_fallback": False,
                 "number_ocr": False,
+                "appearance_matching": "color_then_grayscale",
                 "independent_evaluation_completed": False,
             },
         )
@@ -112,6 +115,7 @@ class ChainEndpointRecognizer:
             result.issues.append("截图尺寸或布局与本帧棋盘结果不一致")
             return self._finish(result, started)
         normalized = cast(Image, cv2.resize(image, (reference_width, reference_height), interpolation=cv2.INTER_AREA))
+        grayscale = cast(Image, cv2.cvtColor(normalized, cv2.COLOR_BGR2GRAY))
         sx, sy = width / reference_width, height / reference_height
         bx, by, bw, bh = board.board_region
         left, top = max(0, round(bx / sx)), max(0, round(by / sy))
@@ -161,7 +165,7 @@ class ChainEndpointRecognizer:
         for center in centers:
             hits.extend(
                 hit
-                for hit in self._match(normalized, center)
+                for hit in self._match(normalized, grayscale, center)
                 if any(x1 <= hit.center[0] < x2 and y1 <= hit.center[1] < y2 for x1, y1, x2, y2 in regions)
             )
         # 同一标记的多档模板或尺度命中在本帧合并，独立标记必须保留。
@@ -217,36 +221,42 @@ class ChainEndpointRecognizer:
         count, _, _, centers = cv2.connectedComponentsWithStats(peaks)
         return [(float(centers[index, 0]) + left, float(centers[index, 1]) + top) for index in range(1, count)]
 
-    def _match(self, image: Image, center: tuple[float, float]) -> list[ChainEndpointMarker]:
-        """只在当前帧明亮核心附近核对静态模板，掩码排除数字与大部分来线。"""
+    def _match(self, image: Image, grayscale: Image, center: tuple[float, float]) -> list[ChainEndpointMarker]:
+        """先匹配彩色外观；动效改变色相时，以同阈值核对当前白色核心的灰度结构。"""
         hits = []
-        for template in self.templates:
-            th, tw = template.pattern.image.shape[:2]
-            expected_x, expected_y = center[0] - template.anchor[0], center[1] - template.anchor[1]
-            left, top = max(0, round(expected_x) - self.search_radius), max(0, round(expected_y) - self.search_radius)
-            right = min(image.shape[1], round(expected_x) + tw + self.search_radius + 1)
-            bottom = min(image.shape[0], round(expected_y) + th + self.search_radius + 1)
-            patch = image[top:bottom, left:right]
-            if patch.shape[0] < th or patch.shape[1] < tw:
-                continue
-            if not projection_may_reach(patch, template.pattern, template.threshold):
-                continue
-            response = cv2.matchTemplate(
-                patch, template.pattern.image, cv2.TM_CCOEFF_NORMED, mask=template.pattern.mask
-            )
-            response = np.where(np.isfinite(response), response, -1).astype(np.float32)
-            _, score, _, position = cv2.minMaxLoc(response)
-            if score < template.threshold:
-                continue
-            x, y = left + position[0], top + position[1]
-            hits.append(
-                ChainEndpointMarker(
-                    template.variant,
-                    (x + template.anchor[0], y + template.anchor[1]),
-                    (float(x), float(y), float(tw), float(th)),
-                    min(1.0, score),
+        for use_grayscale in (False, True):
+            current = grayscale if use_grayscale else image
+            for template in self.templates:
+                th, tw = template.pattern.image.shape[:2]
+                expected_x, expected_y = center[0] - template.anchor[0], center[1] - template.anchor[1]
+                left, top = (
+                    max(0, round(expected_x) - self.search_radius),
+                    max(0, round(expected_y) - self.search_radius),
                 )
-            )
+                right = min(image.shape[1], round(expected_x) + tw + self.search_radius + 1)
+                bottom = min(image.shape[0], round(expected_y) + th + self.search_radius + 1)
+                patch = current[top:bottom, left:right]
+                if patch.shape[0] < th or patch.shape[1] < tw:
+                    continue
+                if not use_grayscale and not projection_may_reach(patch, template.pattern, template.threshold):
+                    continue
+                expected = template.grayscale if use_grayscale else template.pattern.image
+                response = cv2.matchTemplate(patch, expected, cv2.TM_CCOEFF_NORMED, mask=template.pattern.mask)
+                response = np.where(np.isfinite(response), response, -1).astype(np.float32)
+                _, score, _, position = cv2.minMaxLoc(response)
+                if score < template.threshold:
+                    continue
+                x, y = left + position[0], top + position[1]
+                hits.append(
+                    ChainEndpointMarker(
+                        template.variant,
+                        (x + template.anchor[0], y + template.anchor[1]),
+                        (float(x), float(y), float(tw), float(th)),
+                        min(1.0, score),
+                    )
+                )
+            if hits:
+                break
         return hits
 
     @staticmethod

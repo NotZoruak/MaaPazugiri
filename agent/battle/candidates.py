@@ -57,6 +57,24 @@ def _route_rank(route: CandidateRoute) -> tuple[int, float, float, tuple[int, ..
     return (-len(route.object_ids), -route.minimum_clearance, route.total_distance, route.object_ids)
 
 
+def preferred_ghoul_touch_point(item: BoardObject, board: BoardResult) -> tuple[float, float]:
+    """优先当前身体中心；被本帧炸弹外框覆盖时保留识别器已排除炸弹的可见触点。"""
+    assert item.candidate_point is not None
+    if not _point_inside(item.center, board) or not _point_inside(
+        (round(item.center[0]), round(item.center[1])), board
+    ):
+        return item.candidate_point
+    for other in board.objects:
+        if other.kind != "bomb":
+            continue
+        x, y, width, height = other.body_box
+        if not all(math.isfinite(value) for value in other.body_box) or min(width, height) <= 0:
+            return item.candidate_point
+        if x <= item.center[0] < x + width and y <= item.center[1] < y + height:
+            return item.candidate_point
+    return item.center
+
+
 def build_route_preview(board: BoardResult, *, beam_width: int = 32, max_expansions: int = 4096) -> RoutePreview:
     """按剩余连接数量优先有限回溯；宽度限制每步分支，结果不保证全局最长。"""
     if beam_width < 1 or max_expansions < 1:
@@ -81,8 +99,12 @@ def build_route_preview(board: BoardResult, *, beam_width: int = 32, max_expansi
             result.excluded_objects.append({"object_id": item.id, "reason": reason})
             continue
         assert item.candidate_point is not None
+        point = preferred_ghoul_touch_point(item, board)
+        if not _point_inside((round(point[0]), round(point[1])), board):
+            result.excluded_objects.append({"object_id": item.id, "reason": "实际触点取整后不在截图或棋盘内"})
+            continue
         eligible[item.id] = item
-        points[item.id] = item.candidate_point
+        points[item.id] = point
 
     adjacency: dict[int, set[int]] = {identifier: set() for identifier in eligible}
     clearances: dict[frozenset[int], float] = {}

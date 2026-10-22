@@ -1,9 +1,12 @@
-"""验证普通连线不会因早期成功证据而丢掉剩余路线。"""
+"""验证普通整笔连线与乱舞扫动的触控、停止及手数边界。"""
 
 from __future__ import annotations
 
+import math
 import sys
 import unittest
+from dataclasses import replace
+from itertools import pairwise
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "agent"))
 from battle.candidates import CandidateRoute  # noqa: E402
 from battle.execution import MaaBattleExecutor  # noqa: E402
 from battle.observation import BattleObservation  # noqa: E402
+from battle.ranbu import ranbu_sweep_points  # noqa: E402
 from battle.strategy import BattlePhase, StageResolution, StrategyDecision, StrategyDocument, StrategyMetrics  # noqa: E402
 from vision.model import (  # noqa: E402
     BoardObject,
@@ -93,6 +97,7 @@ class MarkerReplay:
         self.checks = 0
         self.checked_moves: list[ChainMovePositions] = []
         self.failures: list[dict[str, object]] = []
+        self.ranbu_reports: list[dict[str, object]] = []
 
     def recognize_chain_endpoint(
         self, image: np.ndarray, board: BoardResult, *, move: ChainMovePositions | None = None
@@ -100,8 +105,6 @@ class MarkerReplay:
         """只回放当前帧标志，不连接设备。"""
         seen = self.appears_at is not None and self.checks >= self.appears_at
         self.checks += 1
-        if move is None:
-            return ChainEndpointResult(board.frame_id, "not_detected")
         if move is not None:
             self.checked_moves.append(move)
         return ChainEndpointResult(
@@ -114,6 +117,13 @@ class MarkerReplay:
     def save_link_failure(self, image, board, move, result, details) -> None:
         """记录失败诊断内容，测试中不产生图片文件。"""
         self.failures.append(details)
+
+    def save_ranbu_report(self, image, board, start, color, previous_color, points) -> None:
+        """执行器回放不写磁盘，只保留原有输入记录。"""
+
+    def save_ranbu_execution_report(self, before, held, report, *, pass_images=(), grab_images=()) -> None:
+        """保存真实执行器生成的输入记录，不写入图片。"""
+        self.ranbu_reports.append({**report, "held_image_available": held is not None})
 
 
 class BattleExecutionTests(unittest.TestCase):
@@ -130,6 +140,49 @@ class BattleExecutionTests(unittest.TestCase):
             "normal_link", "阶段", route=CandidateRoute("red", tuple(range(1, 9)), POINTS, 0.5, 200.0)
         )
 
+    def test_down_submission_wait_and_negative_result_all_attempt_release(self) -> None:
+        """按下可能已到达设备时，无论提交、等待还是结果失败都尝试释放。"""
+        for mode in ("submit_exception", "wait_exception", "failed"):
+            with self.subTest(mode=mode):
+
+                class DownFailureController(ReplayController):
+                    """回放按下阶段异常，实际不连接设备。"""
+
+                    def __init__(self, failure_mode: str) -> None:
+                        super().__init__()
+                        self.failure_mode = failure_mode
+
+                    def post_touch_down(self, *point: int) -> ReplayJob:
+                        """记录可能已经生效的按下，并在指定边界失败。"""
+                        self.actions.append(("down", point))
+                        if self.failure_mode == "submit_exception":
+                            raise RuntimeError("测试按下提交异常")
+                        if self.failure_mode == "failed":
+                            return ReplayJob(False)
+
+                        class FailingWait(ReplayJob):
+                            """设备可能收到按下，但等待返回时连接异常。"""
+
+                            def wait(self) -> ReplayJob:
+                                """回放无法取得按下结果。"""
+                                raise RuntimeError("测试按下等待异常")
+
+                        return FailingWait()
+
+                controller, preview = DownFailureController(mode), MarkerReplay(0)
+                with self.assertRaises(RuntimeError):
+                    self.executor(controller, preview)._hold_and_move(
+                        POINTS,
+                        self.observation,
+                        check_marker=False,
+                        hold_start_seconds=0.0,
+                        gesture_duration=0.8,
+                        capture_ranbu=True,
+                    )
+                self.assertEqual(controller.actions, [("down", POINTS[0]), ("up", ())])
+                self.assertFalse(preview.ranbu_reports[0]["dispatch_completed"])
+                self.assertEqual(preview.ranbu_reports[0]["stop_reason"], "input_failed")
+
     def executor(
         self, controller: ReplayController, replay: MarkerReplay, *, stop_after: int = 100, can_start: bool = True
     ) -> MaaBattleExecutor:
@@ -145,343 +198,265 @@ class BattleExecutionTests(unittest.TestCase):
             sleep=clock.sleep,
         )
 
-    def test_early_marker_still_visits_the_entire_planned_route(self) -> None:
-        """菱形即时或稍晚到达当前目标，都继续逐段完成八点路线。"""
-        for appears_at in (0, 3):
-            with self.subTest(appears_at=appears_at):
-                self.confirmations.clear()
-                controller = ReplayController()
-                executor = self.executor(controller, MarkerReplay(appears_at))
-                executor._hold_and_move(POINTS, self.observation, hold_start_seconds=0.0)
-                self.assertEqual(
-                    controller.actions,
-                    [("down", POINTS[0]), *[("move", point) for point in POINTS[1:]], ("up", ())],
-                )
-
     def test_normal_link_counts_success_once_after_completing_the_route(self) -> None:
         """成功证据可早于末点，计数只增加一次且完整执行后释放。"""
         controller = ReplayController()
-        self.executor(controller, MarkerReplay(3)).execute_once(self.observation, self.resolution, self.decision)
+        self.executor(controller, MarkerReplay(0)).execute_once(self.observation, self.resolution, self.decision)
         self.assertEqual(controller.moves, 7)
         self.assertEqual(self.confirmations, [True])
+        self.assertEqual(controller.actions[-1], ("up", ()))
+
+    def test_unconfirmed_gesture_uses_the_opposite_end_on_the_next_fresh_route(self) -> None:
+        """整笔未确认后只保留换向状态，下一次使用新帧路线的另一端起步。"""
+        controller = ReplayController()
+        executor = self.executor(controller, MarkerReplay(None))
+        executor.execute_once(self.observation, self.resolution, self.decision)
+        next_points = tuple((x + 3, y + 2) for x, y in POINTS)
+        next_decision = replace(self.decision, route=replace(self.decision.route, points=next_points))
+        executor.execute_once(self.observation, self.resolution, next_decision)
+        starts = [point for kind, point in controller.actions if kind == "down"]
+        self.assertEqual(starts, [POINTS[0], next_points[-1]])
+
+    def test_slow_ranbu_controller_keeps_intermediate_touch_points(self) -> None:
+        """输入较慢时宁可超过目标时长，也不能跳过中间触点。"""
+        clock = ReplayClock()
+        controller = ReplayController()
+        original_move = controller.post_touch_move
+
+        def slow_move(*point: int) -> ReplayJob:
+            """模拟移动命令实际需要四毫秒。"""
+            clock.now += 0.004
+            return original_move(*point)
+
+        controller.post_touch_move = slow_move
+        executor = MaaBattleExecutor(
+            controller,
+            MarkerReplay(0),
+            lambda: None,
+            lambda: True,
+            lambda: False,
+            clock=clock.clock,
+            sleep=clock.sleep,
+        )
+        executor.execute_once(self.upper_yellow_observation(), self.resolution, StrategyDecision("ranbu_link", "阶段"))
+        self.assertGreater(controller.moves, 18)
+        points = [point for kind, point in controller.actions if kind in ("down", "move")]
+        self.assertTrue(all(math.dist(a, b) <= 80 for a, b in pairwise(points)))
+        self.assertLessEqual(clock.now, max(0.4, controller.moves * 0.004) + 0.01)
+        self.assertTrue(
+            all(
+                ("move", point) in controller.actions
+                for point in ranbu_sweep_points(self.upper_yellow_observation().board)
+            )
+        )
+
+        self.assertEqual(controller.actions[-1], ("up", ()))
+
+    def test_faster_ranbu_keeps_the_entire_original_touch_sequence(self) -> None:
+        """四百毫秒只压缩等待，与八百毫秒逐点经过相同位置。"""
+        observation = self.upper_yellow_observation()
+        points = ((326, 388), *ranbu_sweep_points(observation.board))
+        sequences = []
+        for duration in (0.8, 0.4):
+            clock, controller = ReplayClock(), ReplayController()
+            executor = MaaBattleExecutor(
+                controller,
+                MarkerReplay(0),
+                lambda: None,
+                lambda: True,
+                lambda: False,
+                clock=clock.clock,
+                sleep=clock.sleep,
+            )
+            self.assertTrue(executor._move_timed_path(points, observation, 0.0, duration))
+            self.assertAlmostEqual(clock.now, duration)
+            sequences.append(controller.actions)
+        self.assertGreater(len(sequences[0]), 200)
+        self.assertEqual(sequences[0], sequences[1])
+
+    def test_ranbu_executes_the_confirmed_point_without_selecting_a_new_one(self) -> None:
+        """预选点通过颜色检查后，执行器不能因编号或中心漂移而换点。"""
+        from test_battle_candidates import ghoul
+
+        current_board = BoardResult(
+            "本帧",
+            (720, 1280),
+            (0, 210, 720, 780),
+            "离线",
+            {},
+            objects=[ghoul(0, 500, 600, "yellow"), ghoul(99, 110, 400, "blue")],
+        )
+        observation = replace(self.upper_yellow_observation(), board=current_board)
+        controller = ReplayController()
+        self.executor(controller, MarkerReplay(0), stop_after=10000).execute_once(
+            observation,
+            self.resolution,
+            StrategyDecision("ranbu_link", "阶段", reserved_color="red", ranbu_start=(100, 400)),
+        )
+        self.assertEqual(controller.actions[0], ("down", (100, 400)))
+        self.assertTrue(all(("move", point) in controller.actions for point in ranbu_sweep_points(current_board)))
+
+    def test_confirmed_point_becoming_reserved_is_not_replaced_or_clicked(self) -> None:
+        """预选点当前证据不再允许时，执行器不能自行挑另一个未经确认的点。"""
+        from test_battle_candidates import ghoul
+
+        current_board = replace(self.board, objects=[ghoul(1, 100, 100, "red"), ghoul(2, 50, 50, "blue")])
+        observation = replace(self.observation, board=current_board)
+        controller = ReplayController()
+        self.executor(controller, MarkerReplay(0)).execute_once(
+            observation,
+            self.resolution,
+            StrategyDecision("ranbu_link", "阶段", reserved_color="red", ranbu_start=(100, 100)),
+        )
+        self.assertEqual(controller.actions, [])
+
+    def test_consecutive_ranbu_sweeps_rotate_colors_using_fresh_frame_positions(self) -> None:
+        """跨帧仅记上次颜色；三轮分别选蓝、绿、黄，触点必须来自各自新帧。"""
+        from test_battle_candidates import ghoul
+
+        controller = ReplayController()
+        executor = self.executor(controller, MarkerReplay(0), stop_after=10000)
+        for offset in (0, 10, 20):
+            objects = [
+                ghoul(1, 100 + offset, 400, "blue"),
+                ghoul(2, 300 + offset, 400, "yellow"),
+                ghoul(3, 500 + offset, 400, "green"),
+                ghoul(0, 400, 700, "red"),
+            ]
+            current_board = BoardResult(str(offset), (720, 1280), (0, 210, 720, 780), "离线", {}, objects=objects)
+            observation = BattleObservation(
+                str(offset), BattlePhase.RANBU, np.zeros((1280, 720, 3), np.uint8), current_board, StrategyMetrics()
+            )
+            executor.execute_once(
+                observation, self.resolution, StrategyDecision("ranbu_link", "阶段", reserved_color="red")
+            )
+        self.assertEqual(
+            [point for kind, point in controller.actions if kind == "down"], [(100, 400), (510, 400), (320, 400)]
+        )
+
+    def test_skipped_ranbu_gesture_does_not_advance_color_rotation(self) -> None:
+        """未获准按下的轮次不能当作已消除一种颜色。"""
+        from test_battle_candidates import ghoul
+
+        allowed = [False]
+        clock, controller = ReplayClock(), ReplayController()
+        executor = MaaBattleExecutor(
+            controller,
+            MarkerReplay(0),
+            lambda: None,
+            lambda: allowed[0],
+            lambda: False,
+            clock=clock.clock,
+            sleep=clock.sleep,
+        )
+        current_board = BoardResult(
+            "当前帧",
+            (720, 1280),
+            (0, 210, 720, 780),
+            "离线",
+            {},
+            objects=[ghoul(1, 100, 400, "blue"), ghoul(2, 300, 400, "green")],
+        )
+        observation = BattleObservation(
+            "当前帧", BattlePhase.RANBU, np.zeros((1280, 720, 3), np.uint8), current_board, StrategyMetrics()
+        )
+        decision = StrategyDecision("ranbu_link", "阶段", reserved_color="red")
+        executor.execute_once(observation, self.resolution, decision)
+        self.assertEqual(controller.actions, [])
+        allowed[0] = True
+        executor.execute_once(observation, self.resolution, decision)
+        self.assertEqual(controller.actions[0], ("down", (100, 400)))
+
+    def upper_yellow_observation(self) -> BattleObservation:
+        """用本次失败现场的真实尺寸与触点构造离线输入。"""
+        points = ((326, 388), (335, 310))
+        objects = [
+            BoardObject(
+                index,
+                "ghoul",
+                "yellow",
+                None,
+                "ghoul_yellow",
+                "黄色饿鬼",
+                center,
+                (center[0] - 48, center[1] - 50, 96, 100),
+                {"width": 96, "height": 100},
+                [],
+                point,
+                "identified",
+            )
+            for index, center, point in ((1, (326.16, 407.06), points[0]), (2, (335.13, 329.27), points[1]))
+        ]
+        board = BoardResult("当前帧", (720, 1280), (0, 210, 720, 780), "失败现场回放", {}, objects=objects)
+        return replace(self.observation, board=board, image=np.zeros((1280, 720, 3), dtype=np.uint8))
+
+    def test_normal_link_moves_continuously_through_the_target_body(self) -> None:
+        """不能一步跳到眼睛，必须以有时间间隔的短段经过目标身体。"""
+        observation = self.upper_yellow_observation()
+        clock = ReplayClock()
+        controller = ReplayController()
+        timestamps: list[float] = []
+        move = controller.post_touch_move
+
+        def record_move(*point: int) -> ReplayJob:
+            """记录每个真实移动命令的派发时间。"""
+            timestamps.append(clock.clock())
+            return move(*point)
+
+        controller.post_touch_move = record_move
+        executor = MaaBattleExecutor(
+            controller,
+            MarkerReplay(0),
+            lambda: None,
+            lambda: True,
+            lambda: False,
+            clock=clock.clock,
+            sleep=clock.sleep,
+        )
+        self.assertTrue(executor._hold_and_move(((326, 388), (335, 310)), observation, hold_start_seconds=0))
+        points = [point for action, point in controller.actions if action == "move"]
+        self.assertGreater(len(points), 1)
+        self.assertEqual(points[-1], (335, 310))
+        self.assertTrue(all(math.dist(a, b) <= 20 for a, b in pairwise([(326, 388), *points])))
+        self.assertLess(min(math.dist(point, (335.13, 329.27)) for point in points[:-1]), 8)
+        self.assertGreaterEqual(timestamps[-1] - timestamps[0], 0.05)
+        self.assertLessEqual(timestamps[-1] - timestamps[0], 0.2)
+        self.assertEqual(controller.actions[-1], ("up", ()))
+
+    def test_stop_during_continuous_movement_releases_before_the_target(self) -> None:
+        """用户停止能中断段内移动，不再截图确认或继续移动。"""
+        controller = ReplayController()
+        replay = MarkerReplay(0)
+        executor = self.executor(controller, replay, stop_after=2)
+        succeeded = executor._hold_and_move(
+            ((326, 388), (335, 310)), self.upper_yellow_observation(), hold_start_seconds=0
+        )
+        self.assertFalse(succeeded)
+        self.assertEqual(controller.moves, 2)
+        self.assertNotIn(("move", (335, 310)), controller.actions)
+        self.assertEqual(replay.checks, 0)
+        self.assertEqual(controller.actions[-1], ("up", ()))
+
+    def test_continuous_movement_failure_releases_the_touch(self) -> None:
+        """任一中间移动失败都释放触控并上报，不继续后面的移动。"""
+        controller = ReplayController(fail_move=2)
+        executor = self.executor(controller, MarkerReplay(0))
+        with self.assertRaisesRegex(RuntimeError, "移动连线触点失败"):
+            executor._hold_and_move(((326, 388), (335, 310)), self.upper_yellow_observation(), hold_start_seconds=0)
+        self.assertEqual(controller.moves, 2)
         self.assertEqual(controller.actions[-1], ("up", ()))
 
     def test_no_marker_does_not_increment_the_counter(self) -> None:
-        """首段始终没有接入证据时停止后续移动，不虚增普通手数。"""
+        """整笔完成后未检到菱形，不重试和虚增手数。"""
         controller = ReplayController()
         replay = MarkerReplay(None)
         self.executor(controller, replay).execute_once(self.observation, self.resolution, self.decision)
-        self.assertEqual(controller.moves, 1)
+        self.assertEqual(controller.moves, 7)
+        self.assertEqual(replay.checks, 1)
         self.assertEqual(self.confirmations, [])
         self.assertEqual(controller.actions[-1], ("up", ()))
         self.assertEqual(len(replay.failures), 1)
-        self.assertLessEqual(replay.failures[0]["attempts"], 31)
-
-    def test_each_target_must_be_confirmed_before_the_next_move(self) -> None:
-        """标志还停在前一只时复查当前目标，确认后才继续下一段。"""
-        controller = ReplayController()
-        replay = MarkerReplay(2)
-        executor = self.executor(controller, replay)
-        executor.execute_once(self.observation, self.resolution, self.decision)
-        self.assertEqual(controller.moves, 7)
-        self.assertEqual(replay.checked_moves[:3], [ChainMovePositions(POINTS[0], POINTS[1])] * 3)
-        self.assertEqual(replay.checked_moves[3], ChainMovePositions(POINTS[1], POINTS[2]))
-        self.assertEqual(self.confirmations, [True])
-
-    def test_marker_remaining_at_previous_target_does_not_confirm_the_next_target(self) -> None:
-        """始终检测到旧端点也不能把第三只误认为已经接上。"""
-        controller = ReplayController()
-        replay = MarkerReplay(0)
-        original = replay.recognize_chain_endpoint
-
-        def recognize(image, board, *, move=None):
-            """第一段成功，之后菱形始终留在上一目标。"""
-            result = original(image, board, move=move)
-            result.move_outcome = "target_reached" if controller.moves == 1 else "still_at_start"
-            return result
-
-        replay.recognize_chain_endpoint = recognize
-        self.executor(controller, replay).execute_once(self.observation, self.resolution, self.decision)
-        self.assertEqual(controller.moves, 2)
-        self.assertEqual(controller.actions[-1], ("up", ()))
-        self.assertEqual(self.confirmations, [True])
-        self.assertEqual(replay.failures[0]["confirmed_targets"], 2)
-        self.assertEqual(replay.failures[0]["target_index"], 3)
-
-    def test_confirmation_never_starts_another_capture_at_the_deadline(self) -> None:
-        """340毫秒首轮加10毫秒等待耗尽预算后，不再启动第二轮截图。"""
-        clock = ReplayClock()
-        controller = ReplayController()
-        replay = MarkerReplay(1)
-
-        def capture():
-            """模拟每次截图与识别链路的长耗时。"""
-            clock.now += 0.34
-            return ReplayJob()
-
-        controller.post_screencap = capture
-        executor = MaaBattleExecutor(
-            controller,
-            replay,
-            lambda: None,
-            lambda: True,
-            lambda: False,
-            clock=clock.clock,
-            sleep=clock.sleep,
-            confirmation_timeout=0.35,
-        )
-        feedback = executor._confirm_move(self.observation, ChainMovePositions(POINTS[0], POINTS[1]))
-        self.assertFalse(feedback.reached)
-        self.assertEqual(replay.checks, 1)
-
-    def test_late_recognition_is_not_accepted_after_the_confirmation_deadline(self) -> None:
-        """即使菱形正确，识别返回时已经超时也不能放行下一段。"""
-        clock = ReplayClock()
-        controller = ReplayController()
-        replay = MarkerReplay(0)
-        original = replay.recognize_chain_endpoint
-
-        def recognize(image, board, *, move=None):
-            """模拟识别返回晚于预算。"""
-            clock.now += 0.4
-            return original(image, board, move=move)
-
-        replay.recognize_chain_endpoint = recognize
-        executor = MaaBattleExecutor(
-            controller,
-            replay,
-            lambda: None,
-            lambda: True,
-            lambda: False,
-            clock=clock.clock,
-            sleep=clock.sleep,
-            confirmation_timeout=0.35,
-        )
-        feedback = executor._confirm_move(self.observation, ChainMovePositions(POINTS[0], POINTS[1]))
-        self.assertFalse(feedback.reached)
-
-    def test_expired_capture_does_not_start_another_recognition(self) -> None:
-        """截图已耗尽预算时不再启动识别，避免继续增加无效等待。"""
-        controller = ReplayController()
-        replay = MarkerReplay(0)
-        clock = ReplayClock()
-
-        def capture():
-            """模拟截图返回已经超过1.5秒。"""
-            clock.now += 1.6
-            return ReplayJob()
-
-        controller.post_screencap = capture
-        executor = MaaBattleExecutor(
-            controller, replay, lambda: None, lambda: True, lambda: False, clock=clock.clock, sleep=clock.sleep
-        )
-        feedback = executor._confirm_move(self.observation, ChainMovePositions(POINTS[0], POINTS[1]))
-        self.assertFalse(feedback.reached)
-        self.assertEqual(replay.checks, 0)
-
-    def test_stop_during_capture_prevents_further_recognition(self) -> None:
-        """截图期间收到停止后，不再启动识别或接受该目标。"""
-        controller = ReplayController()
-        replay = MarkerReplay(0)
-        stopped = False
-
-        def capture():
-            """模拟等待截图时用户停止。"""
-            nonlocal stopped
-            stopped = True
-            return ReplayJob()
-
-        controller.post_screencap = capture
-        executor = MaaBattleExecutor(controller, replay, lambda: None, lambda: True, lambda: stopped)
-        feedback = executor._confirm_move(self.observation, ChainMovePositions(POINTS[0], POINTS[1]))
-        self.assertFalse(feedback.reached)
-        self.assertEqual(replay.checks, 0)
-
-    def test_default_budget_accepts_a_slow_ui_response(self) -> None:
-        """默认预算容纳超过350毫秒的界面响应，确认后立即继续。"""
-        clock = ReplayClock()
-        controller = ReplayController()
-        replay = MarkerReplay(1)
-
-        def capture():
-            """回放响应较慢的截图链路。"""
-            clock.now += 0.4
-            return ReplayJob()
-
-        controller.post_screencap = capture
-        executor = MaaBattleExecutor(
-            controller, replay, lambda: None, lambda: True, lambda: False, clock=clock.clock, sleep=clock.sleep
-        )
-        feedback = executor._confirm_move(self.observation, ChainMovePositions(POINTS[0], POINTS[1]))
-        self.assertTrue(feedback.reached)
-        self.assertEqual(replay.checks, 2)
-        self.assertLess(feedback.elapsed_ms, 1500)
-
-    def test_confirmation_can_continue_after_eight_checks(self) -> None:
-        """第九次以后仍在总期限内时，允许继续确认目标。"""
-        clock = ReplayClock()
-        replay = MarkerReplay(10)
-        executor = MaaBattleExecutor(
-            ReplayController(), replay, lambda: None, lambda: True, lambda: False, clock=clock.clock, sleep=clock.sleep
-        )
-        feedback = executor._confirm_move(self.observation, ChainMovePositions(POINTS[0], POINTS[1]))
-        self.assertTrue(feedback.reached)
-        self.assertEqual(replay.checks, 11)
-
-    def test_failed_target_returns_to_a_fresh_marker_before_retrying(self) -> None:
-        """重滑起点取自新截图中的实际菱形，不能沿用上个目标坐标。"""
-        controller = ReplayController()
-        replay = MarkerReplay(0)
-        live_point = (37, 49)
-
-        def recognize(image, board, *, move=None):
-            """首段成功，下一段重滑后才成功；全盘搜索给出新位置。"""
-            if move is None:
-                marker = ChainEndpointMarker("普通", live_point, (32, 44, 10, 10), 0.99)
-                return ChainEndpointResult("重查帧", "detected", [marker])
-            reached = controller.moves == 1 or controller.moves >= 4
-            return ChainEndpointResult(
-                "确认帧", "detected", [MARKER], move_outcome="target_reached" if reached else "still_at_start"
-            )
-
-        replay.recognize_chain_endpoint = recognize
-        self.executor(controller, replay)._hold_and_move(POINTS[:3], self.observation, hold_start_seconds=0.0)
-        self.assertEqual(
-            controller.actions,
-            [
-                ("down", POINTS[0]),
-                ("move", POINTS[1]),
-                ("move", POINTS[2]),
-                ("move", live_point),
-                ("move", POINTS[2]),
-                ("up", ()),
-            ],
-        )
-
-    def test_a_target_can_only_be_retried_twice(self) -> None:
-        """首次失败后最多两次回退重滑，每次都重新定位菱形。"""
-        controller = ReplayController()
-        replay = MarkerReplay(0)
-        live_points = iter(((37, 49), (39, 51)))
-        reads: list[tuple[int, int]] = []
-
-        def recognize(image, board, *, move=None):
-            """第三只始终未接上，实际菱形位置在每次重查时变化。"""
-            if move is None:
-                point = next(live_points)
-                reads.append(point)
-                marker = ChainEndpointMarker("普通", point, (0, 0, 10, 10), 0.99)
-                return ChainEndpointResult("重查帧", "detected", [marker])
-            return ChainEndpointResult(
-                "确认帧",
-                "detected",
-                [MARKER],
-                move_outcome="target_reached" if controller.moves == 1 else "still_at_start",
-            )
-
-        replay.recognize_chain_endpoint = recognize
-        self.executor(controller, replay)._hold_and_move(POINTS[:3], self.observation, hold_start_seconds=0.0)
-        self.assertEqual(reads, [(37, 49), (39, 51)])
-        self.assertEqual(controller.moves, 6)
-        self.assertEqual(controller.actions[-1], ("up", ()))
-        self.assertEqual(replay.failures[0]["retries"], 2)
-
-    def test_first_attempt_and_two_retries_share_one_waiting_budget(self) -> None:
-        """首次确认与两次重滑共享1.5秒，不能累计到四秒以上。"""
-        controller = ReplayController()
-        replay = MarkerReplay(None)
-        clock = ReplayClock()
-
-        def recognize(image, board, *, move=None):
-            """菱形始终停在起点，允许回退但目标始终未接入。"""
-            if move is None:
-                return ChainEndpointResult("重查帧", "detected", [MARKER])
-            return ChainEndpointResult("确认帧", "detected", [MARKER], move_outcome="still_at_start")
-
-        replay.recognize_chain_endpoint = recognize
-        executor = MaaBattleExecutor(
-            controller, replay, lambda: None, lambda: True, lambda: False, clock=clock.clock, sleep=clock.sleep
-        )
-        feedback = executor._confirm_move_with_retries(self.observation, ChainMovePositions(POINTS[0], POINTS[1]))
-        self.assertFalse(feedback.reached)
-        self.assertEqual(feedback.retries, 2)
-        self.assertLessEqual(feedback.elapsed_ms, 1500)
-
-    def test_first_attempt_still_allows_the_slowest_success_seen_in_logs(self) -> None:
-        """首次确认保留约0.9秒，覆盖日志中约0.8秒的正常响应。"""
-        controller = ReplayController()
-        replay = MarkerReplay(1)
-        clock = ReplayClock()
-
-        def capture():
-            """模拟两次各耗时400毫秒的截图和处理。"""
-            clock.now += 0.4
-            return ReplayJob()
-
-        controller.post_screencap = capture
-        executor = MaaBattleExecutor(
-            controller, replay, lambda: None, lambda: True, lambda: False, clock=clock.clock, sleep=clock.sleep
-        )
-        feedback = executor._confirm_move_with_retries(self.observation, ChainMovePositions(POINTS[0], POINTS[1]))
-        self.assertTrue(feedback.reached)
-        self.assertEqual(feedback.retries, 0)
-        self.assertEqual(controller.actions, [])
-
-    def test_ambiguous_current_markers_do_not_trigger_rollback(self) -> None:
-        """多个菱形无法唯一定位时，不猜测回退点。"""
-        controller = ReplayController()
-        replay = MarkerReplay(None)
-
-        def recognize(image, board, *, move=None):
-            """移动未确认，全盘重查给出两个冲突菱形。"""
-            if move is None:
-                return ChainEndpointResult("重查帧", "uncertain", [MARKER, MARKER])
-            return ChainEndpointResult("确认帧", "not_detected")
-
-        replay.recognize_chain_endpoint = recognize
-        self.executor(controller, replay)._hold_and_move(POINTS[:2], self.observation, hold_start_seconds=0.0)
-        self.assertEqual(controller.actions, [("down", POINTS[0]), ("move", POINTS[1]), ("up", ())])
-        self.assertEqual(replay.failures[0]["stop_reason"], "current_marker_not_unique")
-
-    def test_stop_after_recovery_capture_prevents_rollback(self) -> None:
-        """重查菱形期间用户停止时，不再派发回退或重滑。"""
-        stopped = False
-        controller = ReplayController()
-        replay = MarkerReplay(None)
-        clock = ReplayClock()
-
-        def recognize(image, board, *, move=None):
-            """在全盘重查返回时模拟停止请求。"""
-            nonlocal stopped
-            if move is None:
-                stopped = True
-                return ChainEndpointResult("重查帧", "detected", [MARKER])
-            return ChainEndpointResult("确认帧", "not_detected")
-
-        replay.recognize_chain_endpoint = recognize
-        executor = MaaBattleExecutor(
-            controller, replay, lambda: None, lambda: True, lambda: stopped, clock=clock.clock, sleep=clock.sleep
-        )
-        executor._hold_and_move(POINTS[:2], self.observation, hold_start_seconds=0.0)
-        self.assertEqual(controller.actions, [("down", POINTS[0]), ("move", POINTS[1]), ("up", ())])
-        self.assertEqual(replay.failures, [])
-
-    def test_failed_rollback_still_releases_the_touch(self) -> None:
-        """回退命令失败必须释放触控并上报错误。"""
-        controller = ReplayController(fail_move=2)
-        replay = MarkerReplay(None)
-
-        def recognize(image, board, *, move=None):
-            """目标未接入，但能独立定位当前菱形。"""
-            if move is None:
-                return ChainEndpointResult("重查帧", "detected", [MARKER])
-            return ChainEndpointResult("确认帧", "not_detected")
-
-        replay.recognize_chain_endpoint = recognize
-        with self.assertRaisesRegex(RuntimeError, "回退到当前大菱形失败"):
-            self.executor(controller, replay)._hold_and_move(POINTS[:2], self.observation, hold_start_seconds=0.0)
-        self.assertEqual(controller.moves, 2)
-        self.assertEqual(controller.actions[-1], ("up", ()))
+        self.assertEqual(replay.failures[0]["confirmation_mode"], "after_full_gesture")
 
     def test_user_stop_interrupts_remaining_moves_and_releases(self) -> None:
         """用户停止优先于剩余候选路线。"""
@@ -511,6 +486,156 @@ class BattleExecutionTests(unittest.TestCase):
         self.assertEqual(controller.moves, 7)
         self.assertEqual(replay.checks, 0)
 
+    def test_ranbu_sweep_is_a_continuous_gesture_without_the_normal_start_hold(self) -> None:
+        """全盘扫动跨越多个画面帧，零起点长按，也不调用普通菱形确认。"""
+        clock = ReplayClock()
+        controller = ReplayController()
+        replay = MarkerReplay(0)
+        first_move_times: list[float] = []
+        original_move = controller.post_touch_move
+
+        def record_move(*point: int) -> ReplayJob:
+            """记录第一处移动时间，避免重新加入普通连线长按。"""
+            first_move_times.append(clock.clock())
+            return original_move(*point)
+
+        controller.post_touch_move = record_move
+        executor = MaaBattleExecutor(
+            controller,
+            replay,
+            lambda: self.confirmations.append(True),
+            lambda: True,
+            lambda: False,
+            clock=clock.clock,
+            sleep=clock.sleep,
+        )
+        executor.execute_once(self.upper_yellow_observation(), self.resolution, StrategyDecision("ranbu_link", "阶段"))
+        self.assertGreater(controller.moves, 18)
+        self.assertGreaterEqual(clock.now, 0.4)
+        self.assertLessEqual(clock.now, 0.42)
+        self.assertLess(first_move_times[0], 0.05)
+        points = [point for kind, point in controller.actions if kind in ("down", "move")]
+        self.assertTrue(all(math.dist(a, b) <= 80 for a, b in pairwise(points)))
+        self.assertEqual(replay.checks, 0)
+        self.assertEqual(self.confirmations, [])
+        self.assertEqual(controller.actions[-1], ("up", ()))
+
+    def test_ranbu_records_actual_moves_and_captures_before_releasing(self) -> None:
+        """记录派发时间，松手前截图单列耗时，不能误称游戏已全部接入。"""
+        clock, replay = ReplayClock(), MarkerReplay(0)
+
+        class CaptureController(ReplayController):
+            """截图需要四十毫秒，验证其发生在移动末尾和松手之前。"""
+
+            def post_screencap(self) -> ReplayJob:
+                """用假时钟回放截图耗时。"""
+                self.actions.append(("capture", ()))
+                clock.now += 0.04
+                return ReplayJob()
+
+        controller = CaptureController()
+        executor = MaaBattleExecutor(
+            controller, replay, lambda: None, lambda: True, lambda: False, clock=clock.clock, sleep=clock.sleep
+        )
+        executor.execute_once(self.upper_yellow_observation(), self.resolution, StrategyDecision("ranbu_link", "阶段"))
+        self.assertEqual(controller.actions[-2:], [("capture", ()), ("up", ())])
+        self.assertEqual(len(replay.ranbu_reports), 1)
+        report = replay.ranbu_reports[0]
+        self.assertTrue(report["dispatch_completed"])
+        self.assertFalse(report["game_connection_verified"])
+        self.assertTrue(report["held_image_available"])
+        self.assertAlmostEqual(report["movement_elapsed_ms"], 400, places=2)
+        self.assertAlmostEqual(report["capture_elapsed_ms"], 40, places=2)
+        events = report["events"]
+        self.assertEqual(
+            [entry["kind"] for entry in events], [kind for kind, _ in controller.actions if kind != "capture"]
+        )
+        self.assertEqual(
+            [entry["point"] for entry in events if entry["kind"] == "move"],
+            [list(point) for kind, point in controller.actions if kind == "move"],
+        )
+        self.assertTrue(all(entry["succeeded"] for entry in events))
+
+    def test_interrupted_ranbu_reports_incomplete_dispatch(self) -> None:
+        """停止后的报告必须标为未完成，不能把少量触点称为整盘派发成功。"""
+        controller, replay = ReplayController(), MarkerReplay(0)
+        executor = self.executor(controller, replay, stop_after=3)
+        executor.execute_once(self.upper_yellow_observation(), self.resolution, StrategyDecision("ranbu_link", "阶段"))
+        self.assertEqual(controller.actions[-1], ("up", ()))
+        self.assertEqual(len(replay.ranbu_reports), 1)
+        self.assertFalse(replay.ranbu_reports[0]["dispatch_completed"])
+        self.assertFalse(replay.ranbu_reports[0]["held_image_available"])
+
+    def test_ranbu_capture_failure_still_releases_and_keeps_input_evidence(self) -> None:
+        """诊断截图返回失败或抛错时，仍释放触点并保留已经派发的输入。"""
+        for mode in ("failed", "exception"):
+            with self.subTest(mode=mode):
+
+                class CaptureFailureController(ReplayController):
+                    """仅让诊断截图失败，不改变触控接口。"""
+
+                    def __init__(self, capture_mode: str) -> None:
+                        super().__init__()
+                        self.capture_mode = capture_mode
+
+                    def post_screencap(self) -> ReplayJob:
+                        """回放两种截图失败边界。"""
+                        if self.capture_mode == "exception":
+                            raise RuntimeError("测试截图异常")
+                        return ReplayJob(False)
+
+                controller, replay = CaptureFailureController(mode), MarkerReplay(0)
+                executor = self.executor(controller, replay, stop_after=10000)
+                executor.execute_once(
+                    self.upper_yellow_observation(), self.resolution, StrategyDecision("ranbu_link", "阶段")
+                )
+                self.assertEqual(controller.actions[-1], ("up", ()))
+                self.assertTrue(replay.ranbu_reports[0]["dispatch_completed"])
+                self.assertEqual(replay.ranbu_reports[0]["capture_status"], mode)
+                self.assertFalse(replay.ranbu_reports[0]["held_image_available"])
+
+    def test_ranbu_move_failure_releases_and_reports_failed_input(self) -> None:
+        """移动失败仍上报实际失败触点，不能写成完整派发。"""
+        controller, replay = ReplayController(fail_move=3), MarkerReplay(0)
+        executor = self.executor(controller, replay)
+        with self.assertRaisesRegex(RuntimeError, "移动连线触点失败"):
+            executor.execute_once(
+                self.upper_yellow_observation(), self.resolution, StrategyDecision("ranbu_link", "阶段")
+            )
+        self.assertEqual(controller.actions[-1], ("up", ()))
+        report = replay.ranbu_reports[0]
+        self.assertFalse(report["dispatch_completed"])
+        self.assertFalse(report["events"][-2]["succeeded"])
+        self.assertEqual(report["events"][-1]["kind"], "up")
+
+    def test_ranbu_deadline_interrupts_a_sweep_inside_a_segment(self) -> None:
+        """乱舞输入期限结束时立即停止后续段内移动并松手。"""
+        clock = ReplayClock()
+        controller = ReplayController()
+        executor = MaaBattleExecutor(
+            controller,
+            MarkerReplay(0),
+            lambda: None,
+            lambda: clock.now < 0.08,
+            lambda: False,
+            clock=clock.clock,
+            sleep=clock.sleep,
+        )
+        executor.execute_once(self.upper_yellow_observation(), self.resolution, StrategyDecision("ranbu_link", "阶段"))
+        self.assertGreater(clock.now, 0)
+        self.assertLessEqual(clock.now, 0.1)
+        self.assertNotIn(("move", (719, 989)), controller.actions)
+        self.assertEqual(controller.actions[-1], ("up", ()))
+
+    def test_user_stop_interrupts_ranbu_before_the_first_sweep_corner(self) -> None:
+        """停止能打断较长的第一段，不能先跳到角点再检查。"""
+        controller = ReplayController()
+        executor = self.executor(controller, MarkerReplay(0), stop_after=3)
+        executor.execute_once(self.upper_yellow_observation(), self.resolution, StrategyDecision("ranbu_link", "阶段"))
+        self.assertEqual(controller.moves, 3)
+        self.assertNotIn(("move", (0, 210)), controller.actions)
+        self.assertEqual(controller.actions[-1], ("up", ()))
+
     def reserved_board(self) -> None:
         """回放本帧中全部为保留色的三只普通饿鬼。"""
         self.board.objects = [
@@ -538,7 +663,11 @@ class BattleExecutionTests(unittest.TestCase):
         replay = MarkerReplay(0)
         decision = StrategyDecision("ranbu_short_link", "阶段", reserved_color="red")
         self.executor(controller, replay).execute_once(self.observation, self.resolution, decision)
-        self.assertEqual(controller.actions, [("down", (20, 30)), ("move", (50, 60)), ("up", ())])
+        self.assertEqual(controller.actions[0], ("down", (20, 30)))
+        self.assertEqual(controller.actions[-2:], [("move", (50, 60)), ("up", ())])
+        points = [point for kind, point in controller.actions if kind == "move"]
+        self.assertGreater(len(points), 1)
+        self.assertTrue(all(20 <= x <= 50 and 30 <= y <= 60 for x, y in points))
         self.assertEqual(replay.checks, 0)
         self.assertEqual(self.confirmations, [])
 

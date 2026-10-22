@@ -64,6 +64,7 @@ def main() -> int:
                     "missing_templates": result.coverage["missing_templates"],
                     "recognition_mode": result.coverage["recognition_mode"],
                     "skipped_kinds": result.coverage["skipped_kinds"],
+                    "skipped_variants": result.coverage["skipped_variants"],
                 }
             )
             print(json.dumps(summaries[-1], ensure_ascii=False))
@@ -71,9 +72,7 @@ def main() -> int:
             "# 离线识别开发报告",
             "",
             "这些结果用于逐个核对，不代表独立评估准确率或可自动操作。",
-            "轻量模式仅识别所有饿鬼与炸弹，障碍物（含青铜钟）未检查；未检查的区域不能视为空地。"
-            if args.lightweight
-            else "完整模式包含障碍物（含青铜钟）。",
+            "识别范围以各图结果的coverage为准；主动跳过的类别与外观未检查，未检查的区域不能视为空地。",
             "",
             "诊断图数字对应 JSON 中的对象编号；问号表示证据单一、等级冲突或尚未解释的区域。",
             "延伸至区域边界的残留颜色仅在 JSON 保留，避免将大片背景画成对象候选框。",
@@ -89,6 +88,8 @@ def main() -> int:
                     f"处理耗时：{summary['elapsed_ms']} 毫秒；诊断问题：{summary['issues']} 项。",
                     "",
                     f"缺少模板：{summary['missing_templates']}。",
+                    "",
+                    f"未检查类别：{summary['skipped_kinds']}；未检查外观：{summary['skipped_variants']}。",
                     "",
                 ]
             )

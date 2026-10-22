@@ -88,4 +88,6 @@ class BattleSession:
                     if now - last_operable >= self.timeout_seconds:
                         return BattleOutcome.TIMEOUT
             # 轮询间隔只控制观察频率，是否可操作始终由新截图判断。
-            self.sleep(min(self.poll_interval, self.timeout_seconds - (now - last_operable)))
+            # 乱舞尽快获取独立确认帧，松手后一秒等待仍由动作入口单独执行。
+            interval = min(self.poll_interval, 0.02) if state == BattleState.RANBU else self.poll_interval
+            self.sleep(min(interval, self.timeout_seconds - (now - last_operable)))

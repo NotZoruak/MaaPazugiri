@@ -74,6 +74,18 @@ class ChainEndpointTests(unittest.TestCase):
                 self.assertLess(math.dist(result.markers[0].center, expected), 7)
                 self.assertIsNone(result.object_id)
 
+    def test_runtime_pink_glow_does_not_hide_the_white_diamond(self) -> None:
+        """18:10现场的粉色动效改变外缘色相，但当前帧白色菱形仍在真实终点。"""
+        sample = SAMPLES / "运行_20261021_181031.png"
+        if not sample.is_file():
+            self.skipTest("需要本地18:10运行现场")
+        image = read_image(sample)
+        result = self.recognizer.analyze(image, board_for(image), move=ChainMovePositions((393, 830), (424, 924)))
+        self.assertEqual(result.status, "detected")
+        self.assertEqual(result.move_outcome, "target_reached")
+        self.assertEqual(len(result.markers), 1)
+        self.assertLess(math.dist(result.markers[0].center, (424, 919)), 5)
+
     def test_start_markers_are_not_endpoints(self) -> None:
         """单独保留小星星和其连线时不能误报终点。"""
         starts = (

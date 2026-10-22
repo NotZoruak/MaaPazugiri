@@ -48,5 +48,21 @@
                 "target": [296, 1170, 125, 58]
             }
         }
+    },
+    "UnknownPage_Close": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [0, 1117, 720, 163],
+                "template": "button/关闭_底部按钮.png"
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "post_wait_freezes": {
+            "time": 200,
+            "target": true
+        }
     }
 }

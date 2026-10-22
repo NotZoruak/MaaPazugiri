@@ -7,6 +7,7 @@ import time
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import maa
@@ -16,8 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "agent"))
 
 from battle.candidates import CandidateRoute, RoutePreview  # noqa: E402
-from battle.session import BattleSession, BattleState  # noqa: E402
-from battle.strategy import StrategyDecision, StrategyDocument  # noqa: E402
+from battle.observation import BattleObservation  # noqa: E402
+from battle.session import BattleOutcome, BattleSession, BattleState  # noqa: E402
+from battle.strategy import BattlePhase, StrategyDecision, StrategyDocument, StrategyMetrics  # noqa: E402
 from custom.action.battle import BattleAction  # noqa: E402
 from maa.controller import CustomController  # noqa: E402
 from maa.library import Library  # noqa: E402
@@ -54,6 +56,62 @@ class ImageOnlyController(CustomController):
 
 class BattleActionNativeTests(unittest.TestCase):
     """在真实Maa任务中检查CustomAction返回后的分支。"""
+
+    def test_current_ranbu_frames_keep_dispatching_after_five_point_five_seconds(self) -> None:
+        """新帧仍确认乱舞时继续动作，不能按墙钟五点五秒提前停止。"""
+        now = [0.0]
+        image = np.zeros((1280, 720, 3), dtype=np.uint8)
+        image[350:450, 50:150] = (0, 0, 200)
+        job = SimpleNamespace(succeeded=True, get=lambda: image)
+        job.wait = lambda: job
+        context = SimpleNamespace(
+            tasker=SimpleNamespace(stopping=False, controller=SimpleNamespace(post_screencap=lambda: job)),
+            run_recognition_direct=lambda *args: None,
+            get_node_data=lambda name: {"enabled": False},
+        )
+        board = BoardResult("当前帧", (720, 1280), (0, 210, 720, 780), "离线", {}, objects=[ghoul(1, 100)])
+        observation = BattleObservation("当前帧", BattlePhase.RANBU, image, board, StrategyMetrics())
+        states = (
+            BattleState.RANBU,
+            BattleState.RANBU,
+            BattleState.UNKNOWN,
+            BattleState.RANBU,
+            BattleState.RANBU,
+            BattleState.RANBU,
+            BattleState.RANBU,
+            BattleState.VICTORY,
+        )
+
+        class FrameSession:
+            """只推进已确认帧与虚拟时间，不调用任何真实设备接口。"""
+
+            def run(self, observe, *, stopped, on_operable, on_ranbu):
+                """三组稳定乱舞帧跨越二十秒，未知帧不允许操作。"""
+                for stamp in (0.0, 7.0, 8.0, 14.0, 14.25, 20.0, 20.25, 22.0):
+                    now[0] = stamp
+                    state = observe()
+                    if state == BattleState.RANBU:
+                        on_ranbu()
+                return BattleOutcome.VICTORY
+
+        with (
+            patch("custom.action.battle.BattleFrameRecognizer") as recognizer,
+            patch("custom.action.battle.BoardPreviewer"),
+            patch("custom.action.battle.UltimateChargeRecognizer"),
+            patch("custom.action.battle.BattleObserver") as observer,
+            patch("custom.action.battle.BattleSession", return_value=FrameSession()),
+            patch("custom.action.battle.MaaBattleExecutor") as executor,
+            patch("custom.action.battle.time.monotonic", side_effect=lambda: now[0]),
+        ):
+            recognizer.return_value.analyze.side_effect = states
+            observer.return_value.observe.side_effect = [
+                replace(observation, board=replace(board, frame_id=str(index))) for index in range(6)
+            ]
+            observer.return_value.apply_stage_resolution.side_effect = lambda current, resolution: current
+            result = BattleAction().run(context, SimpleNamespace(custom_action_param="{}"))
+            decisions = [call.args[2].kind for call in executor.return_value.execute_once.call_args_list]
+        self.assertTrue(result.success)
+        self.assertEqual(decisions, ["wait", "ranbu_link", "wait", "ranbu_link", "wait", "ranbu_link"])
 
     def run_case(
         self,
@@ -222,8 +280,8 @@ class BattleActionNativeTests(unittest.TestCase):
                 minimum_after_action_delay=0.99,
             )
 
-    def test_ranbu_all_reserved_uses_the_short_link_action(self) -> None:
-        """真实战斗入口在全为保留色时改派两点短连，不误报等待或全屏扫动。"""
+    def test_ranbu_all_reserved_waits_for_a_nonreserved_start(self) -> None:
+        """真实战斗入口在全为保留色时等待，不再触发保留色短连。"""
         image = np.zeros((1280, 720, 3), dtype=np.uint8)
         strategy = StrategyDocument.builtin_default()
         stage = strategy.stages[0]
@@ -249,7 +307,7 @@ class BattleActionNativeTests(unittest.TestCase):
             patch("custom.action.battle.load_strategy", return_value=strategy),
             patch(
                 "custom.action.battle.BattleFrameRecognizer.analyze",
-                side_effect=[BattleState.RANBU, BattleState.VICTORY],
+                side_effect=[BattleState.RANBU, BattleState.RANBU, BattleState.VICTORY],
             ),
         ):
             self.run_case(
@@ -257,8 +315,9 @@ class BattleActionNativeTests(unittest.TestCase):
                 "Battle_TestNext",
                 next_image=image,
                 expected_state="乱舞",
-                expected_operation="乱舞短连",
-                board_objects=objects,
+                expected_operation="等待起点颜色确认",
+                board_frames=(objects, objects),
+                expected_messages=1,
             )
 
 

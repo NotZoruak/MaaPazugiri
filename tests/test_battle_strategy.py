@@ -75,9 +75,7 @@ class StrategyLoadingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             strategy_dir = Path(directory) / "strategies"
             strategy_dir.mkdir()
-            (strategy_dir / f"{STRATEGY_ID}.json").write_text(
-                json.dumps(sample_strategy()), encoding="utf-8"
-            )
+            (strategy_dir / f"{STRATEGY_ID}.json").write_text(json.dumps(sample_strategy()), encoding="utf-8")
 
             strategy = load_strategy(STRATEGY_ID, Path(directory))
 
@@ -97,11 +95,55 @@ class StrategyLoadingTests(unittest.TestCase):
             with self.assertRaises(StrategyFormatError):
                 load_strategy(STRATEGY_ID, Path(directory))
 
+    def test_editor_color_priority_count_controls_ranked_and_unranked_routes(self) -> None:
+        """编辑器只为前若干颜色编号，其余颜色同优先级并优先长连。"""
+        routes = [
+            {"color": "red", "object_ids": tuple(range(6))},
+            {"color": "blue", "object_ids": tuple(range(7))},
+            {"color": "green", "object_ids": tuple(range(8))},
+            {"color": "yellow", "object_ids": tuple(range(10))},
+        ]
+        for count, expected_color in (
+            (None, "blue"),
+            (0, "yellow"),
+            (1, "yellow"),
+            (2, "blue"),
+            (3, "blue"),
+            (4, "blue"),
+        ):
+            with self.subTest(count=count), tempfile.TemporaryDirectory() as directory:
+                strategy_dir = Path(directory) / "strategies"
+                strategy_dir.mkdir()
+                data = sample_strategy()
+                if count is not None:
+                    data["stages"][0]["actions"]["normal_link"]["color_priority_count"] = count  # type: ignore[index]
+                (strategy_dir / f"{STRATEGY_ID}.json").write_text(json.dumps(data), encoding="utf-8")
+
+                strategy = load_strategy(STRATEGY_ID, Path(directory))
+                decision = decide_action(StrategyRuntime(strategy), BattlePhase.OPERABLE, routes=routes)
+
+                self.assertEqual(decision.kind, "normal_link")
+                self.assertEqual(decision.route["color"], expected_color)
+
+    def test_invalid_editor_color_priority_count_is_rejected(self) -> None:
+        """优先色数量只能是零至四的整数，不接受布尔、空值或越界值。"""
+        for count in (-1, 5, True, 1.5, "2", None):
+            with self.subTest(count=count), tempfile.TemporaryDirectory() as directory:
+                strategy_dir = Path(directory) / "strategies"
+                strategy_dir.mkdir()
+                data = sample_strategy()
+                data["stages"][0]["actions"]["normal_link"]["color_priority_count"] = count  # type: ignore[index]
+                (strategy_dir / f"{STRATEGY_ID}.json").write_text(json.dumps(data), encoding="utf-8")
+
+                with self.assertRaisesRegex(StrategyFormatError, "color_priority_count"):
+                    load_strategy(STRATEGY_ID, Path(directory))
+
     def test_future_version_unknown_field_and_missing_required_field_fail_closed(self) -> None:
         """格式不兼容或字段不完整时拒绝加载，不静默补默认值。"""
         for mutation in (
             lambda data: data.update(schema_version=2),
             lambda data: data.update(unrecognized=True),
+            lambda data: data["stages"][0]["actions"]["normal_link"].update(unrecognized=True),  # type: ignore[index]
             lambda data: data["stages"][0]["actions"].pop("priority"),  # type: ignore[index]
         ):
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as directory:
@@ -308,9 +350,7 @@ class StrategyConditionTests(unittest.TestCase):
             data["stages"][0]["actions"]["ultimates"][0]["condition"] = {  # type: ignore[index]
                 "type": "group",
                 "match": "all",
-                "children": [
-                    {"type": "predicate", "metric": "enemy_hp_percent", "comparison": "less", "value": 50}
-                ],
+                "children": [{"type": "predicate", "metric": "enemy_hp_percent", "comparison": "less", "value": 50}],
             }
             (strategy_dir / f"{STRATEGY_ID}.json").write_text(json.dumps(data), encoding="utf-8")
             runtime = StrategyRuntime(load_strategy(STRATEGY_ID, Path(directory)))
@@ -393,6 +433,23 @@ class RoutePriorityTests(unittest.TestCase):
             color_priority=("red", "blue", "green", "yellow"),
         )
         self.assertEqual(fallback["color"], "red")
+
+    def test_partial_color_priority_keeps_short_route_fallback_and_disabled_behavior(self) -> None:
+        """无七连时仍可选已编号短连，关闭颜色优先后按长度选择。"""
+        routes = [
+            {"color": "red", "object_ids": tuple(range(4))},
+            {"color": "blue", "object_ids": tuple(range(6))},
+        ]
+        for prioritize_colors, expected_color in ((True, "red"), (False, "blue")):
+            with self.subTest(prioritize_colors=prioritize_colors):
+                selected = choose_normal_route(
+                    routes,
+                    prioritize_colors=prioritize_colors,
+                    long_link_threshold=7,
+                    color_priority=("red", "blue", "green", "yellow"),
+                    color_priority_count=1,
+                )
+                self.assertEqual(selected["color"], expected_color)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ from maa.pipeline import JOCR, JColorMatch, JRecognitionParam, JRecognitionType,
 from numpy.typing import NDArray
 
 from .ranbu import matches_ranbu_marker
+from .ranbu_state import matches_ranbu_countdown
 from .session import BattleState
 from .strategy import parse_hp_percent
 
@@ -84,7 +85,7 @@ class BattleFrameRecognizer:
         if not self._hit("gear", image):
             return BattleState.UNKNOWN
         operable = self._hit("brightness", image)
-        ranbu = matches_ranbu_marker(image)
+        ranbu = matches_ranbu_marker(image) or matches_ranbu_countdown(image)
         if operable and ranbu:
             return BattleState.UNKNOWN
         if ranbu:
