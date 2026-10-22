@@ -70,6 +70,16 @@ class BoardObject:
     enhanced: bool | None = None
 
 
+def is_black_ghoul(item: BoardObject) -> bool:
+    """只接受类别、细分类型和颜色均明确的特殊黑色饿鬼。"""
+    return item.kind == "special_ghoul" and item.subtype == "black" and item.color == "black"
+
+
+def is_linkable_ghoul(item: BoardObject) -> bool:
+    """普通四色与用户已确认黑黑规则的对象可参与连线候选。"""
+    return item.kind == "ghoul" and item.color in COLORS or is_black_ghoul(item)
+
+
 @dataclass
 class ChainEndpointMarker:
     """保存当前帧终点菱形的视觉位置，外观标签不代表读取了连线数量。"""
@@ -118,6 +128,7 @@ class BoardResult:
     elapsed_ms: float = 0.0
     automatic_action_allowed: bool = False
     chain_endpoint: ChainEndpointResult | None = None
+    route_exclusion_regions: list[tuple[float, float, float, float]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """返回可直接序列化的诊断数据。"""

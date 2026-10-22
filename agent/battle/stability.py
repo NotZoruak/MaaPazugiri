@@ -3,10 +3,22 @@
 from __future__ import annotations
 
 import math
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from statistics import median
 
-from vision.model import BoardObject, BoardResult
+from vision.model import COLORS, OBSTACLE_TYPES, BoardObject, BoardResult
+
+
+@dataclass(frozen=True)
+class _PlanningScope:
+    """保存本次状态比较允许规划的范围，不提供旧帧识别对象。"""
+
+    bottom_y: float | None = None
+    regions: tuple[tuple[float, float, float, float], ...] = ()
+    current_indices: frozenset[int] | None = None
+    matched_count: int = 0
+    missing_ids: tuple[int, ...] = ()
+    added_ids: tuple[int, ...] = ()
 
 
 def _valid_board(board: BoardResult) -> bool:
@@ -75,7 +87,71 @@ def _bottom_band_top(board: BoardResult) -> float:
     return by + bh - depth
 
 
-def _compare_boards(previous: BoardResult, current: BoardResult) -> tuple[bool, str, float | None]:
+def _local_planning_scope(
+    previous: BoardResult,
+    current: BoardResult,
+    matched: dict[int, int],
+    missing: list[BoardObject],
+    added: list[BoardObject],
+) -> _PlanningScope | None:
+    """用分散的稳定对象证明主体未动，将少量检测差异隔离为未知区域。"""
+    total = max(len(previous.objects), len(current.objects))
+    if len(matched) < 6 or len(matched) / total < 0.9 or max(len(missing), len(added)) > 4:
+        return None
+    uncertain = (*missing, *added)
+    if any(
+        not (
+            item.kind == "ghoul" and item.color in COLORS or item.kind == "obstacle" and item.subtype in OBSTACLE_TYPES
+        )
+        for item in uncertain
+    ):
+        # 黑色影响全局最高优先级，炸弹影响触点安全，二者变化均不套用局部例外。
+        return None
+    anchors = [
+        current.objects[index].center
+        for index, old_index in matched.items()
+        if current.objects[index].quality in ("identified", "single_feature")
+        and previous.objects[old_index].quality in ("identified", "single_feature")
+    ]
+    _, _, bw, bh = current.board_region
+    if (
+        len(anchors) < 6
+        or max(point[0] for point in anchors) - min(point[0] for point in anchors) < bw * 0.5
+        or max(point[1] for point in anchors) - min(point[1] for point in anchors) < bh * 0.5
+    ):
+        return None
+    for item in missing:
+        peers = [
+            other
+            for other in added
+            if (item.kind, item.color, item.subtype, item.enhanced)
+            == (other.kind, other.color, other.subtype, other.enhanced)
+        ]
+        if peers:
+            nearest = min(peers, key=lambda other: math.dist(item.center, other.center))
+            if math.dist(item.center, nearest.center) > min(*item.body_box[2:], *nearest.body_box[2:]) * 0.25:
+                return None
+
+    bx, by, _, _ = current.board_region
+    regions = []
+    for item in uncertain:
+        x, y, width, height = item.body_box
+        margin = max(2.0, min(width, height) * 0.1)
+        left, top = max(bx, x - margin), max(by, y - margin)
+        right, bottom = min(bx + bw, x + width + margin), min(by + bh, y + height + margin)
+        region = (left, top, right - left, bottom - top)
+        if right > left and bottom > top and region not in regions:
+            regions.append(region)
+    return _PlanningScope(
+        regions=tuple(regions),
+        current_indices=frozenset(matched),
+        matched_count=len(matched),
+        missing_ids=tuple(item.id for item in missing),
+        added_ids=tuple(item.id for item in added),
+    )
+
+
+def _compare_boards(previous: BoardResult, current: BoardResult) -> tuple[bool, str, _PlanningScope | None]:
     """逐项比较并保留拒绝原因，不能用总数或平均位置代替对象匹配。"""
     if previous.frame_id == current.frame_id:
         return False, "重复使用同一帧，尚未取得两帧独立结果", None
@@ -131,7 +207,23 @@ def _compare_boards(previous: BoardResult, current: BoardResult) -> tuple[bool, 
             math.dist(missing[0].center, added[0].center) <= min(*missing[0].body_box[2:], *added[0].body_box[2:]) * 0.5
         )
     if tolerated:
-        return True, "底部单只饿鬼识别差异，其余对象稳定；本轮连线避开底部", band_top
+        return (
+            True,
+            "底部单只饿鬼识别差异，其余对象稳定；本轮连线避开底部",
+            _PlanningScope(
+                bottom_y=band_top,
+                matched_count=len(matched),
+                missing_ids=tuple(item.id for item in missing),
+                added_ids=tuple(item.id for item in added),
+            ),
+        )
+    scope = _local_planning_scope(previous, current, matched, missing, added)
+    if scope is not None:
+        return (
+            True,
+            f"主体稳定（匹配{len(matched)}/{max(len(previous.objects), len(current.objects))}），本轮避让局部识别差异",
+            scope,
+        )
     if len(previous.objects) != len(current.objects):
         return False, f"棋盘对象数量变化：{len(previous.objects)} → {len(current.objects)}", None
     item = missing[0]
@@ -139,7 +231,7 @@ def _compare_boards(previous: BoardResult, current: BoardResult) -> tuple[bool, 
 
 
 def boards_are_similar(previous: BoardResult, current: BoardResult) -> bool:
-    """比较同范围独立结果，仅允许底部单只普通饿鬼的局部误差。"""
+    """比较同范围独立结果，对有充分整体稳定证据的局部差异提供有限例外。"""
     return _compare_boards(previous, current)[0]
 
 
@@ -165,6 +257,7 @@ def _board_summary(board: BoardResult | None) -> dict[str, object] | None:
                 "bomb_level": item.bomb_level,
                 "subtype": item.subtype,
                 "enhanced": item.enhanced,
+                "quality": item.quality,
                 "center": coordinates(item.center),
                 "body_box": coordinates(item.body_box),
                 "candidate_point": coordinates(item.candidate_point),
@@ -191,12 +284,12 @@ class NormalLinkStability:
         """每次以当前帧替换比较基准，只判断相邻两次结果。"""
         previous = self._previous
         self.route_board = None
-        band_top = None
+        scope = None
         if board is None or not _valid_board(board):
             self.reset()
             stable, reason = False, "当前棋盘缺失或存在无效对象几何、触点"
         else:
-            stable, reason, band_top = (
+            stable, reason, scope = (
                 _compare_boards(previous, board)
                 if previous is not None
                 else (False, "仅取得一帧有效棋盘，等待下一帧", None)
@@ -204,22 +297,39 @@ class NormalLinkStability:
             self._previous = board
             if stable:
                 self.route_board = board
-                if band_top is not None:
+                if scope is not None and scope.bottom_y is not None:
                     bx, by, bw, _ = board.board_region
                     # 只从本帧生成规划视图；裁剪区域保证路线的直线段也不会穿入不确定带。
                     self.route_board = replace(
                         board,
-                        board_region=(bx, by, bw, band_top - by),
+                        board_region=(bx, by, bw, scope.bottom_y - by),
                         objects=[
                             item
                             for item in board.objects
-                            if item.kind != "ghoul" or item.body_box[1] + item.body_box[3] < band_top
+                            if item.kind != "ghoul" or item.body_box[1] + item.body_box[3] < scope.bottom_y
                         ],
+                    )
+                elif scope is not None:
+                    # 旧帧只用于确定需避让的差异区域；候选仍完全来自本帧匹配项，不补回任何旧对象。
+                    self.route_board = replace(
+                        board,
+                        objects=[
+                            item
+                            for index, item in enumerate(board.objects)
+                            if scope.current_indices is not None and index in scope.current_indices
+                        ],
+                        route_exclusion_regions=list(scope.regions),
                     )
         self.last_report = {
             "stable": stable,
             "reason": reason,
-            "bottom_exclusion_y": band_top,
+            "bottom_exclusion_y": scope.bottom_y if scope else None,
+            "route_exclusion_regions": list(scope.regions) if scope else [],
+            "matched_count": scope.matched_count
+            if scope
+            else (len(board.objects) if stable and board is not None else None),
+            "unmatched_previous_ids": scope.missing_ids if scope else (),
+            "unmatched_current_ids": scope.added_ids if scope else (),
             "previous": _board_summary(previous),
             "current": _board_summary(board),
         }

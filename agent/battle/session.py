@@ -14,6 +14,8 @@ class BattleState(StrEnum):
     INOPERABLE = "inoperable"
     OPERABLE = "operable"
     RANBU = "ranbu"
+    ULTIMATE_TAP_CONFIRMATION = "ultimate_tap_confirmation"
+    ULTIMATE_SWIPE_CONFIRMATION = "ultimate_swipe_confirmation"
     VICTORY = "victory"
     DEFEAT = "defeat"
 
@@ -55,6 +57,7 @@ class BattleSession:
         stopped: Callable[[], bool],
         on_operable: Callable[[], None] | None = None,
         on_ranbu: Callable[[], None] | None = None,
+        on_ultimate_confirmation: Callable[[BattleState], None] | None = None,
     ) -> BattleOutcome:
         """观察至终局或退出，仅在期限内确认可操作后调用内部处理。"""
         last_operable = self.clock()
@@ -71,7 +74,13 @@ class BattleSession:
                 return BattleOutcome.DEFEAT
             if now - last_operable >= self.timeout_seconds:
                 return BattleOutcome.TIMEOUT
-            if state in (BattleState.OPERABLE, BattleState.RANBU):
+            active_states = (
+                BattleState.OPERABLE,
+                BattleState.RANBU,
+                BattleState.ULTIMATE_TAP_CONFIRMATION,
+                BattleState.ULTIMATE_SWIPE_CONFIRMATION,
+            )
+            if state in active_states:
                 last_operable = now
                 if state == BattleState.OPERABLE and on_operable is not None:
                     on_operable()
@@ -82,6 +91,20 @@ class BattleSession:
                         return BattleOutcome.TIMEOUT
                 elif state == BattleState.RANBU and on_ranbu is not None:
                     on_ranbu()
+                    now = self.clock()
+                    if stopped():
+                        return BattleOutcome.CANCELLED
+                    if now - last_operable >= self.timeout_seconds:
+                        return BattleOutcome.TIMEOUT
+                elif (
+                    state
+                    in (
+                        BattleState.ULTIMATE_TAP_CONFIRMATION,
+                        BattleState.ULTIMATE_SWIPE_CONFIRMATION,
+                    )
+                    and on_ultimate_confirmation is not None
+                ):
+                    on_ultimate_confirmation(state)
                     now = self.clock()
                     if stopped():
                         return BattleOutcome.CANCELLED

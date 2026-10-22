@@ -17,7 +17,7 @@ from battle.strategy import StrategyDecision  # noqa: E402
 
 
 class RanbuDirectStartTests(unittest.TestCase):
-    """双帧预选完成后，不再用按下后的选中外观阻断扫动。"""
+    """本帧起点判色完成后，不再用按下后的选中外观阻断扫动。"""
 
     def test_live_action_does_not_install_selection_outline_check(self) -> None:
         """实际动作入口不得重新接入导致短按即松手的描边回调。"""
@@ -37,10 +37,10 @@ class RanbuDirectStartTests(unittest.TestCase):
             session.return_value.run.return_value = BattleOutcome.VICTORY
             self.assertTrue(BattleAction().run(context, SimpleNamespace(custom_action_param="{}")).success)
             self.assertNotIn("inspect_ranbu_start", executor.call_args.kwargs)
-            self.assertIn("inspect_ranbu_hold", executor.call_args.kwargs)
+            self.assertNotIn("inspect_ranbu_hold", executor.call_args.kwargs)
 
-    def test_full_sweep_moves_before_first_capture_without_start_size(self) -> None:
-        """未提供描边尺寸也完成完整轨迹，截图只发生在扫完之后。"""
+    def test_full_sweep_without_start_size_never_waits_for_capture(self) -> None:
+        """未提供描边尺寸也完成完整轨迹，不追加按住截图。"""
         fixture = fixtures.BattleExecutionTests()
         fixture.setUp()
         clock, preview = fixtures.ReplayClock(), fixtures.MarkerReplay(0)
@@ -68,7 +68,7 @@ class RanbuDirectStartTests(unittest.TestCase):
             fixture.upper_yellow_observation(), fixture.resolution, StrategyDecision("ranbu_link", "阶段")
         )
         self.assertGreater(controller.moves, 200)
-        self.assertEqual(capture_moves, [controller.moves])
+        self.assertEqual(capture_moves, [])
         self.assertEqual(controller.actions[0][0], "down")
         self.assertEqual(controller.actions[1][0], "move")
         self.assertEqual(controller.actions[-1], ("up", ()))

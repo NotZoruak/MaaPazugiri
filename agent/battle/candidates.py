@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from itertools import combinations, pairwise
 
 from vision.connectability import ConnectabilityResult, ConnectabilityStatus, assess_ghoul_connectability
-from vision.model import COLORS, BoardObject, BoardResult
+from vision.model import BoardObject, BoardResult, is_black_ghoul, is_linkable_ghoul
 
 
 @dataclass(frozen=True)
@@ -49,12 +49,45 @@ def _point_inside(point: tuple[float, float] | None, board: BoardResult) -> bool
     x, y = point
     width, height = board.source_size
     bx, by, bw, bh = board.board_region
-    return 0 <= x < width and 0 <= y < height and bx <= x < bx + bw and by <= y < by + bh
+    return (
+        0 <= x < width
+        and 0 <= y < height
+        and bx <= x < bx + bw
+        and by <= y < by + bh
+        and not any(rx <= x <= rx + rw and ry <= y <= ry + rh for rx, ry, rw, rh in board.route_exclusion_regions)
+    )
 
 
-def _route_rank(route: CandidateRoute) -> tuple[int, float, float, tuple[int, ...]]:
-    """先比较对象数量，再比较几何余量、路线长度和编号顺序。"""
-    return (-len(route.object_ids), -route.minimum_clearance, route.total_distance, route.object_ids)
+def _segment_avoids_exclusions(first: tuple[float, float], second: tuple[float, float], board: BoardResult) -> bool:
+    """检查整条线段，端点在区域外仍不能穿越或擦过不确定区域。"""
+    for x, y, width, height in board.route_exclusion_regions:
+        begin, end = 0.0, 1.0
+        for origin, delta, lower, upper in (
+            (first[0], second[0] - first[0], x, x + width),
+            (first[1], second[1] - first[1], y, y + height),
+        ):
+            if abs(delta) < 1e-9:
+                if not lower <= origin <= upper:
+                    break
+            else:
+                enter, leave = sorted(((lower - origin) / delta, (upper - origin) / delta))
+                begin, end = max(begin, enter), min(end, leave)
+                if begin > end:
+                    break
+        else:
+            return False
+    return True
+
+
+def _route_rank(route: CandidateRoute) -> tuple[int, int, float, float, tuple[int, ...]]:
+    """黑色优先，再比较对象数量、几何余量、路线长度和编号顺序。"""
+    return (
+        0 if route.color == "black" else 1,
+        -len(route.object_ids),
+        -route.minimum_clearance,
+        route.total_distance,
+        route.object_ids,
+    )
 
 
 def preferred_ghoul_touch_point(item: BoardObject, board: BoardResult) -> tuple[float, float]:
@@ -75,11 +108,20 @@ def preferred_ghoul_touch_point(item: BoardObject, board: BoardResult) -> tuple[
     return item.center
 
 
-def build_route_preview(board: BoardResult, *, beam_width: int = 32, max_expansions: int = 4096) -> RoutePreview:
+def build_route_preview(
+    board: BoardResult, *, beam_width: int = 32, max_expansions: int = 4096, black_only: bool = False
+) -> RoutePreview:
     """按剩余连接数量优先有限回溯；宽度限制每步分支，结果不保证全局最长。"""
     if beam_width < 1 or max_expansions < 1:
         raise ValueError("候选搜索宽度和总扩展上限必须为正整数")
     result = RoutePreview(board.frame_id)
+    if any(
+        len(region) != 4 or not all(math.isfinite(value) for value in region) or min(region[2:]) <= 0
+        for region in board.route_exclusion_regions
+    ):
+        result.status = "invalid_board"
+        result.issues.append("规划避让区域无效，本帧不生成路线")
+        return result
     if len({item.id for item in board.objects}) != len(board.objects):
         result.status = "invalid_board"
         result.issues.append("当前帧对象编号不唯一，不能关联候选路线")
@@ -89,8 +131,8 @@ def build_route_preview(board: BoardResult, *, beam_width: int = 32, max_expansi
     points: dict[int, tuple[float, float]] = {}
     for item in sorted(board.objects, key=lambda obj: obj.id):
         reason = None
-        if item.kind != "ghoul" or item.color not in COLORS:
-            reason = "不是已确认颜色的普通饿鬼"
+        if not is_linkable_ghoul(item) or black_only and not is_black_ghoul(item):
+            reason = "不是当前检查范围内已确认连接规则的饿鬼"
         elif item.quality not in ("identified", "single_feature"):
             reason = "对象识别质量不足"
         elif not _point_inside(item.center, board) or not _point_inside(item.candidate_point, board):
@@ -113,6 +155,13 @@ def build_route_preview(board: BoardResult, *, beam_width: int = 32, max_expansi
             continue
         assessment = assess_ghoul_connectability(board, first.id, second.id)
         if assessment.status == ConnectabilityStatus.CANDIDATE:
+            if not _segment_avoids_exclusions(
+                (round(points[first.id][0]), round(points[first.id][1])),
+                (round(points[second.id][0]), round(points[second.id][1])),
+                board,
+            ):
+                result.rejected_pairs += 1
+                continue
             result.candidate_edges.append(assessment)
             adjacency[first.id].add(second.id)
             adjacency[second.id].add(first.id)
@@ -155,7 +204,9 @@ def build_route_preview(board: BoardResult, *, beam_width: int = 32, max_expansi
             pending.extend(sorted(adjacency[identifier] - component, reverse=True))
         remaining.difference_update(component)
         components.append(component)
-    for component in sorted(components, key=lambda nodes: (-len(nodes), min(nodes))):
+    for component in sorted(
+        components, key=lambda nodes: (0 if eligible[min(nodes)].color == "black" else 1, -len(nodes), min(nodes))
+    ):
         seeds = sorted(
             {(first, second) for first in component for second in adjacency[first] if first < second},
             key=lambda path: _route_rank(make_route(path)),

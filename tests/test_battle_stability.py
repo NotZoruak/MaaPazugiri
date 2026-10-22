@@ -56,6 +56,7 @@ class BattleStabilityActionTests(unittest.TestCase):
         maximum_capture_gap: float | None = None,
         minimum_capture_gap_after_action: float | None = None,
         diagnostic_delay_after_release: float = 0.0,
+        executed_boards: list[BoardResult] | None = None,
     ) -> tuple[list[tuple[int, StrategyDecision]], list[BoardResult]]:
         """逐帧回放，记录实际获准执行的操作及路线使用的当前帧。"""
         states = states or [*[BattleState.OPERABLE] * len(boards), BattleState.VICTORY]
@@ -66,7 +67,7 @@ class BattleStabilityActionTests(unittest.TestCase):
         image = np.zeros((1280, 720, 3), dtype=np.uint8)
         capture_times: list[float] = []
         action_times: list[tuple[int, float]] = []
-        executor_stub = SimpleNamespace(last_gesture_released_at=None)
+        executor_stub = SimpleNamespace(last_gesture_released_at=None, last_ranbu_color=None)
 
         def advance(seconds: float) -> None:
             """推进回放时钟，不实际等待。"""
@@ -115,14 +116,18 @@ class BattleStabilityActionTests(unittest.TestCase):
         def execute(observation, resolution, decision: StrategyDecision) -> None:
             """仅记录获准的实际行动，等待不发送任何输入。"""
             if decision.kind != "wait":
+                if executed_boards is not None:
+                    executed_boards.append(observation.board)
                 operations.append((len(observed), decision))
                 action_times.append((len(capture_times), clock.now))
                 executor_stub.last_gesture_released_at = clock.now
+                if decision.kind == "ranbu_link":
+                    executor_stub.last_ranbu_color = decision.ranbu_color
                 advance(diagnostic_delay_after_release)
 
         executor_stub.execute_once = execute
 
-        def run(observe, *, stopped, on_operable, on_ranbu):
+        def run(observe, *, stopped, on_operable, on_ranbu, on_ultimate_confirmation):
             """逐次经过真实截图入口与状态回调，直到终局。"""
             for expected_state in states:
                 advance(0.25)
@@ -264,48 +269,56 @@ class BattleStabilityActionTests(unittest.TestCase):
                 BattleState.VICTORY,
             ],
         )
-        self.assertEqual([(index, decision.kind) for index, decision in operations], [(4, "normal_link")])
+        self.assertEqual(
+            [(index, decision.kind) for index, decision in operations], [(2, "ranbu_link"), (4, "normal_link")]
+        )
 
-    def test_ranbu_cannot_act_on_its_first_board(self) -> None:
-        """乱舞标志不代表棋盘已落稳，单帧不能直接起手。"""
+    def test_ranbu_can_start_from_current_frame_color_evidence(self) -> None:
+        """当前版本从本帧对象与像素判色起手，不再要求历史帧稳定。"""
         operations, _ = self.run_replay(
             [board(ghoul(1, 100), ghoul(2, 190))], states=[BattleState.RANBU, BattleState.VICTORY]
         )
-        self.assertEqual(operations, [])
+        self.assertEqual([(index, decision.kind) for index, decision in operations], [(1, "ranbu_link")])
 
-    def test_ranbu_waits_for_stability_and_uses_latest_color_positions(self) -> None:
-        """下落及颜色位置变化后，只有最新两帧稳定才发起乱舞。"""
+    def test_ranbu_uses_each_current_frame_color_and_position(self) -> None:
+        """颜色位置互换时各自采用本帧证据，不沿用上一帧起点。"""
         frames = [
             board(ghoul(1, 100, color="yellow"), ghoul(2, 190, color="red")),
             board(ghoul(3, 100, color="red"), ghoul(4, 190, color="yellow")),
             board(ghoul(8, 102, color="red"), ghoul(9, 192, color="yellow")),
         ]
-        operations, planned = self.run_replay(frames, states=[*[BattleState.RANBU] * 3, BattleState.VICTORY])
-        self.assertEqual([(index, decision.kind) for index, decision in operations], [(3, "ranbu_link")])
+        operations, planned = self.run_replay(
+            frames, states=[*[BattleState.RANBU] * 3, BattleState.VICTORY], reserved_color="red"
+        )
+        self.assertEqual([index for index, _ in operations], [1, 2, 3])
+        self.assertEqual([decision.ranbu_start for _, decision in operations], [(100, 400), (190, 400), (192, 400)])
+        self.assertTrue(all(decision.ranbu_color == "yellow" for _, decision in operations))
         self.assertEqual(planned, [])
 
-    def test_each_ranbu_sweep_requires_fresh_stability_evidence(self) -> None:
-        """每次扫动后重置判断，不能沿用操作前的稳定结论。"""
+    def test_each_ranbu_sweep_requires_fresh_current_frame(self) -> None:
+        """每次扫动取新截图和新帧编号，不再复用操作前的帧。"""
         frames = [board(ghoul(1, 100), ghoul(2, 190)) for _ in range(4)]
         operations, _ = self.run_replay(frames, states=[*[BattleState.RANBU] * 4, BattleState.VICTORY])
         self.assertEqual(
-            [(index, decision.kind) for index, decision in operations], [(2, "ranbu_link"), (4, "ranbu_link")]
+            [(index, decision.kind) for index, decision in operations],
+            [(index, "ranbu_link") for index in (1, 2, 3, 4)],
         )
+        self.assertEqual(len({decision.ranbu_frame_id for _, decision in operations}), 4)
 
-    def test_ranbu_only_confirms_the_preselected_point_and_preserves_its_coordinates(self) -> None:
-        """其他对象下落或数量变化时，只要同一预选点颜色不变就放行。"""
+    def test_ranbu_reselects_the_current_point_when_objects_move(self) -> None:
+        """对象移动或数量变化后重选当前落点，不保留上一帧坐标。"""
         frames = [
             board(ghoul(1, 100, color="blue"), ghoul(2, 300)),
-            board(ghoul(99, 110, color="blue"), ghoul(0, 500, color="yellow"), ghoul(3, 600)),
+            board(ghoul(99, 110, color="blue"), ghoul(0, 500), ghoul(3, 600)),
         ]
         operations, _ = self.run_replay(
             frames, states=[BattleState.RANBU, BattleState.RANBU, BattleState.VICTORY], reserved_color="red"
         )
-        self.assertEqual([(index, decision.kind) for index, decision in operations], [(2, "ranbu_link")])
-        self.assertEqual(operations[0][1].ranbu_start, (100, 400))
+        self.assertEqual([index for index, _ in operations], [1, 2])
+        self.assertEqual([decision.ranbu_start for _, decision in operations], [(100, 400), (110, 400)])
 
-    def test_ranbu_waits_half_a_second_then_requires_a_fresh_pair_at_the_selected_point(self) -> None:
-        """按用户观察等待半秒消除动画，之后仍须两张新图确认起点。"""
+    def test_ranbu_waits_half_a_second_then_uses_fresh_current_evidence(self) -> None:
+        """松手后仍须等待半秒消除动画，再从新截图判断起点。"""
         frames = [board(ghoul(1, 100, color="blue"), ghoul(2, 300)) for _ in range(4)]
         operations, _ = self.run_replay(
             frames,
@@ -313,7 +326,7 @@ class BattleStabilityActionTests(unittest.TestCase):
             maximum_capture_gap=0.501,
             minimum_capture_gap_after_action=0.49,
         )
-        self.assertEqual([index for index, _ in operations], [2, 4])
+        self.assertEqual([index for index, _ in operations], [1, 2, 3, 4])
 
     def test_ranbu_diagnostic_writing_overlaps_the_half_second_pause(self) -> None:
         """诊断耗时计入半秒等待，不能保存后再重新计时。"""
@@ -325,7 +338,7 @@ class BattleStabilityActionTests(unittest.TestCase):
             minimum_capture_gap_after_action=0.49,
             diagnostic_delay_after_release=0.2,
         )
-        self.assertEqual([index for index, _ in operations], [2, 4])
+        self.assertEqual([index for index, _ in operations], [1, 2, 3, 4])
 
     def test_all_reserved_colors_wait_instead_of_starting_a_short_link(self) -> None:
         """最新起手规则要求非保留色，全为保留色不能触发旧短连例外。"""
@@ -335,8 +348,8 @@ class BattleStabilityActionTests(unittest.TestCase):
         )
         self.assertEqual(operations, [])
 
-    def test_interruption_breaks_ranbu_stability_evidence(self) -> None:
-        """未知或不可操作状态会使乱舞重新累计两帧稳定证据。"""
+    def test_interruption_never_dispatches_a_ranbu_action(self) -> None:
+        """未知或不可操作帧不能操作，恢复乱舞后使用新帧证据。"""
         for interrupted in (BattleState.UNKNOWN, BattleState.INOPERABLE):
             with self.subTest(state=interrupted):
                 frames = [board(ghoul(1, 100), ghoul(2, 190)) for _ in range(3)]
@@ -344,7 +357,7 @@ class BattleStabilityActionTests(unittest.TestCase):
                     frames,
                     states=[BattleState.RANBU, interrupted, BattleState.RANBU, BattleState.RANBU, BattleState.VICTORY],
                 )
-                self.assertEqual([(index, decision.kind) for index, decision in operations], [(3, "ranbu_link")])
+                self.assertEqual([index for index, _ in operations], [1, 2, 3])
 
     def test_ranbu_short_link_also_requires_stability(self) -> None:
         """保留色短连也需要落稳，不能在过渡帧误触。"""

@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 from dataclasses import replace
 
+from battle.candidates import build_route_preview
 from battle.execution import MaaBattleExecutor
 from battle.observation import BattleObserver
 from battle.preview import BoardPreviewer
@@ -21,6 +22,7 @@ from maa.custom_action import CustomAction
 from utils import logger
 from utils.params import parse_params
 from utils.runtime_paths import get_runtime_paths
+from vision.model import is_black_ghoul
 
 
 @AgentServer.custom_action("BattleAction")
@@ -62,11 +64,13 @@ class BattleAction(CustomAction):
             last_decision_at = float("-inf")
             force_next_decision = False
             observe_after: float | None = None
+            last_ultimate_confirmation: BattleState | None = None
             normal_link_stability = NormalLinkStability()
 
             def observe() -> BattleState:
                 """重新截图并核对状态，不在本阶段发送棋盘输入。"""
                 nonlocal last_state, current_image, observe_after, force_next_decision
+                nonlocal last_ultimate_confirmation
                 current_image = None
                 if observe_after is not None:
                     while not context.tasker.stopping:
@@ -86,13 +90,33 @@ class BattleAction(CustomAction):
                 state = BattleState.UNKNOWN if not image.size else recognizer.analyze(image)
                 if state != BattleState.OPERABLE:
                     normal_link_stability.reset()
-                if state in (BattleState.OPERABLE, BattleState.RANBU):
+                if state not in (
+                    BattleState.ULTIMATE_TAP_CONFIRMATION,
+                    BattleState.ULTIMATE_SWIPE_CONFIRMATION,
+                    BattleState.UNKNOWN,
+                ):
+                    last_ultimate_confirmation = None
+                if state in (
+                    BattleState.OPERABLE,
+                    BattleState.RANBU,
+                    BattleState.ULTIMATE_TAP_CONFIRMATION,
+                    BattleState.ULTIMATE_SWIPE_CONFIRMATION,
+                ):
                     current_image = image
                 if state != last_state:
                     force_next_decision = True
                     logger.debug("战斗内部状态：{}", state.value)
                     last_state = state
                 return state
+
+            def process_ultimate_confirmation(state: BattleState) -> None:
+                """同一确认提示只执行一组固定手势，等待画面离开后再允许下一组。"""
+                nonlocal current_image, last_ultimate_confirmation
+                if current_image is None or state == last_ultimate_confirmation:
+                    return
+                last_ultimate_confirmation = state
+                executor.execute_ultimate_confirmation(state)
+                current_image = None
 
             def process_current_frame(phase: BattlePhase) -> None:
                 """串联观测、阶段评估、行动选择和单步派发。"""
@@ -146,6 +170,24 @@ class BattleAction(CustomAction):
                         )
                         return tuple(route_preview.routes)
 
+                    black_routes = ()
+                    black_route_ready = phase == BattlePhase.RANBU or board_stable
+                    if (
+                        observation.board is not None
+                        and sum(is_black_ghoul(item) for item in observation.board.objects) >= 2
+                    ):
+                        black_routes = tuple(build_route_preview(observation.board, black_only=True).routes)
+                        route_board = normal_link_stability.route_board
+                        if black_routes and phase == BattlePhase.OPERABLE:
+                            if board_stable and route_board is not None and route_board is not observation.board:
+                                allowed_black = tuple(build_route_preview(route_board, black_only=True).routes)
+                                black_route_ready = bool(allowed_black)
+                                if allowed_black:
+                                    black_routes = allowed_black
+                            waiting_for_stability = not black_route_ready
+                        logger.debug(
+                            "黑色连线优先检查：候选路线={}，允许起手={}。", len(black_routes), black_route_ready
+                        )
                     decision = decide_action(
                         strategy_runtime,
                         phase,
@@ -153,6 +195,8 @@ class BattleAction(CustomAction):
                         ultimate_states=observation.metrics.ultimate_ready,
                         available_bomb_levels=observation.available_bomb_levels,
                         route_provider=provide_normal_routes,
+                        black_routes=black_routes,
+                        black_route_ready=black_route_ready,
                         stage_resolution=resolution,
                     )
                     if waiting_for_stability or (decision.kind == "normal_link" and not board_stable):
@@ -201,15 +245,23 @@ class BattleAction(CustomAction):
                         decision,
                     )
                     progress.report(phase, resolution, decision)
-                    executor.execute_once(observation, resolution, decision)
+                    execution_observation = observation
+                    if (
+                        phase == BattlePhase.OPERABLE
+                        and decision.kind in ("normal_link", "black_link")
+                        and normal_link_stability.route_board is not None
+                    ):
+                        execution_observation = replace(observation, board=normal_link_stability.route_board)
+                    executor.execute_once(execution_observation, resolution, decision)
                     if decision.kind != "wait":
                         normal_link_stability.reset()
                     force_next_decision = waiting_for_stability or decision.kind in (
                         "ultimate",
                         "bomb",
                         "normal_link",
+                        "black_link",
                     )
-                    if decision.kind in ("normal_link", "ranbu_link", "ranbu_short_link"):
+                    if decision.kind in ("normal_link", "black_link", "ranbu_link", "ranbu_short_link"):
                         released_at = getattr(executor, "last_gesture_released_at", None)
                         after_release_seconds = 0.5 if phase == BattlePhase.RANBU else 1.0
                         if phase == BattlePhase.RANBU and isinstance(released_at, (int, float)):
@@ -226,6 +278,7 @@ class BattleAction(CustomAction):
                 stopped=lambda: context.tasker.stopping,
                 on_operable=lambda: process_current_frame(BattlePhase.OPERABLE),
                 on_ranbu=lambda: process_current_frame(BattlePhase.RANBU),
+                on_ultimate_confirmation=process_ultimate_confirmation,
             )
         except Exception:
             logger.exception("战斗自定义动作发生运行错误")

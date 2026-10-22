@@ -580,6 +580,13 @@ def choose_normal_route(
     if not routes:
         return None
     candidates = list(routes)
+    black = [
+        route
+        for route in candidates
+        if _value(route, "color") == "black" and len(_value(route, "object_ids") or ()) >= 2
+    ]
+    if black:
+        return max(black, key=lambda route: len(_value(route, "object_ids") or ()))
     if prioritize_colors:
         long_routes = [route for route in candidates if len(_value(route, "object_ids") or ()) >= long_link_threshold]
         if long_routes:
@@ -616,6 +623,8 @@ def decide_action(
     available_bomb_levels: list[int] | tuple[int, ...] = (),
     routes: list[Any] | tuple[Any, ...] = (),
     route_provider: Callable[[], list[Any] | tuple[Any, ...]] | None = None,
+    black_routes: list[Any] | tuple[Any, ...] = (),
+    black_route_ready: bool = True,
     stage_resolution: StageResolution | None = None,
 ) -> StrategyDecision:
     """使用已评估阶段选择一步建议，仅在需要普通连线时请求路线。"""
@@ -636,6 +645,22 @@ def decide_action(
     if resolution.transition_loop:
         return StrategyDecision(
             "wait", stage.id, transition_chain=transitions, transition_loop=True, reason="同一观察内阶段转变形成循环"
+        )
+
+    black = [
+        route
+        for route in (*black_routes, *routes)
+        if _value(route, "color") == "black" and len(_value(route, "object_ids") or ()) >= 2
+    ]
+    if black:
+        if not black_route_ready:
+            return StrategyDecision("wait", stage.id, transition_chain=transitions, reason="等待黑色连线棋盘稳定")
+        return StrategyDecision(
+            "black_link",
+            stage.id,
+            route=max(black, key=lambda route: len(_value(route, "object_ids") or ())),
+            transition_chain=transitions,
+            reason="可连接黑色饿鬼优先于全部策略动作",
         )
 
     for action in stage.actions.priority:

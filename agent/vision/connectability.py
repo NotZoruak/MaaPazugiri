@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from enum import StrEnum
 
-from .model import COLORS, BoardObject, BoardResult
+from .model import COLORS, BoardObject, BoardResult, is_black_ghoul
 
 
 class ConnectabilityStatus(StrEnum):
@@ -109,9 +109,10 @@ def assess_ghoul_connectability(
     second = _find_object(board, second_id)
     if first is None or second is None:
         return _result(board, first_id, second_id, ConnectabilityStatus.UNCERTAIN, "当前帧缺少唯一的指定对象")
-    if first.kind != "ghoul" or second.kind != "ghoul":
-        return _result(board, first_id, second_id, ConnectabilityStatus.REJECTED, "只处理普通四色饿鬼")
-    if first.color not in COLORS or second.color not in COLORS:
+    black_pair = is_black_ghoul(first) and is_black_ghoul(second)
+    if not black_pair and (first.kind != "ghoul" or second.kind != "ghoul"):
+        return _result(board, first_id, second_id, ConnectabilityStatus.REJECTED, "只处理普通同色饿鬼或黑黑连接")
+    if not black_pair and (first.color not in COLORS or second.color not in COLORS):
         return _result(board, first_id, second_id, ConnectabilityStatus.UNCERTAIN, "饿鬼颜色未确认")
     if first.color != second.color:
         return _result(board, first_id, second_id, ConnectabilityStatus.REJECTED, "两只饿鬼颜色不同")

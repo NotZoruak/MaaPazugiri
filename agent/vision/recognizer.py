@@ -543,7 +543,10 @@ class BoardRecognizer:
             position_hits = [
                 hit
                 for hit in position_hits
-                if all(0.8 <= actual / reference <= 1.2 for actual, reference in zip(hit.body_size, first.body_size))
+                if all(
+                    0.8 <= actual / reference <= 1.2
+                    for actual, reference in zip(hit.body_size, first.body_size, strict=True)
+                )
             ]
         weights = [max(0.01, hit.score) ** 4 for hit in position_hits]
         cx = sum(hit.center[0] * weight for hit, weight in zip(position_hits, weights, strict=True)) / sum(weights)
@@ -554,7 +557,10 @@ class BoardRecognizer:
         x1, y1 = max(0.0, center[0] - bw * sx / 2), max(0.0, center[1] - bh * sy / 2)
         x2, y2 = min(source_size[0], center[0] + bw * sx / 2), min(source_size[1], center[1] + bh * sy / 2)
         candidate = None
-        for hit in group if first.kind in ("ghoul", "bomb") else []:
+        clickable = first.kind in ("ghoul", "bomb") or (
+            first.kind == "special_ghoul" and first.subtype == "black" and first.color == "black"
+        )
+        for hit in group if clickable else []:
             point = hit.center if first.kind == "bomb" else hit.anchor
             if first.kind == "bomb" or not any(self._in_bomb(point, bomb[0]) for bomb in bombs):
                 candidate = (round((point[0] + rx) * sx, 2), round((point[1] + ry) * sy, 2))

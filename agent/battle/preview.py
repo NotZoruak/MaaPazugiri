@@ -36,6 +36,8 @@ def write_preview_report(image: Image, board: BoardResult, preview: RoutePreview
     if board.frame_id != preview.frame_id or image.shape[:2] != tuple(reversed(board.source_size)):
         raise ValueError("棋盘、路线和输入图像必须来自同一帧且尺寸一致")
     annotated = annotate_board(image, board)
+    for x, y, width, height in board.route_exclusion_regions:
+        cv2.rectangle(annotated, (round(x), round(y)), (round(x + width), round(y + height)), (0, 170, 255), 2)
     objects = {item.id: item for item in board.objects}
     for edges, color in ((preview.candidate_edges, (80, 160, 80)), (preview.uncertain_edges, (0, 170, 255))):
         for edge in edges:
@@ -68,7 +70,12 @@ def write_preview_report(image: Image, board: BoardResult, preview: RoutePreview
         "automatic_action_allowed": False,
         "board": board.to_dict(),
         "preview": asdict(preview),
-        "legend": {"绿色细线": "连接候选", "橙色细线": "边界不确定，不参与路线", "粗箭头与数字": "拟选顺序"},
+        "legend": {
+            "绿色细线": "连接候选",
+            "橙色细线": "边界不确定，不参与路线",
+            "橙色矩形": "识别差异避让区，路线不可穿越",
+            "粗箭头与数字": "拟选顺序",
+        },
     }
     write_image(destination / f"{stem}.preview.png", annotated)
     write_text_atomic(

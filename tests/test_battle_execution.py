@@ -520,8 +520,8 @@ class BattleExecutionTests(unittest.TestCase):
         self.assertEqual(self.confirmations, [])
         self.assertEqual(controller.actions[-1], ("up", ()))
 
-    def test_ranbu_records_actual_moves_and_captures_before_releasing(self) -> None:
-        """记录派发时间，松手前截图单列耗时，不能误称游戏已全部接入。"""
+    def test_ranbu_records_actual_moves_and_releases_without_capture(self) -> None:
+        """记录派发时间，整盘扫完直接松手，不再追加按住截图。"""
         clock, replay = ReplayClock(), MarkerReplay(0)
 
         class CaptureController(ReplayController):
@@ -538,14 +538,15 @@ class BattleExecutionTests(unittest.TestCase):
             controller, replay, lambda: None, lambda: True, lambda: False, clock=clock.clock, sleep=clock.sleep
         )
         executor.execute_once(self.upper_yellow_observation(), self.resolution, StrategyDecision("ranbu_link", "阶段"))
-        self.assertEqual(controller.actions[-2:], [("capture", ()), ("up", ())])
+        self.assertEqual(controller.actions[-1], ("up", ()))
+        self.assertNotIn(("capture", ()), controller.actions)
         self.assertEqual(len(replay.ranbu_reports), 1)
         report = replay.ranbu_reports[0]
         self.assertTrue(report["dispatch_completed"])
         self.assertFalse(report["game_connection_verified"])
-        self.assertTrue(report["held_image_available"])
+        self.assertFalse(report["held_image_available"])
         self.assertAlmostEqual(report["movement_elapsed_ms"], 400, places=2)
-        self.assertAlmostEqual(report["capture_elapsed_ms"], 40, places=2)
+        self.assertAlmostEqual(report["capture_elapsed_ms"], 0, places=2)
         events = report["events"]
         self.assertEqual(
             [entry["kind"] for entry in events], [kind for kind, _ in controller.actions if kind != "capture"]
@@ -566,8 +567,8 @@ class BattleExecutionTests(unittest.TestCase):
         self.assertFalse(replay.ranbu_reports[0]["dispatch_completed"])
         self.assertFalse(replay.ranbu_reports[0]["held_image_available"])
 
-    def test_ranbu_capture_failure_still_releases_and_keeps_input_evidence(self) -> None:
-        """诊断截图返回失败或抛错时，仍释放触点并保留已经派发的输入。"""
+    def test_ranbu_never_calls_optional_capture_even_if_it_would_fail(self) -> None:
+        """即使截图接口会失败或抛错，单遍扫动也不会调用它。"""
         for mode in ("failed", "exception"):
             with self.subTest(mode=mode):
 
@@ -591,7 +592,7 @@ class BattleExecutionTests(unittest.TestCase):
                 )
                 self.assertEqual(controller.actions[-1], ("up", ()))
                 self.assertTrue(replay.ranbu_reports[0]["dispatch_completed"])
-                self.assertEqual(replay.ranbu_reports[0]["capture_status"], mode)
+                self.assertEqual(replay.ranbu_reports[0]["capture_status"], "not_attempted")
                 self.assertFalse(replay.ranbu_reports[0]["held_image_available"])
 
     def test_ranbu_move_failure_releases_and_reports_failed_input(self) -> None:
@@ -605,6 +606,7 @@ class BattleExecutionTests(unittest.TestCase):
         self.assertEqual(controller.actions[-1], ("up", ()))
         report = replay.ranbu_reports[0]
         self.assertFalse(report["dispatch_completed"])
+        self.assertEqual(report["stop_reason"], "input_failed")
         self.assertFalse(report["events"][-2]["succeeded"])
         self.assertEqual(report["events"][-1]["kind"], "up")
 

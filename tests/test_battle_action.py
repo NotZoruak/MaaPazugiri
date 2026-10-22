@@ -85,7 +85,7 @@ class BattleActionNativeTests(unittest.TestCase):
         class FrameSession:
             """只推进已确认帧与虚拟时间，不调用任何真实设备接口。"""
 
-            def run(self, observe, *, stopped, on_operable, on_ranbu):
+            def run(self, observe, *, stopped, on_operable, on_ranbu, on_ultimate_confirmation):
                 """三组稳定乱舞帧跨越二十秒，未知帧不允许操作。"""
                 for stamp in (0.0, 7.0, 8.0, 14.0, 14.25, 20.0, 20.25, 22.0):
                     now[0] = stamp
@@ -102,8 +102,11 @@ class BattleActionNativeTests(unittest.TestCase):
             patch("custom.action.battle.BattleSession", return_value=FrameSession()),
             patch("custom.action.battle.MaaBattleExecutor") as executor,
             patch("custom.action.battle.time.monotonic", side_effect=lambda: now[0]),
+            patch("custom.action.battle.time.sleep", side_effect=lambda seconds: now.__setitem__(0, now[0] + seconds)),
         ):
             recognizer.return_value.analyze.side_effect = states
+            image[350:450, 50:150] = (0, 0, 200)
+            executor.return_value.last_ranbu_color = None
             observer.return_value.observe.side_effect = [
                 replace(observation, board=replace(board, frame_id=str(index))) for index in range(6)
             ]
@@ -111,7 +114,7 @@ class BattleActionNativeTests(unittest.TestCase):
             result = BattleAction().run(context, SimpleNamespace(custom_action_param="{}"))
             decisions = [call.args[2].kind for call in executor.return_value.execute_once.call_args_list]
         self.assertTrue(result.success)
-        self.assertEqual(decisions, ["wait", "ranbu_link", "wait", "ranbu_link", "wait", "ranbu_link"])
+        self.assertEqual(decisions, ["ranbu_link"] * 6)
 
     def run_case(
         self,
@@ -315,7 +318,7 @@ class BattleActionNativeTests(unittest.TestCase):
                 "Battle_TestNext",
                 next_image=image,
                 expected_state="乱舞",
-                expected_operation="等待起点颜色确认",
+                expected_operation="等待",
                 board_frames=(objects, objects),
                 expected_messages=1,
             )

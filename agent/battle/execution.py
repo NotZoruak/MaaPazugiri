@@ -10,8 +10,9 @@ from typing import Any, Protocol
 
 from utils import logger
 from vision.image_io import Image
-from vision.model import BoardResult, ChainEndpointResult, ChainMovePositions
+from vision.model import BoardResult, ChainEndpointResult, ChainMovePositions, is_black_ghoul, is_linkable_ghoul
 
+from .candidates import preferred_ghoul_touch_point
 from .observation import BattleObservation
 from .preview import BoardPreviewer
 from .ranbu import (
@@ -22,7 +23,8 @@ from .ranbu import (
     ranbu_sweep_points,
 )
 from .ranbu_feedback import RanbuHoldFeedback
-from .strategy import StageResolution, StrategyDecision
+from .session import BattleState
+from .strategy import BattlePhase, StageResolution, StrategyDecision
 
 
 class BattleExecutor(Protocol):
@@ -40,6 +42,10 @@ class BattleExecutor(Protocol):
 
 class MaaBattleExecutor:
     """执行单个策略动作；动作返回后由外层主循环重新截图。"""
+
+    ULTIMATE_TAP_POINTS = ((360, 450), (200, 730), (520, 730))
+    ULTIMATE_SWIPE_PATHS = (((360, 350), (360, 930)), ((70, 640), (650, 640)))
+    ULTIMATE_SWIPE_DURATION_MS = 500
 
     def __init__(
         self,
@@ -85,12 +91,42 @@ class MaaBattleExecutor:
             self._click_bomb(observation, decision)
         elif decision.kind == "normal_link":
             self._normal_link(observation, decision)
+        elif decision.kind == "black_link":
+            self._black_link(observation, decision)
         elif decision.kind == "ranbu_link":
             self._ranbu_link(observation, decision)
         elif decision.kind == "ranbu_short_link":
             self._ranbu_short_link(observation, decision)
         else:
             logger.debug("本轮不派发设备动作：阶段={}，建议={}。", resolution.stage.id, decision)
+
+    def execute_ultimate_confirmation(self, state: BattleState) -> None:
+        """按提示类型在720×1280画面执行三点点击或十字滑动。"""
+        if state == BattleState.ULTIMATE_TAP_CONFIRMATION:
+            for point in self.ULTIMATE_TAP_POINTS:
+                if self._is_stopping():
+                    return
+                if not self._controller.post_click(*point).wait().succeeded:
+                    raise RuntimeError("点击奥义位置失败")
+            logger.debug("已在圆形范围内按三角分布点击三处奥义位置。")
+            return
+        if state == BattleState.ULTIMATE_SWIPE_CONFIRMATION:
+            for start, end in self.ULTIMATE_SWIPE_PATHS:
+                if self._is_stopping():
+                    return
+                if (
+                    not self._controller.post_swipe(
+                        *start,
+                        *end,
+                        self.ULTIMATE_SWIPE_DURATION_MS,
+                    )
+                    .wait()
+                    .succeeded
+                ):
+                    raise RuntimeError("执行奥义十字滑动失败")
+            logger.debug("已先竖滑、再横滑执行奥义十字手势。")
+            return
+        raise ValueError(f"不支持的奥义位置确认状态：{state}")
 
     def _click_ultimate(self, observation: BattleObservation, decision: StrategyDecision) -> None:
         """点击本帧确认就绪的奥义位置。"""
@@ -142,6 +178,46 @@ class MaaBattleExecutor:
             logger.debug("松手前已识别到连线菱形，本次普通连线手数递增一次。")
         else:
             logger.debug("松手前未确认连线菱形，本次不递增普通连线手数。")
+
+    def _black_link(self, observation: BattleObservation, decision: StrategyDecision) -> None:
+        """只连接当前帧黑色对象，乱舞期间不累计普通连线手数。"""
+        route, board = decision.route, observation.board
+        if board is None or route is None or route.color != "black" or len(route.points) < 2:
+            return
+        objects = {item.id: item for item in board.objects}
+        if (
+            len(route.object_ids) != len(route.points)
+            or len(set(route.object_ids)) != len(route.object_ids)
+            or any(
+                identifier not in objects or not is_black_ghoul(objects[identifier]) for identifier in route.object_ids
+            )
+        ):
+            logger.warning("黑色路线与当前帧对象不符，本轮不发送触控。")
+            return
+        for identifier, point in zip(route.object_ids, route.points, strict=True):
+            item = objects[identifier]
+            if (
+                item.candidate_point is None
+                or item.quality not in ("identified", "single_feature")
+                or not all(math.isfinite(value) for value in point)
+            ):
+                return
+            expected = preferred_ghoul_touch_point(item, board)
+            if tuple(round(value) for value in point) != tuple(round(value) for value in expected):
+                logger.warning("黑色路线落点已脱离本帧可信触点，本轮不发送触控。")
+                return
+        ranbu = observation.phase == BattlePhase.RANBU
+        points = tuple(tuple(round(value) for value in point) for point in route.points)
+        logger.debug("优先连接黑色饿鬼：本帧对象序列={}。", route.object_ids)
+        confirmed = self._hold_and_move(
+            points,
+            observation,
+            check_marker=not ranbu,
+            check_ranbu_allowed=ranbu,
+            hold_start_seconds=0.0 if ranbu else 0.5,
+        )
+        if confirmed and not ranbu:
+            self._record_normal_link_success()
 
     def _ranbu_link(self, observation: BattleObservation, decision: StrategyDecision) -> None:
         """按乱舞规则选择起点并沿棋盘边界生成的固定往返轨迹扫动。"""
@@ -291,6 +367,7 @@ class MaaBattleExecutor:
             if gesture_duration is not None and capture_ranbu:
                 self._last_ranbu_sweep_started = True
                 pass_started = self._clock()
+                stop_reason = "input_failed"
                 try:
                     completed = self._move_timed_path(
                         points,
@@ -449,7 +526,7 @@ class MaaBattleExecutor:
                 size
                 for item in observation.board.objects
                 for size in item.body_box[2:]
-                if item.kind == "ghoul" and math.isfinite(size) and size > 0
+                if is_linkable_ghoul(item) and math.isfinite(size) and size > 0
             ]
             if observation.board is not None
             else []
@@ -541,7 +618,7 @@ class MaaBattleExecutor:
                 size
                 for item in observation.board.objects
                 for size in item.body_box[2:]
-                if item.kind == "ghoul" and math.isfinite(size) and size > 0
+                if is_linkable_ghoul(item) and math.isfinite(size) and size > 0
             ]
             if observation.board is not None
             else []

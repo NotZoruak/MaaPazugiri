@@ -40,6 +40,8 @@ HP_REGIONS: dict[str, tuple[int, int, int, int]] = {
     "ally": (206, 1193, 382, 33),
 }
 
+ULTIMATE_CONFIRMATION_ROI = (72, 168, 576, 104)
+
 
 def recognize_hp_percent(recognize: NativeRecognition, image: Image, side: str) -> float | None:
     """在同一张核对过的战斗截图中 OCR 指定一方的 A/B 血量并换算百分比。"""
@@ -71,7 +73,7 @@ class BattleFrameRecognizer:
         return detail.hit
 
     def analyze(self, image: Image) -> BattleState:
-        """先检查同帧胜负，再判断齿轮和6×6灰度证据。"""
+        """先检查胜负与奥义选点提示，再确认齿轮和可操作证据。"""
         if image.shape != (1280, 720, 3) or image.dtype != np.uint8:
             return BattleState.UNKNOWN
         victory = self._hit("victory", image)
@@ -82,6 +84,9 @@ class BattleFrameRecognizer:
             return BattleState.VICTORY
         if defeat:
             return BattleState.DEFEAT
+        confirmation = self._ultimate_confirmation(image)
+        if confirmation is not None:
+            return confirmation
         if not self._hit("gear", image):
             return BattleState.UNKNOWN
         operable = self._hit("brightness", image)
@@ -91,3 +96,19 @@ class BattleFrameRecognizer:
         if ranbu:
             return BattleState.RANBU
         return BattleState.OPERABLE if operable else BattleState.INOPERABLE
+
+    def _ultimate_confirmation(self, image: Image) -> BattleState | None:
+        """只用提示文案区分点击和滑动选点，不读取动画箭头。"""
+        detail = self.recognize(
+            JRecognitionType.OCR,
+            JOCR(roi=ULTIMATE_CONFIRMATION_ROI, order_by="Horizontal"),
+            image,
+        )
+        if detail is None:
+            raise RuntimeError("无法启动奥义位置确认提示OCR")
+        text = "".join(getattr(result, "text", "") for result in detail.all_results)
+        is_tap = "タップ" in text
+        is_swipe = "スワイプ" in text
+        if is_tap == is_swipe:
+            return BattleState.UNKNOWN if is_tap or "位置" in text or "決め" in text else None
+        return BattleState.ULTIMATE_TAP_CONFIRMATION if is_tap else BattleState.ULTIMATE_SWIPE_CONFIRMATION

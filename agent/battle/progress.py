@@ -8,7 +8,7 @@ from utils import logger
 
 from .strategy import BattlePhase, StageResolution, StrategyDecision, StrategyDocument
 
-_COLORS = {"red": "红色", "blue": "蓝色", "green": "绿色", "yellow": "黄色"}
+_COLORS = {"red": "红色", "blue": "蓝色", "green": "绿色", "yellow": "黄色", "black": "黑色"}
 _METRICS = {
     "battle_normal_links": "本场普通连线手数",
     "stage_normal_links": "本阶段普通连线手数",
@@ -51,12 +51,14 @@ def _operation_text(decision: StrategyDecision) -> str:
     if decision.kind == "normal_link" and decision.route is not None:
         color = _COLORS.get(decision.route.color, "未知颜色")
         return f"普通连线（{color}，目标 {len(decision.route.object_ids)} 个）"
+    if decision.kind == "black_link" and decision.route is not None:
+        return f"优先连接黑色饿鬼（目标 {len(decision.route.object_ids)} 个）"
     if decision.kind == "ranbu_link":
         color = _COLORS.get(decision.reserved_color or "")
         return f"乱舞扫动（保留{color}）" if color else "乱舞扫动"
     if decision.kind == "ranbu_short_link":
         return "乱舞短连后松手（当前棋盘全为保留色）"
-    if decision.kind == "wait" and decision.reason in ("等待棋盘稳定", "等待起点颜色确认"):
+    if decision.kind == "wait" and decision.reason in ("等待棋盘稳定", "等待起点颜色确认", "等待黑色连线棋盘稳定"):
         return decision.reason
     return "等待"
 
