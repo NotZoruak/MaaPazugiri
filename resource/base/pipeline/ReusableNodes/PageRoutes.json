@@ -1,4 +1,24 @@
 {
+    "MainPage_OpenMenu": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [611, 284, 60, 36],
+                "template": "button/展开菜单.png"
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "anchor": {"BackToMainPage": ""},
+        "post_wait_freezes": {
+            "time": 200,
+            "target": [611, 284, 60, 36]
+        },
+        "focus": {
+            "Node.Action.Starting": "正在打开菜单"
+        }
+    },
     "MainPage_EnterSortie": {
         "recognition": {
             "type": "TemplateMatch",
@@ -17,6 +37,22 @@
         },
         "focus": {
             "Node.Action.Starting": "正在前往出阵界面"
+        }
+    },
+    "BackToMainPage": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [0, 1134, 176, 146],
+                "template": ["button/回主页.png", "button/关闭_左侧按钮.png"]
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "post_wait_freezes": {
+            "time": 200,
+            "target": [9, 1155, 91, 89]
         }
     },
     "ChapterMap_ChangeChapter": {

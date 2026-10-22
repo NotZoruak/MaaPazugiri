@@ -1,0 +1,119 @@
+{
+    "task": [
+        {
+            "name": "ClaimRewards",
+            "label": "领取奖励",
+            "entry": "ClaimRewards",
+            "description": "领取每日免费体力药、日课、周课、主要任务和通行证奖励。",
+            "option": [
+                "每日免费体力药",
+                "日课奖励",
+                "周课奖励",
+                "主要奖励",
+                "通行证"
+            ]
+        }
+    ],
+    "option": {
+        "每日免费体力药": {
+            "type": "switch",
+            "label": "每日免费体力药",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "开启",
+                    "pipeline_override": {
+                        "CR_RouteDailyFreeStaminaPotion": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "label": "关闭"
+                }
+            ],
+            "default_case": "No"
+        },
+        "日课奖励": {
+            "type": "switch",
+            "label": "日课奖励",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "开启",
+                    "pipeline_override": {
+                        "CR_RouteDailyTask": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "label": "关闭"
+                }
+            ],
+            "default_case": "No"
+        },
+        "周课奖励": {
+            "type": "switch",
+            "label": "周课奖励",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "开启",
+                    "pipeline_override": {
+                        "CR_RouteWeeklyTask": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "label": "关闭"
+                }
+            ],
+            "default_case": "No"
+        },
+        "主要奖励": {
+            "type": "switch",
+            "label": "主要奖励",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "开启",
+                    "pipeline_override": {
+                        "CR_RouteMainTask": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "label": "关闭"
+                }
+            ],
+            "default_case": "No"
+        },
+        "通行证": {
+            "type": "switch",
+            "label": "通行证",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "label": "开启",
+                    "pipeline_override": {
+                        "CR_OpenPassPage": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "label": "关闭"
+                }
+            ],
+            "default_case": "No"
+        }
+    }
+}

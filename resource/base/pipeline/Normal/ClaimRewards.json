@@ -1,0 +1,311 @@
+{
+    "ClaimRewards": {
+        "anchor": {"Hub": "ClaimRewards"},
+        "next": ["CR_DetectWhereAmI"]
+    },
+    "CR_DetectWhereAmI": {
+        "timeout": 120000,
+        "next": [
+            "CR_RouteDailyFreeStaminaPotion",
+            "[JumpBack]BackToMainPage",
+            "[JumpBack]MainPage_AutoHeadPat",
+            "[JumpBack]MainPage_OpenMenu",
+            "[JumpBack]CR_OpenTopicPage",
+            "CR_IsInTopicPage",
+            "BattleSettlement_SuccessConfirm",
+            "BattleSettlement_SuccessRewardClick",
+            "BattleSettlement_FailureConfirm",
+            "[JumpBack]LoginGameIcon",
+            "[JumpBack]Login_TitleScreen",
+            "[JumpBack]Pump_DailyReport",
+            "[JumpBack]Pump_ResumeBattle",
+            "[JumpBack]Pump_TapToContinue",
+            "[JumpBack]Pump_NoPurchasableProducts",
+            "[JumpBack]Pump_RewardReceived",
+            "[JumpBack]Pump_DateChange",
+            "[JumpBack]Pump_NotificationAnnouncement",
+            "[JumpBack]ChapterSelection_Exit",
+            "[JumpBack]UnknownPage_Close"
+        ],
+        "on_error": ["[JumpBack]RestartGame"]
+    },
+    "CR_RouteDailyFreeStaminaPotion": {
+        "enabled": false,
+        "max_hit": 1,
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [409, 1187, 78, 69],
+                "template": "button/进入万屋.png"
+            }
+        },
+        "next": ["CR_EnterWanwu"],
+        "on_error": ["CR_DetectWhereAmI"]
+    },
+    "CR_EnterWanwu": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [409, 1187, 78, 69],
+                "template": "button/进入万屋.png"
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "next": ["CR_IsInWanwu", "CR_EnterWanwu"],
+        "on_error": ["CR_DetectWhereAmI"]
+    },
+    "CR_IsInWanwu": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [19, 99, 169, 50],
+                "template": "region/万屋.png"
+            }
+        },
+        "next": [
+            "CR_ClaimFreeStaminaPotion",
+            "CR_FreeStaminaPotionClaimFinished"
+        ]
+    },
+    "CR_FreeStaminaPotionClaimFinished": {
+        "next": ["CR_DetectWhereAmI"],
+        "focus": {
+            "Node.Action.Succeeded": "每日免费体力药领取完成"
+        }
+    },
+    "CR_ClaimFreeStaminaPotion": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "roi": [665, 1161, 1, 1],
+                "method": 4,
+                "lower": [249, 58, 20],
+                "upper": [255, 68, 30]
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [458, 1170, 145, 55]
+            }
+        },
+        "next": ["CR_ConfirmFreeStaminaPotionClaim", "CR_ClaimFreeStaminaPotion"],
+        "on_error": ["CR_DetectWhereAmI"]
+    },
+    "CR_ConfirmFreeStaminaPotionClaim": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [288, 1166, 145, 71],
+                "template": "button/关闭_底部按钮.png"
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "next": ["CR_FreeStaminaPotionClaimFinished"]
+    },
+    "CR_OpenTopicPage": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [610, 664, 58, 75],
+                "template": "button/打开课题.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [670, 689, 1, 1]
+            }
+        },
+        "focus": {
+            "Node.Action.Starting": "正在打开课题界面"
+        }
+    },
+    "CR_IsInTopicPage": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [190, 41, 79, 39],
+                "template": [
+                    "region/日课任务.png",
+                    "region/周课任务.png",
+                    "region/主要任务.png"
+                ]
+            }
+        },
+        "next": ["CR_ClaimTopicRewardsHub"]
+    },
+    "CR_ClaimTopicRewardsHub": {
+        "next": [
+            "[JumpBack]CR_ClaimTopicRewards",
+            "[JumpBack]Pump_RewardReceived",
+            "[JumpBack]CR_RouteDailyTask",
+            "[JumpBack]CR_RouteWeeklyTask",
+            "[JumpBack]CR_RouteMainTask",
+            "CR_ClaimTopicRewardsFinished"
+        ]
+    },
+    "CR_ClaimTopicRewardsFinished": {
+        "next": ["CR_OpenPassPage", "BackToMainPage"],
+        "focus": {
+            "Node.Action.Succeeded": "课题奖励领取完成"
+        }
+    },
+    "CR_OpenPassPage": {
+        "enabled": false,
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [578, 1154, 92, 87],
+                "template": "button/打开通行证.png"
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "next": ["CR_IsInPassPage", "CR_OpenPassPage"],
+        "on_error": ["CR_DetectWhereAmI"]
+    },
+    "CR_IsInPassPage": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [268, 71, 183, 35],
+                "template": "region/通行证页面.png"
+            }
+        },
+        "next": ["CR_ClaimPassRewardsHub"]
+    },
+    "CR_ClaimPassRewardsHub": {
+        "next": [
+            "[JumpBack]CR_ClaimPassReward",
+            "[JumpBack]Pump_RewardReceived",
+            "CR_ClosePassPage"
+        ]
+    },
+    "CR_ClosePassPage": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [0, 1134, 176, 146],
+                "template": "button/关闭_左侧按钮.png"
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "focus": {
+            "Node.Action.Succeeded": "通行证奖励领取完成"
+        }
+    },
+    "CR_ClaimPassReward": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "roi": [348, 1170, 22, 7],
+                "method": 4,
+                "lower": [243, 159, 0],
+                "upper": [255, 181, 10]
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
+        "post_wait_freezes": {
+            "time": 200,
+            "target": [279, 1184, 157, 41]
+        }
+    },
+    "CR_ClaimTopicRewards": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "roi": [357, 1169, 32, 8],
+                "method": 4,
+                "lower": [243, 161, 0],
+                "upper": [255, 183, 10],
+                "count": 256
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [279, 1184, 157, 41]
+            }
+        },
+        "post_wait_freezes": {
+            "time": 200,
+            "target": [279, 1184, 157, 41]
+        }
+    },
+    "CR_RouteDailyTask": {
+        "enabled": false,
+        "max_hit": 1,
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [190, 41, 79, 39],
+                "template": [
+                    "region/周课任务.png",
+                    "region/主要任务.png"
+                ]
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [111, 1037, 56, 30]
+            }
+        },
+        "repeat": 2,
+        "repeat_delay": 500
+    },
+    "CR_RouteWeeklyTask": {
+        "enabled": false,
+        "max_hit": 1,
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [190, 41, 79, 39],
+                "template": [
+                    "region/日课任务.png",
+                    "region/主要任务.png"
+                ]
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [330, 1038, 56, 30]
+            }
+        },
+        "repeat": 2,
+        "repeat_delay": 500
+    },
+    "CR_RouteMainTask": {
+        "enabled": false,
+        "max_hit": 1,
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [190, 41, 79, 39],
+                "template": [
+                    "region/日课任务.png",
+                    "region/周课任务.png"
+                ]
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [553, 1037, 55, 30]
+            }
+        },
+        "repeat": 2,
+        "repeat_delay": 500
+    }
+}

@@ -36,7 +36,7 @@
         "recognition": {
             "type": "TemplateMatch",
             "param": {
-                "roi": [9, 1155, 91, 89],
+                "roi": [0, 1134, 176, 146],
                 "template": ["button/回主页.png", "button/关闭_左侧按钮.png"]
             }
         },

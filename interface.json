@@ -61,6 +61,7 @@
     },
     "import": [
         "./tasks/start_game.json",
+        "./tasks/claim_rewards.json",
         "./tasks/resident_battle.json"
     ]
 }

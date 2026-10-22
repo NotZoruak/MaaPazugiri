@@ -93,6 +93,10 @@
             "param": {
                 "target": [294, 1168, 131, 63]
             }
+        },
+        "post_wait_freezes": {
+            "time": 200,
+            "target": [294, 1168, 131, 63]
         }
     },
     "Pump_DateChange": {
