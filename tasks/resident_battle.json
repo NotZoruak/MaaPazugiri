@@ -881,6 +881,9 @@
                     "label": "开启",
                     "option": ["使用当日限定1体力回复药"],
                     "pipeline_override": {
+                        "BattleSettlement_CompleteCurrentTask": {
+                            "enabled": false
+                        },
                         "BattleSettlement_OpenStaminaRecovery": {
                             "enabled": true
                         }
@@ -923,6 +926,9 @@
                     "label": "开启",
                     "option": ["最大次数", "宝玉保留量"],
                     "pipeline_override": {
+                        "BattleSettlement_CompleteCurrentTask": {
+                            "enabled": false
+                        },
                         "BattleSettlement_OpenStaminaRecovery": {
                             "enabled": true
                         },
