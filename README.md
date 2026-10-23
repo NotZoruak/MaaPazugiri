@@ -15,6 +15,8 @@
 
 </div>
 
+桌面 GUI 使用 [MFAA](https://github.com/NotZoruak/MFAA)，这是基于上游 [MaaXYZ/MFAAvalonia](https://github.com/MaaXYZ/MFAAvalonia) 为 MaaPazugiri 定制的版本。MFAA 将围绕本项目需求独立演进，后续会逐步与上游分流；界面功能和行为以 MFAA 仓库为准。
+
 > [!TIP]
 >
 > 项目状态：持续维护与迭代

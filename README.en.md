@@ -15,6 +15,8 @@ A MaaFramework automation project for the official Japanese version of _Touken R
 
 </div>
 
+The desktop GUI uses [MFAA](https://github.com/NotZoruak/MFAA), a customized version of upstream [MaaXYZ/MFAAvalonia](https://github.com/MaaXYZ/MFAAvalonia) for MaaPazugiri. MFAA will evolve independently around this project's needs and may gradually diverge from upstream; refer to the MFAA repository for GUI features and behavior.
+
 > [!TIP]
 >
 > Project status: Ongoing maintenance and iteration

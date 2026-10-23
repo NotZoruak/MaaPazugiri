@@ -75,9 +75,9 @@
     ],
     "runtime": {
         "mfa": {
-            "channel": "stable",
+            "channel": "beta",
             "enabled": true,
-            "version": ""
+            "version": "0.1.1-beta.1"
         }
     },
     "schemaVersion": 2
