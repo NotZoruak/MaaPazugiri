@@ -15,6 +15,7 @@ import {basename, dirname, join} from "node:path";
 import {fileURLToPath} from "node:url";
 
 const projectSlug = "maa-pazugiri";
+const projectExecutableName = "MaaPazugiri";
 const releaseArtifactName = "MaaPazugiri";
 
 // --- GUI type registry (extensible for future GUIs) ---
@@ -465,7 +466,7 @@ function smokeReleasePackage(gui, root, packagePaths, runtimePlatform) {
         throw new Error(`release package smoke failed: GUI entrypoint is missing: ${entrypoint}`);
     }
     for (const candidate of gui.entrypointCandidates(runtimePlatform)) {
-        if (existsSync(join(root, candidate))) {
+        if (candidate !== entrypoint && existsSync(join(root, candidate))) {
             throw new Error(`release package smoke failed: entrypoint must be renamed: ${candidate}`);
         }
     }
@@ -679,7 +680,7 @@ function pythonRuntimePath(runtimePlatform) {
 }
 
 function guiEntrypointName(runtimePlatform) {
-    return runtimePlatform.startsWith("win-") ? `${projectSlug}.exe` : projectSlug;
+    return runtimePlatform.startsWith("win-") ? `${projectExecutableName}.exe` : projectSlug;
 }
 
 function renameGuiEntrypoint(gui, root, runtimePlatform) {
@@ -687,7 +688,9 @@ function renameGuiEntrypoint(gui, root, runtimePlatform) {
     for (const candidate of gui.entrypointCandidates(runtimePlatform)) {
         const source = join(root, candidate);
         if (existsSync(source)) {
-            renameSync(source, target);
+            if (source !== target) {
+                renameSync(source, target);
+            }
             return;
         }
     }
