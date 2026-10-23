@@ -26,11 +26,15 @@ const GUI_TYPES = {
         entrypointCandidates: (platform) =>
             platform.startsWith("win-")
                 ? [
+                      "MaaPazugiri.exe",
                       "MFAAvalonia.exe",
                       "MFAAvalonia",
+                      "MaaPazugiri",
                   ]
                 : [
+                      "MaaPazugiri",
                       "MFAAvalonia",
+                      "MaaPazugiri.exe",
                       "MFAAvalonia.exe",
                   ],
         flatLayout: true,

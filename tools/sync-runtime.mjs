@@ -204,7 +204,16 @@ async function syncMfaaRuntime() {
         } else {
             extractMfaaTarWithPython(archivePath, root);
         }
-        if (!readdirSync(root).some((name) => name === "MFAAvalonia" || name === "MFAAvalonia.exe")) {
+        if (
+            !readdirSync(root).some((name) =>
+                [
+                    "MaaPazugiri",
+                    "MaaPazugiri.exe",
+                    "MFAAvalonia",
+                    "MFAAvalonia.exe",
+                ].includes(name),
+            )
+        ) {
             throw new Error(`MFAA 运行时缺少主程序：${platform}`);
         }
     }
