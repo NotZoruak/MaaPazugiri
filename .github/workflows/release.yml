@@ -85,14 +85,16 @@ jobs:
         if: github.event_name != 'workflow_dispatch'
         env:
           CREATE_MAA_PROJECT_RUNTIME_PLATFORM: ${{ matrix.runtime_os }}-${{ matrix.runtime_arch }}
-      - name: Apply app icon
-        if: github.event_name != 'workflow_dispatch' && hashFiles('logo.ico') != ''
+      - name: Apply Windows executable branding
+        if: github.event_name != 'workflow_dispatch' && matrix.runtime_os == 'win'
         shell: bash
         run: |
           for pkg_dir in dist/package-*; do
             [ -d "$pkg_dir" ] || continue
             gui=$(basename "$pkg_dir" | sed 's/^package-//')
-            cp logo.ico "$pkg_dir/logo.ico"
+            if [[ -f logo.ico ]]; then
+              cp logo.ico "$pkg_dir/logo.ico"
+            fi
 
             if [[ "${{ matrix.runtime_os }}" == "win" ]]; then
               if [ ! -f rcedit.exe ]; then
@@ -103,12 +105,14 @@ jobs:
               exe="$(find "$pkg_dir" -maxdepth 1 -type f -name '*.exe' | head -n 1)"
               if [[ -n "$exe" ]]; then
                 ./rcedit.exe "$exe" \
-                  --set-icon logo.ico \
                   --set-version-string ProductName "MaaPazugiri" \
                   --set-version-string FileDescription "MaaPazugiri" \
                   --set-version-string InternalName "MaaPazugiri" \
                   --set-version-string OriginalFilename "MaaPazugiri.exe"
-                echo "[OK] Applied Windows executable icon: $exe ($gui)"
+                if [[ -f logo.ico ]]; then
+                  ./rcedit.exe "$exe" --set-icon logo.ico
+                fi
+                echo "[OK] Applied MaaPazugiri executable branding: $exe ($gui)"
               else
                 echo "[WARN] Windows executable was not found in $pkg_dir; skipped."
               fi
