@@ -56,7 +56,7 @@ class MaaBattleExecutor:
         can_start_ranbu_link: Callable[[], bool],
         is_stopping: Callable[[], bool],
         *,
-        confirm_normal_link_success: Callable[[], bool] | None = None,
+        confirm_normal_link_board_change: Callable[[BoardResult, tuple[int, ...]], bool] | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
         inspect_ranbu_hold: Callable[[Image, BoardResult, str | None], RanbuHoldFeedback] | None = None,
@@ -66,15 +66,19 @@ class MaaBattleExecutor:
         self._record_normal_link_success = record_normal_link_success
         self._can_start_ranbu_link = can_start_ranbu_link
         self._is_stopping = is_stopping
-        self._confirm_normal_link_success = confirm_normal_link_success
+        self._confirm_normal_link_board_change = confirm_normal_link_board_change
         self._clock = clock
         self._sleep = sleep
         self._inspect_ranbu_hold = inspect_ranbu_hold
         self._reverse_next_normal_link = False
         self._last_ranbu_color: str | None = None
         self._last_gesture_started = False
+        self._last_gesture_dispatch_completed = False
+        self._last_chain_marker_count = 0
+        self._last_chain_marker_reason = "stopped"
         self._last_ranbu_sweep_started = False
         self.last_gesture_released_at: float | None = None
+        self.last_normal_link_succeeded: bool | None = None
 
     @property
     def last_ranbu_color(self) -> str | None:
@@ -101,7 +105,7 @@ class MaaBattleExecutor:
         elif decision.kind == "ranbu_short_link":
             self._ranbu_short_link(observation, decision)
         else:
-            logger.debug("本轮不派发设备动作：阶段={}，建议={}。", resolution.stage.id, decision)
+            logger.debug("本轮不派发设备动作：阶段={}，建议={}", resolution.stage.id, decision)
 
     def execute_ultimate_confirmation(self, state: BattleState) -> None:
         """按提示类型在720×1280画面执行三点点击或十字滑动。"""
@@ -111,7 +115,7 @@ class MaaBattleExecutor:
                     return
                 if not self._controller.post_click(*point).wait().succeeded:
                     raise RuntimeError("点击奥义位置失败")
-            logger.debug("已在圆形范围内按三角分布点击三处奥义位置。")
+            logger.debug("已在圆形范围内按三角分布点击三处奥义位置")
             return
         if state == BattleState.ULTIMATE_SWIPE_CONFIRMATION:
             for start, end in self.ULTIMATE_SWIPE_PATHS:
@@ -127,7 +131,7 @@ class MaaBattleExecutor:
                     .succeeded
                 ):
                     raise RuntimeError("执行奥义十字滑动失败")
-            logger.debug("已先竖滑、再横滑执行奥义十字手势。")
+            logger.debug("已先竖滑、再横滑执行奥义十字手势")
             return
         raise ValueError(f"不支持的奥义位置确认状态：{state}")
 
@@ -135,16 +139,16 @@ class MaaBattleExecutor:
         """点击本帧确认就绪的奥义位置。"""
         point = (observation.ultimate_click_points or {}).get(decision.slot or -1)
         if point is None:
-            logger.warning("奥义位置{}没有本帧就绪点击点，跳过触控。", decision.slot)
+            logger.warning("奥义位置{}没有本帧就绪点击点，跳过触控", decision.slot)
             return
         if not self._controller.post_click(*point).wait().succeeded:
             raise RuntimeError("点击奥义失败")
-        logger.debug("已点击{}号位奥义，回到主循环重新截图。", decision.slot)
+        logger.debug("已点击{}号位奥义，回到主循环重新截图", decision.slot)
 
     def _click_bomb(self, observation: BattleObservation, decision: StrategyDecision) -> None:
         """点击当前帧中确认等级且具有有效触点的首个炸弹。"""
         if observation.board is None or decision.level is None:
-            logger.warning("当前帧没有可点击炸弹识别结果，跳过触控。")
+            logger.warning("当前帧没有可点击炸弹识别结果，跳过触控")
             return
         candidates = [
             item
@@ -155,42 +159,54 @@ class MaaBattleExecutor:
             and item.quality in ("identified", "single_feature")
         ]
         if not candidates:
-            logger.warning("当前帧没有确认的{}级炸弹触点，跳过触控。", decision.level)
+            logger.warning("当前帧没有确认的{}级炸弹触点，跳过触控", decision.level)
             return
         target = min(candidates, key=lambda item: item.id)
         assert target.candidate_point is not None
         point = tuple(round(value) for value in target.candidate_point)
         if not self._controller.post_click(*point).wait().succeeded:
             raise RuntimeError("点击炸弹失败")
-        logger.debug("已点击{}级炸弹对象{}，回到主循环重新截图。", decision.level, target.id)
+        logger.debug("已点击{}级炸弹对象{}，回到主循环重新截图", decision.level, target.id)
 
     def _normal_link(self, observation: BattleObservation, decision: StrategyDecision) -> None:
-        """按当前帧路线整笔连线，并在松手后确认是否成功。"""
+        """按当前帧路线整笔连线，并在松手前通过全屏菱形标志确认结果。"""
+        self.last_normal_link_succeeded = None
         if observation.board is None or decision.route is None or len(decision.route.points) < 2:
-            logger.warning("当前帧普通连线缺少可信棋盘或路线，跳过触控。")
+            logger.warning("当前帧普通连线缺少可信棋盘或路线，跳过触控")
             return
         points = tuple(tuple(round(value) for value in point) for point in decision.route.points)
         if self._reverse_next_normal_link:
             points = tuple(reversed(points))
-            logger.debug("上次整笔未确认成功，本次使用新帧路线的另一端起步。")
-        logger.debug("普通连线目标：颜色={}，对象序列={}。", decision.route.color, decision.route.object_ids)
-        gesture_completed = self._hold_and_move(
+            logger.debug("上次整笔未确认成功，本次使用新帧路线的另一端起步")
+        logger.debug("普通连线目标：颜色={}，对象序列={}", decision.route.color, decision.route.object_ids)
+        ranbu = observation.phase == BattlePhase.RANBU
+        marker_detected = self._hold_and_move(
             points,
             observation,
-            check_marker=self._confirm_normal_link_success is None,
-            return_dispatch_status=self._confirm_normal_link_success is not None,
+            check_ranbu_allowed=ranbu,
+            hold_start_seconds=0.0 if ranbu else 0.5,
         )
-        link_succeeded = gesture_completed
-        if gesture_completed and self._confirm_normal_link_success is not None:
-            link_succeeded = self._confirm_normal_link_success()
+        dispatch_completed = self._last_gesture_dispatch_completed
+        board_change_confirmed = False
+        if (
+            dispatch_completed
+            and not marker_detected
+            and self._confirm_normal_link_board_change is not None
+        ):
+            board_change_confirmed = self._confirm_normal_link_board_change(
+                observation.board, decision.route.object_ids
+            )
+        link_succeeded = dispatch_completed and (marker_detected or board_change_confirmed)
+        self.last_normal_link_succeeded = link_succeeded if dispatch_completed else None
         self._reverse_next_normal_link = False if link_succeeded else not self._reverse_next_normal_link
         if link_succeeded:
-            self._record_normal_link_success()
-            logger.debug("普通连线成功，本次普通连线手数递增一次。")
-        elif gesture_completed:
-            logger.debug("普通连线松手后未确认成功，本次不递增普通连线手数。")
+            if not ranbu:
+                self._record_normal_link_success()
+            logger.info("普通连线判定：生效")
+        elif dispatch_completed:
+            logger.info("普通连线判定：未生效")
         else:
-            logger.debug("普通连线触控未完整派发，本次不递增普通连线手数。")
+            logger.info("普通连线判定：无法判断")
 
     def _black_link(self, observation: BattleObservation, decision: StrategyDecision) -> None:
         """只连接当前帧黑色对象，乱舞期间不累计普通连线手数。"""
@@ -205,7 +221,7 @@ class MaaBattleExecutor:
                 identifier not in objects or not is_black_ghoul(objects[identifier]) for identifier in route.object_ids
             )
         ):
-            logger.warning("黑色路线与当前帧对象不符，本轮不发送触控。")
+            logger.warning("黑色路线与当前帧对象不符，本轮不发送触控")
             return
         for identifier, point in zip(route.object_ids, route.points, strict=True):
             item = objects[identifier]
@@ -217,11 +233,11 @@ class MaaBattleExecutor:
                 return
             expected = preferred_ghoul_touch_point(item, board)
             if tuple(round(value) for value in point) != tuple(round(value) for value in expected):
-                logger.warning("黑色路线落点已脱离本帧可信触点，本轮不发送触控。")
+                logger.warning("黑色路线落点已脱离本帧可信触点，本轮不发送触控")
                 return
         ranbu = observation.phase == BattlePhase.RANBU
         points = tuple(tuple(round(value) for value in point) for point in route.points)
-        logger.debug("优先连接黑色饿鬼：本帧对象序列={}。", route.object_ids)
+        logger.debug("优先连接黑色饿鬼：本帧对象序列={}", route.object_ids)
         confirmed = self._hold_and_move(
             points,
             observation,
@@ -235,23 +251,21 @@ class MaaBattleExecutor:
     def _ranbu_link(self, observation: BattleObservation, decision: StrategyDecision) -> None:
         """按乱舞规则选择起点并沿棋盘边界生成的固定往返轨迹扫动。"""
         if observation.board is None:
-            logger.warning("当前帧没有乱舞棋盘识别结果，跳过扫动。")
+            logger.warning("当前帧没有乱舞棋盘识别结果，跳过扫动")
             return
         # 保留独立起手图，避免后续截图复用缓冲区覆盖诊断现场。
         observation = replace(observation, image=observation.image.copy())
         assert observation.board is not None
         start = decision.ranbu_start
         if start is None:
-            start = choose_ranbu_start(
-                observation.board, decision.reserved_color, previous_color=self._last_ranbu_color
-            )
+            start = choose_ranbu_start(observation.board, decision.reserved_color)
         if start is None:
-            logger.debug("当前帧没有符合保留颜色规则的乱舞起点，等待新截图。")
+            logger.debug("当前帧没有符合保留颜色规则的乱舞起点，等待新截图")
             return
         if decision.ranbu_frame_id is not None and (
             decision.ranbu_frame_id != observation.frame_id or observation.board.frame_id != observation.frame_id
         ):
-            logger.debug("乱舞起点局部证据不属于当前帧，不发送触控。")
+            logger.debug("乱舞起点局部证据不属于当前帧，不发送触控")
             return
         color = (
             decision.ranbu_color
@@ -263,12 +277,12 @@ class MaaBattleExecutor:
             )
         )
         if decision.ranbu_start is not None and (color is None or color == decision.reserved_color):
-            logger.debug("已确认起点在当前帧未命中非保留色，不更换落点或发送触控。")
+            logger.debug("已确认起点在当前帧未命中非保留色，不更换落点或发送触控")
             return
         points = (start, *ranbu_sweep_points(observation.board))
         previous_color = self._last_ranbu_color
         logger.debug(
-            "乱舞整盘轨迹：起点颜色={}，上次颜色={}，保留颜色={}，本帧起点={}，完整折返点={}。",
+            "乱舞整盘轨迹：起点颜色={}，上次颜色={}，保留颜色={}，本帧起点={}，完整折返点={}",
             color,
             self._last_ranbu_color,
             decision.reserved_color,
@@ -296,11 +310,11 @@ class MaaBattleExecutor:
                 observation.image, observation.board, start, color, previous_color, points
             )
         except Exception as exc:
-            logger.warning("乱舞轨迹诊断保存失败：{}。", exc)
+            logger.warning("乱舞轨迹诊断保存失败：{}", exc)
         if self._last_ranbu_sweep_started:
-            logger.debug("乱舞扫动已结束，回到主循环重新截图；乱舞连线不计入普通手数。")
+            logger.debug("乱舞扫动已结束，回到主循环重新截图；乱舞连线不计入普通手数")
         else:
-            logger.debug("乱舞扫动未开始，回到主循环重新截图。")
+            logger.debug("乱舞扫动未开始，回到主循环重新截图")
 
     def _ranbu_short_link(self, observation: BattleObservation, decision: StrategyDecision) -> None:
         """全为保留色时，从一只普通饿鬼滑到另一只后立即松手。"""
@@ -308,7 +322,7 @@ class MaaBattleExecutor:
             return
         points = ranbu_short_link_points(observation.board, decision.reserved_color)
         if points is None:
-            logger.debug("当前帧不满足保留色两点短连条件，等待新截图。")
+            logger.debug("当前帧不满足保留色两点短连条件，等待新截图")
             return
         self._hold_and_move(
             points,
@@ -318,7 +332,7 @@ class MaaBattleExecutor:
             hold_start_seconds=0.0,
             gesture_duration=0.04,
         )
-        logger.debug("乱舞保留色短连结束，回到主循环重新截图；不计入普通手数。")
+        logger.debug("乱舞保留色短连结束，回到主循环重新截图；不计入普通手数")
 
     def _hold_and_move(
         self,
@@ -326,7 +340,6 @@ class MaaBattleExecutor:
         observation: BattleObservation,
         *,
         check_marker: bool = True,
-        return_dispatch_status: bool = False,
         check_ranbu_allowed: bool = False,
         hold_start_seconds: float = 0.5,
         gesture_duration: float | None = None,
@@ -338,12 +351,15 @@ class MaaBattleExecutor:
     ) -> bool:
         """整笔连续移动，并按菱形检查或触控派发状态返回结果。"""
         self._last_gesture_started = False
+        self._last_gesture_dispatch_completed = False
+        self._last_chain_marker_count = 0
+        self._last_chain_marker_reason = "stopped"
         self._last_ranbu_sweep_started = False
         self.last_gesture_released_at = None
         if len(points) < 2 or self._is_stopping():
             return False
         if check_ranbu_allowed and not self._can_start_ranbu_link():
-            logger.debug("当前帧未确认允许乱舞，不再启动扫动。")
+            logger.debug("当前帧未确认允许乱舞，不再启动扫动")
             return False
         gesture_started = self._clock()
         events: list[dict[str, object]] | None = [] if capture_ranbu else None
@@ -387,7 +403,7 @@ class MaaBattleExecutor:
             if capture_ranbu and ranbu_reserved_color is None:
                 selection_check = "not_required"
                 stop_reason = "no_reserved_color_check"
-                logger.debug("乱舞未设置保留颜色，跳过按下后的起点颜色识别，直接扫动。")
+                logger.debug("乱舞未设置保留颜色，跳过按下后的起点颜色识别，直接扫动")
             elif capture_ranbu:
                 selection_check = "capture_failed"
                 selection_started = self._clock()
@@ -406,14 +422,14 @@ class MaaBattleExecutor:
                             if ranbu_continue_on_unknown_color:
                                 stop_reason = "selection_color_unknown_continue"
                                 logger.warning(
-                                    "乱舞按下后起点颜色无法分类；策略允许继续扫动。保留色={}。",
+                                    "乱舞按下后起点颜色无法分类；策略允许继续扫动。保留色={}",
                                     ranbu_reserved_color,
                                 )
                             else:
                                 stop_reason = "selection_color_unknown"
                                 selection_allowed = False
                                 logger.warning(
-                                    "乱舞按下后起点颜色无法分类；策略要求原地松手，不执行扫动。保留色={}。",
+                                    "乱舞按下后起点颜色无法分类；策略要求原地松手，不执行扫动。保留色={}",
                                     ranbu_reserved_color,
                                 )
                         elif selected_color == ranbu_reserved_color:
@@ -423,7 +439,7 @@ class MaaBattleExecutor:
                         else:
                             selection_check = "accepted"
                             logger.debug(
-                                "乱舞按下后起点颜色确认：预判={}，实选={}，保留色={}，允许扫动。",
+                                "乱舞按下后起点颜色确认：预判={}，实选={}，保留色={}，允许扫动",
                                 ranbu_color,
                                 selected_color,
                                 ranbu_reserved_color,
@@ -440,7 +456,7 @@ class MaaBattleExecutor:
                     selection_allowed = False
                 if not selection_allowed:
                     logger.warning(
-                        "乱舞按下后起点颜色确认未通过：预判={}，实选={}，保留色={}，判定={}；原地松手，不执行扫动。",
+                        "乱舞按下后起点颜色确认未通过：预判={}，实选={}，保留色={}，判定={}；原地松手，不执行扫动",
                         ranbu_color,
                         selected_color,
                         ranbu_reserved_color,
@@ -513,9 +529,12 @@ class MaaBattleExecutor:
                             and bool(result.markers)
                         )
                         reason = "marker_detected" if succeeded else "marker_not_detected"
+                        self._last_chain_marker_count = len(result.markers) if result else 0
+                self._last_chain_marker_reason = reason
         finally:
             release_started = self._clock()
             up = self._controller.post_touch_up().wait()
+            self._last_gesture_dispatch_completed = completed and bool(up.succeeded)
             gesture_finished_at = self._clock()
             self.last_gesture_released_at = gesture_finished_at
             if events is not None:
@@ -571,12 +590,12 @@ class MaaBattleExecutor:
                         observation.image, held, report, pass_images=pass_images
                     )
                 except Exception as exc:
-                    logger.warning("乱舞执行诊断保存失败：{}。", exc)
+                    logger.warning("乱舞执行诊断保存失败：{}", exc)
             if not up.succeeded:
                 raise RuntimeError("释放连线触点失败")
         if check_marker:
             logger.debug(
-                "普通连线末尾单次确认：计划目标={}，菱形数量={}，判定={}，耗时={:.2f}ms。",
+                "普通连线松手前全屏菱形检查：计划目标={}，菱形数量={}，判定={}，耗时={:.2f}ms",
                 len(points),
                 len(result.markers) if result else 0,
                 reason,
@@ -588,11 +607,15 @@ class MaaBattleExecutor:
                     observation.board,
                     ChainMovePositions(points[0], points[-1]),
                     result,
-                    {"planned_targets": len(points), "confirmation_mode": "after_full_gesture", "stop_reason": reason},
+                    {
+                        "planned_targets": len(points),
+                        "confirmation_mode": "full_screen_before_release",
+                        "stop_reason": reason,
+                    },
                 )
         elif gesture_duration is not None:
             logger.debug(
-                "乱舞手势耗时：单遍目标={}ms，整笔实际={:.2f}ms，完整派发={}，截图耗时={}ms，完成反馈={}，退出原因={}；松手后等待另计。",
+                "乱舞手势耗时：单遍目标={}ms，整笔实际={:.2f}ms，完整派发={}，截图耗时={}ms，完成反馈={}，退出原因={}；松手后等待另计",
                 round(gesture_duration * 1000),
                 (gesture_finished_at - gesture_started) * 1000,
                 completed,
@@ -600,7 +623,7 @@ class MaaBattleExecutor:
                 passes,
                 stop_reason,
             )
-        confirmed = succeeded if check_marker else return_dispatch_status and completed and bool(up.succeeded)
+        confirmed = succeeded if check_marker else completed and bool(up.succeeded)
         return confirmed and not self._is_stopping()
 
     def _move_timed_path(
@@ -721,7 +744,7 @@ class MaaBattleExecutor:
         count = max(1, math.ceil(math.dist(start, end) / step))
         # 常见相邻对象约用60至100毫秒经过身体，长段的采样总间隔最多160毫秒。
         interval = min(0.016, 0.16 / (count - 1)) if count > 1 else 0.0
-        logger.debug("触控连续移动：起点={}，目标={}，采样点={}，最大步长={:.2f}像素。", start, end, count, step)
+        logger.debug("触控连续移动：起点={}，目标={}，采样点={}，最大步长={:.2f}像素", start, end, count, step)
 
         def can_move() -> bool:
             """每个移动点都检查停止与当前乱舞许可。"""

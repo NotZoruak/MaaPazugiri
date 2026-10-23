@@ -87,9 +87,16 @@ def write_preview_report(image: Image, board: BoardResult, preview: RoutePreview
 class BoardPreviewer:
     """只缓存静态识别器，每次独立识别显式传入的当前帧。"""
 
-    def __init__(self, profile_path: Path, destination: Path) -> None:
+    def __init__(
+        self,
+        profile_path: Path,
+        destination: Path,
+        *,
+        save_draw: bool = True,
+    ) -> None:
         self.profile_path = profile_path
         self.destination = destination
+        self.save_draw = save_draw
         self._recognizer: BoardRecognizer | None = None
         self._ranbu_execution_sequence = 0
         self._ranbu_execution_run_id = uuid4().hex
@@ -103,11 +110,14 @@ class BoardPreviewer:
     def preview_routes(self, image: Image, board: BoardResult, *, stem: str = "latest") -> RoutePreview:
         """根据已经识别的当前帧棋盘单独生成候选路线预演。"""
         preview = build_route_preview(board)
-        write_preview_report(image, board, preview, self.destination, stem)
+        if self.save_draw:
+            write_preview_report(image, board, preview, self.destination, stem)
         return preview
 
     def save_stability_report(self, report: dict[str, object]) -> None:
         """覆盖保存最近两帧稳定性比较，即使尚未允许规划路线也能排查。"""
+        if not self.save_draw:
+            return
         write_text_atomic(
             self.destination / "latest-stability.json",
             json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
@@ -128,6 +138,8 @@ class BoardPreviewer:
         points: tuple[tuple[int, int], ...],
     ) -> None:
         """覆盖保留最近一轮乱舞起点与原图，便于核对留色及落点，不积累图片。"""
+        if not self.save_draw:
+            return
         report = (
             json.dumps(
                 _finite_diagnostic(
@@ -158,6 +170,8 @@ class BoardPreviewer:
         grab_images: Sequence[Image] = (),
     ) -> None:
         """轮换保存最近六轮实际输入及松手前现场，不把派发成功视为游戏接入成功。"""
+        if not self.save_draw:
+            return
         self._ranbu_execution_sequence += 1
         slot = (self._ranbu_execution_sequence - 1) % 6 + 1
         stem = f"ranbu-execution-{slot:02d}"
@@ -217,6 +231,8 @@ class BoardPreviewer:
         details: dict[str, object],
     ) -> None:
         """保留最近一次未确认普通连线的现场，不无限积累截图。"""
+        if not self.save_draw:
+            return
         report = {
             "planned_frame_id": board.frame_id,
             "move": asdict(move),

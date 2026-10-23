@@ -20,6 +20,7 @@ class CandidateRoute:
     points: tuple[tuple[float, float], ...]
     minimum_clearance: float
     total_distance: float
+    enhanced_object_ids: tuple[int, ...] = ()
 
 
 @dataclass
@@ -79,9 +80,10 @@ def _segment_avoids_exclusions(first: tuple[float, float], second: tuple[float, 
     return True
 
 
-def _route_rank(route: CandidateRoute) -> tuple[int, int, float, float, tuple[int, ...]]:
-    """黑色优先，再比较对象数量、几何余量、路线长度和编号顺序。"""
+def _route_rank(route: CandidateRoute) -> tuple[int, int, int, float, float, tuple[int, ...]]:
+    """先按强化目标数量排序，再比较黑色、对象数量、几何余量和路线长度。"""
     return (
+        -len(route.enhanced_object_ids),
         0 if route.color == "black" else 1,
         -len(route.object_ids),
         -route.minimum_clearance,
@@ -111,7 +113,7 @@ def preferred_ghoul_touch_point(item: BoardObject, board: BoardResult) -> tuple[
 def build_route_preview(
     board: BoardResult, *, beam_width: int = 32, max_expansions: int = 4096, black_only: bool = False
 ) -> RoutePreview:
-    """按剩余连接数量优先有限回溯；宽度限制每步分支，结果不保证全局最长。"""
+    """有限回溯生成路线；所在分量有强化饿鬼时，优先保留含强化目标的路径。"""
     if beam_width < 1 or max_expansions < 1:
         raise ValueError("候选搜索宽度和总扩展上限必须为正整数")
     result = RoutePreview(board.frame_id)
@@ -183,6 +185,7 @@ def build_route_preview(
             points=tuple(points[identifier] for identifier in path),
             minimum_clearance=min(clearances[frozenset(pair)] for pair in pairs),
             total_distance=round(sum(math.dist(points[first], points[second]) for first, second in pairs), 3),
+            enhanced_object_ids=tuple(identifier for identifier in path if eligible[identifier].enhanced is True),
         )
 
     def choices(endpoint: int, used: frozenset[int]) -> Iterator[int]:
@@ -205,18 +208,34 @@ def build_route_preview(
         remaining.difference_update(component)
         components.append(component)
     for component in sorted(
-        components, key=lambda nodes: (0 if eligible[min(nodes)].color == "black" else 1, -len(nodes), min(nodes))
+        components,
+        key=lambda nodes: (
+            0 if any(eligible[identifier].enhanced is True for identifier in nodes) else 1,
+            0 if eligible[min(nodes)].color == "black" else 1,
+            -len(nodes),
+            min(nodes),
+        ),
     ):
-        seeds = sorted(
-            {(first, second) for first in component for second in adjacency[first] if first < second},
-            key=lambda path: _route_rank(make_route(path)),
-        )
-        best = make_route(seeds[0])
+        enhanced_ids = {identifier for identifier in component if eligible[identifier].enhanced is True}
+        seeds = {(first, second) for first in component for second in adjacency[first] if first < second}
+        if enhanced_ids:
+            seeds = {path for path in seeds if enhanced_ids.intersection(path)}
+        if not seeds:
+            continue
+        ordered_seeds = sorted(seeds, key=lambda path: _route_rank(make_route(path)))
+        best = make_route(ordered_seeds[0])
         # 单条路线至多拥有两个度数为一的对象，其余叶端至少要舍弃。
         leaves = sum(len(adjacency[node]) == 1 for node in component)
         upper_bound = len(component) - max(0, leaves - 2)
+
+        def reached_upper_bound(
+            route: CandidateRoute, upper_bound: int = upper_bound, enhanced_count: int = len(enhanced_ids)
+        ) -> bool:
+            """只有长度上限与本连通分量内强化目标覆盖均达到时才结束搜索。"""
+            return len(route.object_ids) >= upper_bound and len(route.enhanced_object_ids) == enhanced_count
+
         for start in sorted(component, key=lambda node: (len(adjacency[node]), node)):
-            if len(best.object_ids) >= upper_bound or result.search_expansions >= max_expansions:
+            if reached_upper_bound(best) or result.search_expansions >= max_expansions:
                 break
             used = frozenset((start,))
             stack: list[tuple[tuple[int, ...], frozenset[int], Iterator[int]]] = [
@@ -230,13 +249,14 @@ def build_route_preview(
                     continue
                 result.search_expansions += 1
                 extension = (*path, neighbor)
-                if len(extension) >= len(best.object_ids):
+                contains_enhanced = not enhanced_ids or bool(enhanced_ids.intersection(extension))
+                if contains_enhanced and (enhanced_ids or len(extension) >= len(best.object_ids)):
                     best = min(best, make_route(extension), key=_route_rank)
-                if len(best.object_ids) >= upper_bound:
+                if reached_upper_bound(best):
                     break
                 next_used = used | {neighbor}
                 stack.append((extension, next_used, choices(neighbor, next_used)))
-        result.search_truncated |= result.search_expansions >= max_expansions and len(best.object_ids) < upper_bound
+        result.search_truncated |= result.search_expansions >= max_expansions and not reached_upper_bound(best)
         result.routes.append(best)
 
     result.routes.sort(key=_route_rank)

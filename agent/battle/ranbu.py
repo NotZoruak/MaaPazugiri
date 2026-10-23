@@ -8,7 +8,7 @@ from itertools import combinations
 import numpy as np
 from vision.image_io import Image
 from vision.model import COLORS, BoardObject, BoardResult
-from vision.ranbu_point import identify_ranbu_point_color, ranbu_point_color_margin
+from vision.ranbu_point import identify_ranbu_point_color
 
 from .candidates import preferred_ghoul_touch_point
 
@@ -19,9 +19,9 @@ def _ghoul_touch_point(item: BoardObject, board: BoardResult) -> tuple[float, fl
 
 
 # 开发参数来自010、017两张720×1280实机图，不依赖倒计时数字。
-RANBU_ROI = (595, 166, 4, 14)
-RANBU_LOWER_BGR = (246, 89, 89)
-RANBU_UPPER_BGR = (255, 112, 114)
+RANBU_ROI = (599, 166, 2, 14)
+RANBU_LOWER_BGR = (94, 95, 244)
+RANBU_UPPER_BGR = (130, 127, 255)
 
 
 def matches_ranbu_marker(image: Image) -> bool:
@@ -87,57 +87,36 @@ def ranbu_start_color(board: BoardResult, start: tuple[int, int]) -> str | None:
 
 
 def _ordered_start_candidates(
-    board: BoardResult, reserved_color: str | None, *, previous_color: str | None = None
+    board: BoardResult, reserved_color: str | None
 ) -> list[tuple[int, str | None, tuple[int, int]]]:
-    """先按轮换顺序排列颜色，再在同色起点中从画面下方向上选择。"""
+    """按画面从下往上排列普通颜色起点，不轮换颜色。"""
     candidates = _start_candidates(board, reserved_color)
     if not candidates:
         return []
-    ordinary = [entry for entry in candidates if entry[1] in COLORS]
-    # 按四种普通颜色轮换，特殊黑色饿鬼不作为乱舞起点。
-    candidates = ordinary
-    color_order = COLORS
-    if previous_color in COLORS:
-        offset = COLORS.index(previous_color) + 1
-        color_order = (*COLORS[offset:], *COLORS[:offset])
-    candidates.sort(
-        key=lambda entry: (
-            color_order.index(entry[1]) if entry[1] in color_order else len(color_order),
-            -entry[2][1],
-            entry[0],
-        )
-    )
+    candidates.sort(key=lambda entry: (-entry[2][1], entry[0]))
     return candidates
 
 
 def choose_ranbu_start(
-    board: BoardResult, reserved_color: str | None, *, previous_color: str | None = None
+    board: BoardResult, reserved_color: str | None
 ) -> tuple[int, int] | None:
-    """先轮换本帧可用颜色，只有同色可选时才重复；同色内按编号确定起点。"""
-    candidates = _ordered_start_candidates(board, reserved_color, previous_color=previous_color)
+    """按画面从下往上选择首个符合保留色规则的起点。"""
+    candidates = _ordered_start_candidates(board, reserved_color)
     return candidates[0][2] if candidates else None
 
 
 def choose_ranbu_pixel_start(
-    board: BoardResult, image: Image, reserved_color: str | None, previous_color: str | None = None
+    board: BoardResult, image: Image, reserved_color: str | None
 ) -> tuple[tuple[int, int], str, tuple[float, float]] | None:
-    """按当前帧颜色余量选择可信的非保留色起点。"""
+    """从画面下方向上返回首个颜色识别可信的起点。"""
     objects = {item.id: item for item in board.objects}
-    best: tuple[tuple[int, int], str, tuple[float, float]] | None = None
-    best_margin = -1
-    for object_id, color, point in _ordered_start_candidates(board, reserved_color, previous_color=previous_color):
-        if best is not None and color != best[1]:
-            break
+    for object_id, color, point in _ordered_start_candidates(board, reserved_color):
         if color not in COLORS or ghoul_color_at_point(board, point) != color:
             continue
         size = objects[object_id].body_box[2:]
         if identify_ranbu_point_color(image, point, size) == color:
-            margin = ranbu_point_color_margin(image, point, size, color)
-            if margin > best_margin:
-                best, best_margin = (point, color, size), margin
-            if margin == 4:
-                return best
-    return best
+            return point, color, size
+    return None
 
 
 def ghoul_color_at_point(board: BoardResult, point: tuple[int, int]) -> str | None:
@@ -182,7 +161,6 @@ class RanbuStartConfirmation:
         self._pending_size: tuple[float, float] | None = None
         self._frame_id: str | None = None
         self._layout: tuple[tuple[int, int], tuple[float, float, float, float], str] | None = None
-        self._last_color: str | None = None
         self.last_report: dict[str, object] = {}
         self.confirmed_body_size: tuple[float, float] | None = None
 
@@ -237,7 +215,6 @@ class RanbuStartConfirmation:
             self.confirmed_body_size = self._pending_size
             self._pending = None
             self._pending_size = None
-            self._last_color = current_color
             self.last_report = {
                 "stable": True,
                 "reason": "同一预选点连续两帧命中同一非保留色",
@@ -254,11 +231,11 @@ class RanbuStartConfirmation:
                 "color": current_color,
             }
             return None
-        start = choose_ranbu_start(board, reserved_color, previous_color=self._last_color)
+        start = choose_ranbu_start(board, reserved_color)
         color = ghoul_color_at_point(board, start) if start is not None else None
         size = None
         if image is not None:
-            selected = choose_ranbu_pixel_start(board, image, reserved_color, self._last_color)
+            selected = choose_ranbu_pixel_start(board, image, reserved_color)
             if selected is not None:
                 start, color, size = selected
             else:

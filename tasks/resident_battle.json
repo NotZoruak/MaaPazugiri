@@ -974,7 +974,6 @@
             "inputs": [
                 {
                     "name": "宝玉保留量",
-                    "label": "剩余宝玉数量",
                     "default": "54000",
                     "pipeline_type": "int",
                     "verify": "^[0-9]+$",

@@ -235,6 +235,48 @@ def boards_are_similar(previous: BoardResult, current: BoardResult) -> bool:
     return _compare_boards(previous, current)[0]
 
 
+def significantly_changed_route_objects(
+    previous: BoardResult, current: BoardResult, object_ids: tuple[int, ...]
+) -> frozenset[int]:
+    """返回连线路径中消失、变类或明显移位的目标，忽略少量识别抖动。"""
+    if (
+        previous.source_size != current.source_size
+        or previous.board_region != current.board_region
+        or previous.profile != current.profile
+        or not _valid_board(previous)
+        or not _valid_board(current)
+    ):
+        return frozenset()
+
+    old_objects = {item.id: item for item in previous.objects}
+    targets = [old_objects[identifier] for identifier in object_ids if identifier in old_objects]
+    if len(targets) != len(object_ids):
+        return frozenset()
+
+    matched_current: set[int] = set()
+    changed: set[int] = set()
+    for old in targets:
+        tolerance = min(*old.body_box[2:]) * 0.25
+        candidates = [
+            (math.dist(old.center, new.center), index)
+            for index, new in enumerate(current.objects)
+            if index not in matched_current
+            and (old.kind, old.color, old.bomb_level, old.subtype, old.enhanced)
+            == (new.kind, new.color, new.bomb_level, new.subtype, new.enhanced)
+            and math.dist(old.center, new.center) <= tolerance
+            and all(
+                abs(first - second) <= max(first, second) * 0.15
+                for first, second in zip(old.body_box[2:], new.body_box[2:], strict=True)
+            )
+        ]
+        if candidates:
+            _, index = min(candidates)
+            matched_current.add(index)
+        else:
+            changed.add(old.id)
+    return frozenset(changed)
+
+
 def _board_summary(board: BoardResult | None) -> dict[str, object] | None:
     """只保存排障所需的几何与类别，不复制模板证据或图像。"""
     if board is None:

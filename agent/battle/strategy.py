@@ -51,6 +51,8 @@ class StageActions:
     bomb_levels: tuple[int, ...]
     ultimates: tuple[UltimateRule, ...]
     normal_link: NormalLinkSettings
+    priority_count: int = 4
+    prioritize_actions: bool = True
 
 
 @dataclass(frozen=True)
@@ -105,7 +107,7 @@ class StrategyDocument:
                     stage_id,
                     "全程作战",
                     StageActions(
-                        ("ultimate", "bomb"),
+                        ("ultimate", "bomb", "enhanced_ghoul", "black_ghoul"),
                         (3,),
                         tuple(UltimateRule(slot, True) for slot in (1, 2, 3)),
                         NormalLinkSettings(False, 7, ("red", "blue", "green", "yellow")),
@@ -168,6 +170,7 @@ class StageResolution:
 _ID_PATTERN = re.compile(r"^[0-9a-fA-F]{32}$")
 _HP_PATTERN = re.compile(r"^\s*(\d+)\s*/\s*(\d+)\s*$")
 _COLORS = ("red", "blue", "green", "yellow")
+_ACTION_PRIORITIES = {"ultimate", "bomb", "enhanced_ghoul", "black_ghoul"}
 _COMPARISONS = {
     "greater_or_equal",
     "less_or_equal",
@@ -311,11 +314,28 @@ def _parse_document(data: Any, requested_id: str) -> StrategyDocument:
         stage_name = _string(stage["name"], f"{prefix}.name")
 
         raw_actions = _object(
-            stage["actions"], {"priority", "bomb_levels", "ultimates", "normal_link"}, set(), f"{prefix}.actions"
+            stage["actions"],
+            {"priority", "bomb_levels", "ultimates", "normal_link"},
+            {"priority_count", "prioritize_actions"},
+            f"{prefix}.actions",
         )
         priority = raw_actions["priority"]
-        if not isinstance(priority, list) or len(priority) != 2 or set(priority) != {"ultimate", "bomb"}:
-            raise StrategyFormatError(f"{prefix}.actions.priority必须恰好包含ultimate和bomb")
+        if not isinstance(priority, list):
+            raise StrategyFormatError(f"{prefix}.actions.priority必须是行动优先级数组")
+        if (
+            len(priority) == 2
+            and all(isinstance(action, str) for action in priority)
+            and set(priority) == {"ultimate", "bomb"}
+        ):
+            priority.extend(("enhanced_ghoul", "black_ghoul"))
+        if len(priority) != len(_ACTION_PRIORITIES) or set(priority) != _ACTION_PRIORITIES:
+            raise StrategyFormatError(f"{prefix}.actions.priority必须完整排列四种行动类别")
+        priority_count = _integer(
+            raw_actions.get("priority_count", 4), f"{prefix}.actions.priority_count", maximum=4
+        )
+        prioritize_actions = _boolean(
+            raw_actions.get("prioritize_actions", True), f"{prefix}.actions.prioritize_actions"
+        )
         bomb_levels = raw_actions["bomb_levels"]
         if (
             not isinstance(bomb_levels, list)
@@ -408,7 +428,9 @@ def _parse_document(data: Any, requested_id: str) -> StrategyDocument:
             StrategyStage(
                 stage_id,
                 stage_name,
-                StageActions(tuple(priority), tuple(bomb_levels), tuple(ultimates), normal),
+                StageActions(
+                    tuple(priority), tuple(bomb_levels), tuple(ultimates), normal, priority_count, prioritize_actions
+                ),
                 frenzy,
                 tuple(transitions),
             )
@@ -586,13 +608,27 @@ def choose_normal_route(
     if not routes:
         return None
     candidates = list(routes)
-    black = [
+    enhanced = [
         route
         for route in candidates
-        if _value(route, "color") == "black" and len(_value(route, "object_ids") or ()) >= 2
+        if len(_value(route, "enhanced_object_ids") or ()) > 0
+        and len(_value(route, "object_ids") or ()) >= 2
     ]
-    if black:
-        return max(black, key=lambda route: len(_value(route, "object_ids") or ()))
+    if enhanced:
+        candidates = [
+            route
+            for route in enhanced
+            if len(_value(route, "enhanced_object_ids") or ())
+            == max(len(_value(candidate, "enhanced_object_ids") or ()) for candidate in enhanced)
+        ]
+    else:
+        black = [
+            route
+            for route in candidates
+            if _value(route, "color") == "black" and len(_value(route, "object_ids") or ()) >= 2
+        ]
+        if black:
+            return max(black, key=lambda route: len(_value(route, "object_ids") or ()))
     if prioritize_colors:
         long_routes = [route for route in candidates if len(_value(route, "object_ids") or ()) >= long_link_threshold]
         if long_routes:
@@ -629,6 +665,8 @@ def decide_action(
     available_bomb_levels: list[int] | tuple[int, ...] = (),
     routes: list[Any] | tuple[Any, ...] = (),
     route_provider: Callable[[], list[Any] | tuple[Any, ...]] | None = None,
+    enhanced_routes: list[Any] | tuple[Any, ...] = (),
+    enhanced_route_ready: bool = True,
     black_routes: list[Any] | tuple[Any, ...] = (),
     black_route_ready: bool = True,
     stage_resolution: StageResolution | None = None,
@@ -653,23 +691,25 @@ def decide_action(
             "wait", stage.id, transition_chain=transitions, transition_loop=True, reason="同一观察内阶段转变形成循环"
         )
 
+    enhanced = [
+        route
+        for route in enhanced_routes
+        if len(_value(route, "enhanced_object_ids") or ()) > 0
+        and len(_value(route, "object_ids") or ()) >= 2
+    ]
     black = [
         route
         for route in (*black_routes, *routes)
         if _value(route, "color") == "black" and len(_value(route, "object_ids") or ()) >= 2
     ]
-    if black:
-        if not black_route_ready:
-            return StrategyDecision("wait", stage.id, transition_chain=transitions, reason="等待黑色连线棋盘稳定")
-        return StrategyDecision(
-            "black_link",
-            stage.id,
-            route=max(black, key=lambda route: len(_value(route, "object_ids") or ())),
-            transition_chain=transitions,
-            reason="可连接黑色饿鬼优先于全部策略动作",
-        )
-
-    for action in stage.actions.priority:
+    ranked_actions = (
+        stage.actions.priority[: stage.actions.priority_count] if stage.actions.prioritize_actions else ()
+    )
+    action_priority = (
+        *ranked_actions,
+        *(action for action in ("ultimate", "bomb", "enhanced_ghoul", "black_ghoul") if action not in ranked_actions),
+    )
+    for action in action_priority:
         if action == "ultimate":
             if battle_phase == BattlePhase.RANBU and not stage.frenzy.allow_ultimates:
                 continue
@@ -699,6 +739,36 @@ def decide_action(
                     transition_chain=transitions,
                     reason="按策略允许等级选择当前帧可用炸弹",
                 )
+        elif action == "enhanced_ghoul" and enhanced:
+            if not enhanced_route_ready:
+                return StrategyDecision(
+                    "wait", stage.id, transition_chain=transitions, reason="等待强化饿鬼连线棋盘稳定"
+                )
+            route = choose_normal_route(
+                enhanced,
+                prioritize_colors=False,
+                long_link_threshold=stage.actions.normal_link.long_link_threshold,
+                color_priority=stage.actions.normal_link.color_priority,
+                color_priority_count=stage.actions.normal_link.color_priority_count,
+            )
+            assert route is not None
+            return StrategyDecision(
+                "normal_link",
+                stage.id,
+                route=route,
+                transition_chain=transitions,
+                reason="按行动优先级选择强化饿鬼路线",
+            )
+        elif action == "black_ghoul" and black:
+            if not black_route_ready:
+                return StrategyDecision("wait", stage.id, transition_chain=transitions, reason="等待黑色连线棋盘稳定")
+            return StrategyDecision(
+                "black_link",
+                stage.id,
+                route=max(black, key=lambda route: len(_value(route, "object_ids") or ())),
+                transition_chain=transitions,
+                reason="按行动优先级选择黑色饿鬼路线",
+            )
 
     if battle_phase == BattlePhase.RANBU:
         return StrategyDecision(

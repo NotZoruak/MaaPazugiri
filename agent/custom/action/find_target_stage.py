@@ -44,17 +44,10 @@ class FindTargetStageAction(CustomAction):
                 raise RuntimeError("无法获取当前页面截图")
             unchanged_swipes = 0
             stages = self._recognize_stages(context, current_image)
-            logged_signature: tuple[tuple[int, int], ...] | None = None
 
             while True:
                 if not stages:
                     raise RuntimeError("未能从当前页面识别出关卡编号")
-
-                current_signature = self._signature(stages)
-                if current_signature != logged_signature:
-                    stage_texts = [stage.text for stage in stages]
-                    logger.info(f"当前页面识别到关卡：{'、'.join(stage_texts)}")
-                    logged_signature = current_signature
 
                 target_result = next(
                     (stage for stage in stages if (stage.chapter, stage.stage) == target),
@@ -162,13 +155,9 @@ class FindTargetStageAction(CustomAction):
         longest = max(len(path) for path in paths)
         best = [index for index, path in enumerate(paths) if len(path) == longest]
         if sum(counts[index] for index in best) != 1:
-            logger.warning("关卡编号的横向递增关系存在歧义，本轮不采用识别结果")
             return []
 
         accepted = set(paths[best[0]])
-        rejected = [stage.text for index, stage in enumerate(ordered) if index not in accepted]
-        if rejected:
-            logger.debug(f"已排除不符合横向递增关系的关卡编号：{'、'.join(rejected)}")
         return [stage for index, stage in enumerate(ordered) if index in accepted]
 
     @staticmethod
@@ -235,4 +224,4 @@ class FindTargetStageAction(CustomAction):
                 raise RuntimeError("点击目标关卡失败")
             if index == 0:
                 time.sleep(0.5)
-        logger.info(f"已连续点击目标关卡：{stage.text}")
+        logger.info(f"已进入目标关卡：{stage.text}")

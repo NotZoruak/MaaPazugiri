@@ -19,6 +19,21 @@
             "Node.Action.Starting": "正在打开菜单"
         }
     },
+    "MainPage_EnterSortieLog": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [353, 1038, 101, 102],
+                "template": "button/主页面_出阵.png"
+            }
+        },
+        "anchor": {"BackToMainPage": ""},
+        "next": ["MainPage_EnterSortie"],
+        "on_error": ["[Anchor]Hub"],
+        "focus": {
+            "Node.Action.Starting": "正在前往出阵界面"
+        }
+    },
     "MainPage_EnterSortie": {
         "recognition": {
             "type": "TemplateMatch",
@@ -30,14 +45,21 @@
         "action": {
             "type": "Click"
         },
-        "anchor": {"BackToMainPage": ""},
         "post_wait_freezes": {
             "time": 200,
             "target": [353, 1038, 101, 102]
         },
-        "focus": {
-            "Node.Action.Starting": "正在前往出阵界面"
-        }
+        "next": ["MainPage_EnterSortieDone", "MainPage_EnterSortie"]
+    },
+    "MainPage_EnterSortieDone": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [353, 1038, 101, 102],
+                "template": "button/主页面_出阵.png"
+            }
+        },
+        "inverse": true
     },
     "BackToMainPage": {
         "recognition": {

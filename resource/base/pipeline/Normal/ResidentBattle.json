@@ -9,7 +9,7 @@
             "[Anchor]BackToMainPage",
             "[JumpBack]BattleSettlement_NoStamina",
             "[JumpBack]MainPage_AutoHeadPat",
-            "[JumpBack]MainPage_EnterSortie",
+            "[JumpBack]MainPage_EnterSortieLog",
             "RB_CheckTargetChapter",
             "[JumpBack]ChapterMap_ChangeChapter",
             "RB_SelectTargetChapter",

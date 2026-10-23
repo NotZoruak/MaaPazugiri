@@ -76,13 +76,19 @@ class BattleProgressReporter:
             confirmed_phase = BattlePhase(phase)
         except ValueError:
             return
+        if decision.kind == "wait" and decision.reason == "等待棋盘稳定":
+            signature = (confirmed_phase, "", "wait", None, None, decision.reason)
+            if signature != self._last_summary:
+                logger.info("等待棋盘稳定")
+                self._last_summary = signature
+            return
         previous = self._stages[resolution.previous_stage_id]
         if resolution.applied_transitions:
             self._last_summary = None
         for transition in resolution.applied_transitions:
             target = self._stages[transition.target_stage_id]
             logger.info(
-                "阶段切换：{} → {}；条件：{}。", previous.name, target.name, _condition_text(transition.condition)
+                "阶段切换：{} → {}；条件：{}", previous.name, target.name, _condition_text(transition.condition)
             )
             previous = target
         if decision.kind in ("wait", "ultimate", "ranbu_link", "ranbu_short_link"):
@@ -101,5 +107,5 @@ class BattleProgressReporter:
             self._last_summary = None
         state = "可操作" if confirmed_phase == BattlePhase.OPERABLE else "乱舞"
         logger.info(
-            "当前状态：{}；所属阶段：{}；进行操作：{}。", state, resolution.stage.name, _operation_text(decision)
+            "当前状态：{}；所属阶段：{}；进行操作：{}", state, resolution.stage.name, _operation_text(decision)
         )

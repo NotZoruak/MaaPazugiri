@@ -9,7 +9,7 @@
             "CR_RouteDailyFreeStaminaPotion",
             "[JumpBack]MainPage_AutoHeadPat",
             "[JumpBack]MainPage_OpenMenu",
-            "[JumpBack]CR_OpenTopicPage",
+            "CR_OpenTopicPage",
             "CR_IsInTopicPage",
             "BattleSettlement_SuccessConfirm",
             "BattleSettlement_SuccessRewardClick",
