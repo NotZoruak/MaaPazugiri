@@ -19,5 +19,5 @@ MaaPazugiri 是基于 **MaaFramework** 开发的《刀剑乱舞ぱずぎり》�
 ## 相关链接
 
 - [MaaFramework](https://github.com/MaaXYZ/MaaFramework)
-- [MFAAvalonia](https://github.com/SweetSmellFox/MFAAvalonia)
+- [MFAAvalonia](https://github.com/NotZoruak/MFAA)
 - [create-maa-project](https://github.com/Windsland52/create-maa-project)

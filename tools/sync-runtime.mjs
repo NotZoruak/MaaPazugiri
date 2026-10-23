@@ -16,6 +16,15 @@ import {dirname, join} from "node:path";
 // can never fetch different Python runtimes.
 const PYTHON_EMBED_VERSION = "3.13.14";
 const PYTHON_STANDALONE_MINOR = "3.13";
+const MFAA_REPOSITORY = process.env.MFAA_REPOSITORY?.trim() || "NotZoruak/MFAA";
+const MFAA_RUNTIME_PLATFORMS = [
+    "win-x64",
+    "win-arm64",
+    "linux-x64",
+    "linux-arm64",
+    "osx-x64",
+    "osx-arm64",
+];
 // Must stay above the top-level `await syncPythonRuntime()` call below: `const` bindings are
 // not initialized before their statement runs, so a later declaration is a TDZ error here.
 const PYTHON_STANDALONE_TRIPLES = {
@@ -33,9 +42,6 @@ const updateArgs = [
 ];
 if (project.ocr?.source) {
     updateArgs.push("--update", "ocr-models");
-}
-if (project.runtime?.mfa?.enabled !== false) {
-    updateArgs.push("--update", "runtime:mfa");
 }
 if (project.runtime?.mxu?.enabled) {
     if (requestedRuntimePlatform() === "linux-arm64") {
@@ -64,6 +70,10 @@ if (result.error) {
 }
 if (result.status !== 0) {
     process.exit(result.status ?? 1);
+}
+
+if (project.runtime?.mfa?.enabled !== false) {
+    await syncMfaaRuntime();
 }
 
 if (existsSync("pyproject.toml")) {
@@ -161,6 +171,85 @@ async function syncPythonRuntime() {
         throw new Error(`Unsupported Python runtime platform: ${platform}`);
     }
     console.log("Python Agent release runtime synchronized.");
+}
+
+async function syncMfaaRuntime() {
+    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(MFAA_REPOSITORY)) {
+        throw new Error(`无效的 MFAA 仓库地址：${MFAA_REPOSITORY}`);
+    }
+    const platforms = runtimePlatformAll() ? MFAA_RUNTIME_PLATFORMS : [detectRuntimePlatform()];
+    const release = await resolveMfaaRelease();
+    if (!isRecord(release) || typeof release.tag_name !== "string" || !Array.isArray(release.assets)) {
+        throw new Error(`MFAA 仓库 ${MFAA_REPOSITORY} 的 Release 信息无效`);
+    }
+
+    for (const platform of platforms) {
+        const assetName = mfaaAssetName(release.tag_name, platform);
+        const asset = release.assets.find((item) => isRecord(item) && item.name === assetName);
+        if (!isRecord(asset) || typeof asset.browser_download_url !== "string") {
+            throw new Error(`MFAA Release ${release.tag_name} 缺少运行时资产：${assetName}`);
+        }
+        const sha256Value = typeof asset.digest === "string" ? parseGithubSha256Digest(asset.digest) : undefined;
+        if (!sha256Value) {
+            throw new Error(`MFAA Release 资产没有有效的 SHA-256：${assetName}`);
+        }
+
+        console.log(`同步 MFAAvalonia ${release.tag_name}（${platform}）`);
+        const archivePath = await downloadToCache(asset.browser_download_url, assetName, sha256Value);
+        const root = guiRuntimeRoot(platform);
+        rmSync(root, {recursive: true, force: true});
+        mkdirSync(root, {recursive: true});
+        if (assetName.endsWith(".zip")) {
+            extractZipWithPython(archivePath, root);
+        } else {
+            extractMfaaTarWithPython(archivePath, root);
+        }
+        if (!readdirSync(root).some((name) => name === "MFAAvalonia" || name === "MFAAvalonia.exe")) {
+            throw new Error(`MFAA 运行时缺少主程序：${platform}`);
+        }
+    }
+}
+
+async function resolveMfaaRelease() {
+    const configuredVersion = String(project.runtime?.mfa?.version ?? "").trim();
+    if (configuredVersion) {
+        const tag = configuredVersion.startsWith("v") ? configuredVersion : `v${configuredVersion}`;
+        return fetchGithubJson(
+            `https://api.github.com/repos/${MFAA_REPOSITORY}/releases/tags/${encodeURIComponent(tag)}`,
+        );
+    }
+
+    const channel = String(project.runtime?.mfa?.channel ?? "stable")
+        .trim()
+        .toLowerCase();
+    if (channel === "stable") {
+        return fetchGithubJson(`https://api.github.com/repos/${MFAA_REPOSITORY}/releases/latest`);
+    }
+
+    const releases = await fetchGithubJson(`https://api.github.com/repos/${MFAA_REPOSITORY}/releases?per_page=100`);
+    if (!Array.isArray(releases)) {
+        throw new Error(`无法读取 MFAA 仓库 ${MFAA_REPOSITORY} 的 Release 列表`);
+    }
+    const available = releases.filter((item) => isRecord(item) && !item.draft);
+    const selected = channel === "beta" ? available.find((item) => item.prerelease) : available[0];
+    if (!selected) {
+        throw new Error(`MFAA 仓库 ${MFAA_REPOSITORY} 没有可用于 ${channel} 通道的 Release`);
+    }
+    return selected;
+}
+
+function mfaaAssetName(tag, platform) {
+    const match = /^(win|linux|osx)-(x64|arm64)$/.exec(platform);
+    if (!match) {
+        throw new Error(`不支持的 MFAAvalonia 运行平台：${platform}`);
+    }
+    const [
+        ,
+        os,
+        arch,
+    ] = match;
+    const extension = os === "win" ? "zip" : "tar.gz";
+    return `MFAAvalonia-${tag}-${os}-${arch}.${extension}`;
 }
 
 async function syncWindowsPythonRuntime(platform) {
@@ -413,6 +502,44 @@ with tarfile.open(archive, "r:gz") as tar:
     );
 }
 
+function extractMfaaTarWithPython(archivePath, target) {
+    runPythonScript(
+        `
+import pathlib
+import shutil
+import sys
+import tarfile
+
+archive = sys.argv[1]
+target = pathlib.Path(sys.argv[2]).resolve()
+with tarfile.open(archive, "r:gz") as tar:
+    for member in tar.getmembers():
+        name = pathlib.PurePosixPath(member.name)
+        if name.is_absolute() or ".." in name.parts:
+            raise ValueError(f"压缩包包含越界路径：{member.name}")
+        destination = (target / pathlib.Path(*name.parts)).resolve()
+        if target not in destination.parents and destination != target:
+            raise ValueError(f"压缩包包含越界路径：{member.name}")
+        if member.isdir():
+            destination.mkdir(parents=True, exist_ok=True)
+            continue
+        if not member.isfile():
+            continue
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        source = tar.extractfile(member)
+        if source is None:
+            continue
+        with source, destination.open("wb") as handle:
+            shutil.copyfileobj(source, handle)
+        destination.chmod(member.mode & 0o777)
+`,
+        [
+            archivePath,
+            target,
+        ],
+    );
+}
+
 function patchWindowsPythonPth(root) {
     const pth = readdirSync(root).find((entry) => /^python\d*\._pth$/i.test(entry));
     if (!pth) {
@@ -513,6 +640,10 @@ function normalizeRuntimeArch(value) {
 
 function pythonRuntimeRoot(platform) {
     return `.create-maa-project/runtime/python/${platform}`;
+}
+
+function guiRuntimeRoot(platform) {
+    return `.create-maa-project/runtime/mfaa/${platform}`;
 }
 
 function embeddedPythonExecutable(platform) {
