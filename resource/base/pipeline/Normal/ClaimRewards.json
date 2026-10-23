@@ -18,6 +18,7 @@
             "[JumpBack]LoginGameIcon",
             "[JumpBack]Login_TitleScreen",
             "[JumpBack]Pump_DailyReport",
+            "[JumpBack]Pump_DownloadUpdateData",
             "[JumpBack]Pump_ResumeBattle",
             "[JumpBack]Pump_TapToContinue",
             "[JumpBack]Pump_NoPurchasableProducts",

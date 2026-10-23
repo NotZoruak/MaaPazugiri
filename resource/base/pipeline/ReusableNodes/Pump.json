@@ -1,4 +1,19 @@
 {
+    "Pump_DownloadUpdateData": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [127, 521, 433, 94],
+                "template": "pump/下载更新数据.png"
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [444, 1170, 144, 65]
+            }
+        }
+    },
     "Pump_NotificationAnnouncement": {
         "recognition": {
             "type": "TemplateMatch",
