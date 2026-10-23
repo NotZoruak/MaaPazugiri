@@ -24,6 +24,8 @@
         "format:check": "prettier --check .",
         "format:py": "uv run --frozen ruff format .",
         "lint:py": "uv run --frozen ruff check .",
+        "release:dry-run": "node tools/build-release.mjs --dry-run",
+        "sync:runtime": "node tools/sync-runtime.mjs",
         "typecheck:py": "uv run --frozen pyright"
     },
     "type": "module",

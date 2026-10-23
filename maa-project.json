@@ -3,6 +3,9 @@
         "devTools": {
             "enabled": true
         },
+        "github": {
+            "enabled": true
+        },
         "vscode": {
             "enabled": true
         }
@@ -14,13 +17,13 @@
     },
     "features": {
         "ci": {
-            "enabled": false
+            "enabled": true
         },
         "quality": {
             "enabled": true
         },
         "release": {
-            "enabled": false
+            "enabled": true
         },
         "vscode": {
             "enabled": true
@@ -73,7 +76,7 @@
     "runtime": {
         "mfa": {
             "channel": "stable",
-            "enabled": false,
+            "enabled": true,
             "version": ""
         }
     },
