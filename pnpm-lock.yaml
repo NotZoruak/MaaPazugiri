@@ -570,8 +570,8 @@ packages:
     resolution: {integrity: sha512-ZaBVgXjCvCxlK2Ct89CF3/rgkTy6Hk5PxWMbSbmrviinx1J/YhyvuSc6Ko4SKnY3XeePffq83nCFPR9Y9Os17g==}
     engines: {node: '>=22'}
 
-  undici@6.29.0:
-    resolution: {integrity: sha512-R+RODBqp6i2pPflGdq+xIOUkl+RNfGgHwoinecKu/JCuf2uO06cOKoDbI2P7Dn6KcswdKwrczbU6IYJ6K8X+wg==}
+  undici@6.29.1:
+    resolution: {integrity: sha512-EvRlUt/QqAEvXdQeRMYUfwOQsfzpDztykrG2owGEE/rBOBoYv9uF39ZzsNDh4lTFHhTr2XOZjKkYgueD12ZmGA==}
     engines: {node: '>=18.17'}
 
   validate-npm-package-name@7.0.2:
@@ -607,7 +607,7 @@ snapshots:
   '@actions/http-client@4.0.1':
     dependencies:
       tunnel: 0.0.6
-      undici: 6.29.0
+      undici: 6.29.1
 
   '@actions/io@3.0.2': {}
 
@@ -1013,7 +1013,7 @@ snapshots:
       semver: 7.8.5
       tar: 7.5.22
       tinyglobby: 0.2.17
-      undici: 6.29.0
+      undici: 6.29.1
       which: 6.0.1
 
   nopt@9.0.0:
@@ -1201,7 +1201,7 @@ snapshots:
       '@augment-vir/assert': 32.5.0
       '@augment-vir/common': 32.5.0
 
-  undici@6.29.0: {}
+  undici@6.29.1: {}
 
   validate-npm-package-name@7.0.2: {}
 
