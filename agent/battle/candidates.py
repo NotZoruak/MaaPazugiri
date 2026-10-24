@@ -111,7 +111,7 @@ def preferred_ghoul_touch_point(item: BoardObject, board: BoardResult) -> tuple[
 
 
 def build_route_preview(
-    board: BoardResult, *, beam_width: int = 32, max_expansions: int = 4096, black_only: bool = False
+    board: BoardResult, *, beam_width: int = 32, max_expansions: int = 32768, black_only: bool = False
 ) -> RoutePreview:
     """有限回溯生成路线；所在分量有强化饿鬼时，优先保留含强化目标的路径。"""
     if beam_width < 1 or max_expansions < 1:
