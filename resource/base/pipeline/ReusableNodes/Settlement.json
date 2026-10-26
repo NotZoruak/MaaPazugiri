@@ -137,6 +137,12 @@
             }
         },
         "inverse": true,
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "RecordBrokenJadeStaminaRecoveryAction"
+            }
+        },
         "focus": {
             "Node.Recognition.Succeeded": "已成功碎玉换体"
         }

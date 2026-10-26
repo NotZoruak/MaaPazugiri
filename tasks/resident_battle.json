@@ -971,6 +971,13 @@
                             "custom_recognition_param": {"maximum": "{最大次数}"}
                         }
                     }
+                },
+                "BattleSettlement_BrokenJadeStaminaRecoverySucceeded": {
+                    "action": {
+                        "param": {
+                            "custom_action_param": {"maximum": "{最大次数}"}
+                        }
+                    }
                 }
             }
         },
@@ -990,7 +997,12 @@
                 "BattleSettlement_CheckJadeBalanceThreshold": {
                     "recognition": {
                         "param": {
-                            "custom_recognition_param": {"threshold": "{宝玉保留量}"}
+                            "custom_recognition_param": {
+                                "template_node": "__BattleSettlement_MatchBrokenJadeRecovery",
+                                "ocr_node": "__BattleSettlement_ReadJadeBalance",
+                                "roi_offset": [471, 2, -319, -89],
+                                "threshold": "{宝玉保留量}"
+                            }
                         }
                     }
                 }
