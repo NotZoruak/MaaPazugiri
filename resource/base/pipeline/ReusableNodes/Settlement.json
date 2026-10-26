@@ -10,7 +10,8 @@
         "next": [
             "BattleSettlement_OpenStaminaRecovery",
             "BattleSettlement_CompleteCurrentTask"
-        ]
+        ],
+        "on_error": ["[Anchor]Hub"]
     },
     "BattleSettlement_OpenStaminaRecovery": {
         "enabled": false,
