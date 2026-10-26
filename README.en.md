@@ -21,6 +21,7 @@ The desktop GUI uses [MFAA](https://github.com/NotZoruak/MFAA), a customized ver
 >
 > Project status: Ongoing maintenance and iteration
 > The main daily workflows are implemented, including game startup, resident battles, and reward claims. The project is now in a maintenance and iteration phase, focusing on bug fixes, game-version compatibility, and dependency updates, while evaluating new features, tasks, and workflows as needed.
+> Current known issues: the selected color cannot yet be preserved accurately during Ranbu, and enhanced ghoul recognition is not yet accurate enough.
 
 ## ⚠️ Usage and risk notice
 
@@ -52,8 +53,6 @@ The project currently focuses on game startup, resident battles, and dynamic boa
 - **Battle input**: Ultimate and bomb taps, normal links, and special route gestures are implemented. Normal links require stable-frame checks; after each action, the screen is read again and the result is confirmed. An unconfirmed normal route is retried from the other end on the current board, then temporarily excluded if it still fails.
 - **Board recognition**: OpenCV recognizes freely arranged normal and enhanced ghouls in four colors, special black ghouls, level-one through level-three bombs, shells, rocks, boxes, branches, and the bronze bell in its fixed region. It generates route candidates and diagnostic images and JSON reports.
 - **Lightweight recognition**: The global switch is off by default. When enabled, it skips all obstacle recognition. Results identify unchecked categories, which are not treated as absent.
-
-Board recognition and touch input are integrated with the Agent, but their accuracy and reliability are still being improved. A known issue is that ghouls of the reserved color can still be incorrectly linked during ranbu. This behavior remains to be fixed and retested.
 
 ### Board recognition and route preview
 
