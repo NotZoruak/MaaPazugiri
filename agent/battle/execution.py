@@ -175,6 +175,16 @@ class MaaBattleExecutor:
             logger.warning("当前帧普通连线缺少可信棋盘或路线，跳过触控")
             return
         points = tuple(tuple(round(value) for value in point) for point in decision.route.points)
+        if (
+            len(decision.route.object_ids) != len(points)
+            or len(set(decision.route.object_ids)) != len(decision.route.object_ids)
+            or len(set(points)) != len(points)
+        ):
+            logger.warning(
+                "普通连线路线包含重复目标或重复触点，不符合一笔画规则，跳过触控：对象序列={}",
+                decision.route.object_ids,
+            )
+            return
         if self._reverse_next_normal_link:
             points = tuple(reversed(points))
             logger.debug("上次整笔未确认成功，本次使用新帧路线的另一端起步")
