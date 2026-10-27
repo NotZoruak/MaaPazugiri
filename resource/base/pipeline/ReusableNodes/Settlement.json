@@ -43,9 +43,9 @@
             }
         },
         "next": [
-            "BattleSettlement_UseDailyStaminaRecovery",
-            "BattleSettlement_CheckJadeBalanceThreshold",
             "BattleSettlement_CheckBrokenJadeStaminaRecoveryCount",
+            "BattleSettlement_CheckJadeBalanceThreshold",
+            "BattleSettlement_UseDailyStaminaRecovery",
             "BattleSettlement_UseBrokenJadeStaminaRecovery",
             "BattleSettlement_NoStaminaRecoveryItems"
         ],
