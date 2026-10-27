@@ -13,6 +13,12 @@ from .image_io import Image
 from .model import COLORS
 from .recognizer import HSV_RANGES
 
+# 乱舞起点判色单独收紧红黄交界，不改变棋盘整体识别范围。
+_RANBU_POINT_HSV_RANGES = {
+    "red": (((0, 115, 65), (14, 255, 255)), ((165, 115, 65), (179, 255, 255))),
+    "yellow": (((15, 100, 80), (37, 255, 255)),),
+}
+
 
 def ranbu_point_color_margin(image: Image, point: tuple[int, int], body_size: tuple[float, float], color: str) -> int:
     """只用当前帧评估选点的颜色余量，不搜索对象或更换实际起点。
@@ -57,7 +63,7 @@ def identify_ranbu_point_color(image: Image, point: tuple[int, int], body_size: 
     counts: list[int] = []
     for color in COLORS:
         color_mask = np.zeros(support.mask.shape, dtype=np.uint8)
-        for lower, upper in HSV_RANGES[color]:
+        for lower, upper in _RANBU_POINT_HSV_RANGES.get(color, HSV_RANGES[color]):
             color_mask = cast(Image, cv2.bitwise_or(color_mask, cv2.inRange(hsv, np.array(lower), np.array(upper))))
         color_mask &= support.mask
         color_masks.append(color_mask)
