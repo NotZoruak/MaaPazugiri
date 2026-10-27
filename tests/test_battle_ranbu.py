@@ -156,7 +156,11 @@ class RanbuRecognitionTests(unittest.TestCase):
             """只返回传入条件的命中结果。"""
             if method.value == "OCR":
                 return SimpleNamespace(all_results=[])
-            name = next(name for name, (_, param) in RECOGNITIONS.items() if param is parameters)
+            name = next(
+                name
+                for name, (kind, param) in RECOGNITIONS.items()
+                if kind == method and getattr(param, "template", None) == getattr(parameters, "template", None)
+            )
             return SimpleNamespace(hit=hits.get(name, False))
 
         return BattleFrameRecognizer(recognize)

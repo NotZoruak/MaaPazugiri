@@ -200,8 +200,7 @@ class BattleAction(CustomAction):
                         lightweight=lightweight,
                         required_metrics=required_metrics,
                     )
-                    if phase == BattlePhase.RANBU:
-                        logger.debug("乱舞本帧未检查的策略指标：{}", observation.unchecked_metrics)
+                    logger.debug("战斗本帧未检查的策略指标：{}", observation.unchecked_metrics)
                     board_stable = False
                     if phase == BattlePhase.OPERABLE:
                         board_stable = normal_link_stability.observe(observation.board)

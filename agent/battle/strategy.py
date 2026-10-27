@@ -483,8 +483,6 @@ class StrategyRuntime:
     def required_visual_metrics(self, phase: BattlePhase) -> frozenset[str]:
         """收集当前及所有可达阶段的视觉依赖，不改变条件评估或阶段转变。"""
         visual_metrics = {"enemy_hp_percent", "ally_hp_percent", "ultimate_ready"}
-        if phase != BattlePhase.RANBU:
-            return frozenset(visual_metrics)
         required: set[str] = set()
 
         def collect(condition: dict[str, Any]) -> None:
@@ -507,7 +505,7 @@ class StrategyRuntime:
             for transition in stage.transitions:
                 collect(transition.condition)
                 pending.append(transition.target_stage_id)
-            if stage.frenzy.allow_ultimates:
+            if phase != BattlePhase.RANBU or stage.frenzy.allow_ultimates:
                 for rule in stage.actions.ultimates:
                     if rule.enabled:
                         required.add("ultimate_ready")

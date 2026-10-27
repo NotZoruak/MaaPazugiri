@@ -73,9 +73,7 @@ class BattleObserver:
             )
 
         all_metrics = ("enemy_hp_percent", "ally_hp_percent", "ultimate_ready")
-        required = (
-            required_metrics if phase == BattlePhase.RANBU and required_metrics is not None else frozenset(all_metrics)
-        )
+        required = frozenset(all_metrics) if required_metrics is None else required_metrics
         unchecked = tuple(name for name in all_metrics if name not in required)
         enemy_hp = recognize_hp_percent(self._recognize, image, "enemy") if "enemy_hp_percent" in required else None
         ally_hp = recognize_hp_percent(self._recognize, image, "ally") if "ally_hp_percent" in required else None

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 
 import numpy as np
 from maa.define import RecognitionDetail
@@ -15,7 +16,8 @@ from .session import BattleState
 from .strategy import parse_hp_percent
 
 Image = NDArray[np.uint8]
-RECOGNITIONS: dict[str, tuple[JRecognitionType, JRecognitionParam]] = {
+RegionParameters = JOCR | JColorMatch | JTemplateMatch
+RECOGNITIONS: dict[str, tuple[JRecognitionType, RegionParameters]] = {
     "gear": (
         JRecognitionType.TemplateMatch,
         JTemplateMatch(template=["region/战斗中_设置齿轮.png"], roi=(651, 24, 58, 59), threshold=[0.9]),
@@ -43,12 +45,28 @@ HP_REGIONS: dict[str, tuple[int, int, int, int]] = {
 ULTIMATE_CONFIRMATION_ROI = (72, 168, 576, 104)
 
 
+def _recognize_region(
+    recognize: NativeRecognition, method: JRecognitionType, parameters: RegionParameters, image: Image
+) -> RecognitionDetail | None:
+    """只传本帧静态界面区域；返回框使用局部坐标，仅供命中和文字判断。"""
+    roi = parameters.roi
+    if not isinstance(roi, tuple) or parameters.roi_offset != (0, 0, 0, 0):
+        raise ValueError("战斗局部识别只支持无偏移的固定界面区域")
+    x, y, width, height = roi
+    if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > image.shape[1] or y + height > image.shape[0]:
+        raise ValueError("战斗局部识别区域超出当前截图")
+    # 连续小图避免 SDK 整理数组时再次复制整帧，不修改共享参数或输入截图。
+    cropped = np.ascontiguousarray(image[y : y + height, x : x + width])
+    local = replace(parameters, roi=(0, 0, width, height))
+    return recognize(method, local, cropped)
+
+
 def recognize_hp_percent(recognize: NativeRecognition, image: Image, side: str) -> float | None:
     """在同一张核对过的战斗截图中 OCR 指定一方的 A/B 血量并换算百分比。"""
     roi = HP_REGIONS.get(side)
     if roi is None or image.shape != (1280, 720, 3) or image.dtype != np.uint8:
         return None
-    detail = recognize(JRecognitionType.OCR, JOCR(roi=roi, order_by="Horizontal"), image)
+    detail = _recognize_region(recognize, JRecognitionType.OCR, JOCR(roi=roi, order_by="Horizontal"), image)
     if detail is None:
         return None
     texts = [getattr(result, "text", "") for result in detail.all_results]
@@ -67,7 +85,7 @@ class BattleFrameRecognizer:
     def _hit(self, name: str, image: Image) -> bool:
         """只把原生详情中的命中标志作为识别成功。"""
         method, parameters = RECOGNITIONS[name]
-        detail = self.recognize(method, parameters, image)
+        detail = _recognize_region(self.recognize, method, parameters, image)
         if detail is None:
             raise RuntimeError(f"无法启动战斗内部识别：{name}")
         return detail.hit
@@ -99,7 +117,8 @@ class BattleFrameRecognizer:
 
     def _ultimate_confirmation(self, image: Image) -> BattleState | None:
         """只用提示文案区分点击和滑动选点，不读取动画箭头。"""
-        detail = self.recognize(
+        detail = _recognize_region(
+            self.recognize,
             JRecognitionType.OCR,
             JOCR(roi=ULTIMATE_CONFIRMATION_ROI, order_by="Horizontal"),
             image,

@@ -1,4 +1,4 @@
-"""验证乱舞仅跳过策略所有可达阶段均用不到的视觉指标。"""
+"""验证战斗仅跳过策略所有可达阶段均用不到的视觉指标。"""
 
 from __future__ import annotations
 
@@ -18,7 +18,9 @@ from battle.strategy import (  # noqa: E402
     BattlePhase,
     StageTransition,
     StrategyDocument,
+    StrategyMetrics,
     StrategyRuntime,
+    decide_action,
 )
 
 
@@ -40,6 +42,31 @@ class VisualMetricNeedsTests(unittest.TestCase):
         """乱舞禁奥义且没有视觉条件时，不需要血量或奥义。"""
         runtime = StrategyRuntime(self.document)
         self.assertEqual(runtime.required_visual_metrics(BattlePhase.RANBU), frozenset())
+        self.assertEqual(
+            runtime.required_visual_metrics(BattlePhase.OPERABLE),
+            frozenset(("ultimate_ready",)),
+        )
+
+    def test_normal_disabled_ultimates_do_not_require_readiness_or_rule_hp(self) -> None:
+        """普通阶段禁用的奥义及其条件不应触发额外识别。"""
+        rules = tuple(
+            replace(rule, enabled=False, condition=predicate("enemy_hp_percent"))
+            for rule in self.stage.actions.ultimates
+        )
+        stage = replace(self.stage, actions=replace(self.stage.actions, ultimates=rules))
+        runtime = StrategyRuntime(replace(self.document, stages=(stage,)))
+        self.assertEqual(runtime.required_visual_metrics(BattlePhase.OPERABLE), frozenset())
+
+    def test_normal_reachable_stage_keeps_ultimate_readiness_and_all_conditions(self) -> None:
+        """普通阶段同帧可能转入的阶段保留全部依赖，不受禁乱舞奥义开关影响。"""
+        rule = replace(self.stage.actions.ultimates[0], condition=predicate("ally_hp_percent"))
+        second = replace(self.stage, id="后续", actions=replace(self.stage.actions, ultimates=(rule,)))
+        first = replace(
+            self.stage,
+            actions=replace(self.stage.actions, ultimates=()),
+            transitions=(StageTransition("进入", second.id, predicate("enemy_hp_percent")),),
+        )
+        runtime = StrategyRuntime(replace(self.document, stages=(first, second)))
         self.assertEqual(
             runtime.required_visual_metrics(BattlePhase.OPERABLE),
             frozenset(("enemy_hp_percent", "ally_hp_percent", "ultimate_ready")),
@@ -96,6 +123,40 @@ class VisualMetricNeedsTests(unittest.TestCase):
             runtime.required_visual_metrics(BattlePhase.RANBU), frozenset(("enemy_hp_percent", "ultimate_ready"))
         )
 
+    def test_trimmed_metrics_preserve_actions_across_reachable_transitions(self) -> None:
+        """全量与精简指标在未知值、条件边界和同帧转阶段时给出同一动作。"""
+        rule = replace(self.stage.actions.ultimates[0], condition=predicate("enemy_hp_percent"))
+        target = replace(self.stage, id="后续", actions=replace(self.stage.actions, ultimates=(rule,)))
+        first = replace(
+            self.stage,
+            actions=replace(self.stage.actions, ultimates=()),
+            transitions=(StageTransition("进入", target.id, predicate("ally_hp_percent")),),
+        )
+        for document in (self.document, replace(self.document, stages=(first, target))):
+            for phase in BattlePhase:
+                for enemy in (None, 0.0, 49.0, 50.0, 100.0):
+                    for ally in (None, 0.0, 49.0, 50.0, 100.0):
+                        for ready in (None, False, True):
+                            full = StrategyMetrics(
+                                enemy_hp_percent=enemy, ally_hp_percent=ally, ultimate_ready={1: ready}
+                            )
+                            runtime = StrategyRuntime(document)
+                            required = runtime.required_visual_metrics(phase)
+                            trimmed = replace(
+                                full,
+                                enemy_hp_percent=enemy if "enemy_hp_percent" in required else None,
+                                ally_hp_percent=ally if "ally_hp_percent" in required else None,
+                                ultimate_ready=full.ultimate_ready if "ultimate_ready" in required else {},
+                            )
+                            expected = decide_action(runtime, phase, metrics=full, ultimate_states=full.ultimate_ready)
+                            actual = decide_action(
+                                StrategyRuntime(document),
+                                phase,
+                                metrics=trimmed,
+                                ultimate_states=trimmed.ultimate_ready,
+                            )
+                            self.assertEqual(actual, expected)
+
 
 class RequiredMetricObservationTests(unittest.TestCase):
     """未检查的指标保持未知，不从旧帧复制。"""
@@ -126,8 +187,8 @@ class RequiredMetricObservationTests(unittest.TestCase):
             self.assertNotEqual(first.frame_id, second.frame_id)
             self.assertNotIn("enemy_hp_percent", second.unchecked_metrics)
 
-    def test_normal_phase_keeps_full_metrics_even_when_empty_needs_are_passed(self) -> None:
-        """普通阶段不启用乱舞的按需精简。"""
+    def test_normal_phase_keeps_board_and_skips_explicitly_unused_metrics(self) -> None:
+        """普通阶段空需求仍识别本帧棋盘，未检查的血量和奥义保持未知。"""
         image = np.zeros((1280, 720, 3), np.uint8)
         preview, ultimate = Mock(), Mock()
         preview.recognize_board.return_value = SimpleNamespace(objects=[])
@@ -135,6 +196,23 @@ class RequiredMetricObservationTests(unittest.TestCase):
         observer = BattleObserver(Mock(), preview, ultimate, "阶段")
         with patch("battle.observation.recognize_hp_percent", return_value=33.0) as hp:
             result = observer.observe(image, BattlePhase.OPERABLE, required_metrics=frozenset())
+        hp.assert_not_called()
+        ultimate.analyze.assert_not_called()
+        preview.recognize_board.assert_called_once()
+        self.assertIsNone(result.metrics.enemy_hp_percent)
+        self.assertIsNone(result.metrics.ally_hp_percent)
+        self.assertEqual(result.metrics.ultimate_ready, {})
+        self.assertEqual(set(result.unchecked_metrics), {"enemy_hp_percent", "ally_hp_percent", "ultimate_ready"})
+
+    def test_missing_needs_keeps_full_metrics_for_existing_callers(self) -> None:
+        """没有显式需求的调用者继续读取完整指标。"""
+        image = np.zeros((1280, 720, 3), np.uint8)
+        preview, ultimate = Mock(), Mock()
+        preview.recognize_board.return_value = SimpleNamespace(objects=[])
+        ultimate.analyze.return_value = SimpleNamespace(slots=[])
+        observer = BattleObserver(Mock(), preview, ultimate, "阶段")
+        with patch("battle.observation.recognize_hp_percent", return_value=33.0) as hp:
+            result = observer.observe(image, BattlePhase.OPERABLE)
         self.assertEqual(hp.call_count, 2)
         ultimate.analyze.assert_called_once()
         self.assertEqual(result.unchecked_metrics, ())
