@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -50,6 +52,19 @@ class ReleaseCpuArchiveTests(unittest.TestCase):
             for mode in ("missing", "overwritten", "stale"):
                 with self.subTest(mode=mode), self.assertRaises(ValueError):
                     verify_archive(self.make_archive(Path(folder), mode))
+
+    def test_cli_uses_utf8_with_western_windows_encoding(self) -> None:
+        """英文 Windows runner 的默认编码不能使成功校验变成失败。"""
+        with tempfile.TemporaryDirectory() as folder:
+            archive = self.make_archive(Path(folder), "valid")
+            result = subprocess.run(
+                [sys.executable, str(PATCH.parents[3] / "tools/build_maafw_cpu.py"), "--verify-archive", str(archive)],
+                env={**os.environ, "PYTHONIOENCODING": "cp1252", "PYTHONUTF8": "0"},
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8", errors="replace"))
+            self.assertIn("压缩包中的 CPU OCR 补丁", result.stdout.decode("utf-8"))
 
 
 if __name__ == "__main__":

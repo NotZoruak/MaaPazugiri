@@ -155,6 +155,8 @@ def build(source: Path, build_dir: Path) -> None:
 
 def main() -> None:
     """构建和压缩包校验共用固定版本与摘要约束。"""
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser()
     parser.add_argument("--source-dir", type=Path, default=OUTPUT / "source")
     parser.add_argument("--build-dir", type=Path, default=OUTPUT / "build")
