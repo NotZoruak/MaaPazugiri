@@ -7,6 +7,8 @@ on:
     paths:
       - "agent/**"
       - "tools/**"
+      - "patches/**"
+      - ".github/actions/build-cpu-ocr-patch/**"
       - ".github/workflows/package-smoke.yml"
       - ".github/workflows/release.yml"
       - "interface.json"
@@ -16,6 +18,8 @@ on:
     paths:
       - "agent/**"
       - "tools/**"
+      - "patches/**"
+      - ".github/actions/build-cpu-ocr-patch/**"
       - ".github/workflows/package-smoke.yml"
       - ".github/workflows/release.yml"
       - "interface.json"
@@ -89,6 +93,9 @@ jobs:
           CREATE_MAA_PROJECT_RUNTIME_PLATFORM: ${{ matrix.runtime_os }}-${{ matrix.runtime_arch }}
           MFAA_REPOSITORY: NotZoruak/MFAA
           GITHUB_TOKEN: ${{ github.token }}
+      - name: 构建并验证 Windows CPU OCR 补丁
+        if: matrix.runtime_os == 'win'
+        uses: ./.github/actions/build-cpu-ocr-patch
       - run: node tools/build-release.mjs --release-tag v0.0.0-package-smoke
         env:
           CREATE_MAA_PROJECT_RUNTIME_PLATFORM: ${{ matrix.runtime_os }}-${{ matrix.runtime_arch }}
@@ -144,6 +151,8 @@ jobs:
               if ($LASTEXITCODE -ne 0) {
                 throw "Embedded Python import smoke failed in $packageName"
               }
+              & $python -I -c 'import sys; sys.path.insert(0, "agent"); import maafw_paths; maafw_paths.ensure_maafw_binary_path(); from maa.library import Library; assert Library.version() == "v5.14.3+cpu-nospin", Library.version()'
+              if ($LASTEXITCODE -ne 0) { throw "打包后的 Agent 未实际加载 CPU OCR 补丁" }
               & $python -I -m compileall -q agent
               if ($LASTEXITCODE -ne 0) {
                 throw "Agent compile smoke failed in $packageName"

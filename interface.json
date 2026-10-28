@@ -3,7 +3,7 @@
     "name": "maa-pazugiri",
     "label": "MaaPazugiri",
     "github": "https://github.com/NotZoruak/MaaPazugiri",
-    "version": "v1.0.0-beta.12",
+    "version": "v1.0.0-beta.13",
     "description": "MaaPazugiri MaaFW project",
     "controller": [
         {

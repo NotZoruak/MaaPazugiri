@@ -29,3 +29,5 @@ jobs:
       - run: pnpm check:py
         if: hashFiles('pyproject.toml') != ''
       - run: pnpm release:dry-run
+      - run: node --test tests/test_release_cpu_patch.test.mjs
+      - run: python -m unittest discover -s tests -p test_release_cpu_archive.py

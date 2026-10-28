@@ -2,6 +2,18 @@
 
 本目录保存 MaaPazugiri 在 MaaFramework v5.14.3 上验证过的原生补丁。它修改框架源码，需要重新编译 `MaaFramework.dll`；仅更新 Python Agent 不会启用这项优化。
 
+## 自动发布接入
+
+Windows x64 的 tag 发布与 Package Smoke 流程已加入 `.github/actions/build-cpu-ocr-patch`。该步骤使用 `tools/build_maafw_cpu.py` 检出精确源码、初始化固定子模块、下载并校验 MaaDeps v3.0.0，再应用补丁并编译；构建后通过原生 API 核对版本标识。
+
+`maa-project.json` 的 MaaFW 版本固定为 `v5.14.3`，避免同步运行库时把新版本依赖与旧补丁混用。构建产物写入忽略目录 `.cache/maa-tools/maafw-cpu/win-x64`，不需要把 DLL 提交到 Git。
+
+打包脚本在 GUI、资源、运行库复制完成后注入补丁，并检查补丁源码、DLL 以及 FastDeploy、ONNX Runtime、OpenCV 的摘要。Windows 包包含 `cpu-ocr-patch.json`，记录版本、源码提交、补丁和文件摘要。缺少产物、依赖不匹配或补丁变化时构建失败，不回退到官方 DLL。
+
+Release 流程还会直接检查最终 ZIP 内的清单和原生文件，Package Smoke 则使用包内 Python 实际加载运行库并核对版本。Linux/macOS 暂未构建验证补丁，继续使用固定版本的官方运行库，打包时明确输出提示。
+
+这些改动只影响包含本次修改的新构建，不会修改已发布的 beta.12 资产。旧 tag 仍指向旧工作流和代码。
+
 ## 问题与修复
 
 Maa 的 CPU OCR 分别为文字检测、文字识别创建四线程 ONNX Runtime 会话。推理线程在等待下一次请求时仍会自旋；战斗持续发起 OCR，等待开销反复出现。实机 ETW 采样中，ONNX Runtime 占 MAP 主进程 CPU 采样约74.1%；独立实验也确认 OCR 返回后、没有新请求时仍消耗 CPU。
@@ -40,7 +52,7 @@ cmake --build build-cpu-nospin --target MaaFramework -j 6
 5. 关闭 MAP，备份运行目录原 DLL 并记录新旧文件摘要，再替换 `runtimes/win-x64/native/MaaFramework.dll`。原 EXE、其余运行库、模型和用户配置保留。
 6. 使用原 EXE 验证战斗功能、CPU 和耗时。需要回退时，关闭 MAP，再恢复原 DLL。
 
-构建工具链、原生 DLL、ETL、训练截图和本机备份不纳入此目录。使用官方未打补丁的运行库时，Python 优化仍有效，但不会自动获得关闭原生自旋的收益。升级 MaaFramework 后应重新审查、应用补丁并编译，不能把旧版 DLL 混入新版本；官方提供相同修复或配置入口后，优先移除此补丁并使用官方实现。
+构建工具链、原生 DLL、ETL、训练截图和本机备份不纳入此目录。使用官方未打补丁的运行库时，Python 优化仍有效，但不会自动获得关闭原生自旋的收益。Windows CI 会按上一节构建并注入补丁；手动打包也需要先准备同样的构建产物。升级 MaaFramework 后应重新审查、应用补丁并编译，同时更新版本锁定及保护检查，不能把旧版 DLL 混入新版本；官方提供相同修复或配置入口后，优先移除此补丁并使用官方实现。
 
 ## 验证结果
 

@@ -1,0 +1,20 @@
+name: 构建 CPU OCR 关闭自旋补丁
+description: 构建并加载验证固定版本的 Windows x64 MaaFramework
+runs:
+  using: composite
+  steps:
+    - name: 初始化微软 x64 编译环境
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+        $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        if (-not $installation) { throw '没有找到微软 C++ x64 工具链' }
+        $vcvars = Join-Path $installation 'VC/Auxiliary/Build/vcvars64.bat'
+        $variables = & cmd.exe /d /s /c "`"$vcvars`" >nul && set"
+        if ($LASTEXITCODE -ne 0) { throw '初始化微软编译环境失败' }
+        foreach ($line in $variables) {
+          if ($line -match '^([^=]+)=(.*)$') { Set-Item -LiteralPath "Env:$($matches[1])" -Value $matches[2] }
+        }
+        python tools/build_maafw_cpu.py
+        if ($LASTEXITCODE -ne 0) { throw 'CPU OCR 补丁构建或加载校验失败' }

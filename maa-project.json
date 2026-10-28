@@ -34,7 +34,7 @@
     },
     "maafw": {
         "channel": "stable",
-        "version": ""
+        "version": "v5.14.3"
     },
     "network": {
         "mode": "auto"

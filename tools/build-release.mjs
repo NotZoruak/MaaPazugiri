@@ -13,6 +13,7 @@ import {
 } from "node:fs";
 import {basename, dirname, join} from "node:path";
 import {fileURLToPath} from "node:url";
+import {installCpuOcrPatch, assertCpuOcrPatch} from "./maafw-cpu-patch.mjs";
 
 const projectSlug = "maa-pazugiri";
 const projectExecutableName = "MaaPazugiri";
@@ -395,6 +396,10 @@ function prepareReleasePackage(guiKey, gui, packagePaths, interfaceJson, runtime
         removeFiles(pkgDir, (name) => name.toLowerCase().endsWith(".pdb"));
     }
     ensureClientNativePluginsDir(pkgDir, gui, runtimePlatform);
+    // 最后覆盖原生库，避免 GUI 或资源复制把补丁替换回官方版本。
+    installCpuOcrPatch(clientNativeRuntimePath(pkgDir, gui, runtimePlatform), runtimePlatform);
+    if (runtimePlatform !== "win-x64")
+        console.warn(`[WARN] ${runtimePlatform} 尚未构建验证 CPU OCR 补丁，使用官方运行库`);
     ensureUnixExecutablePermissions(pkgDir, runtimePlatform);
 }
 
@@ -458,6 +463,7 @@ function prepareMxuMaafwRuntime(pkgDir, runtimePlatform) {
 }
 
 function smokeReleasePackage(gui, root, packagePaths, runtimePlatform) {
+    assertCpuOcrPatch(clientNativeRuntimePath(root, gui, runtimePlatform), runtimePlatform);
     if (!existsSync(join(root, "interface.json"))) {
         throw new Error("release package smoke failed: interface.json is missing at package root");
     }

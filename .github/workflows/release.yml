@@ -81,6 +81,9 @@ jobs:
           CREATE_MAA_PROJECT_RUNTIME_PLATFORM: ${{ matrix.runtime_os }}-${{ matrix.runtime_arch }}
           MFAA_REPOSITORY: NotZoruak/MFAA
           GITHUB_TOKEN: ${{ github.token }}
+      - name: 构建并验证 Windows CPU OCR 补丁
+        if: github.event_name != 'workflow_dispatch' && matrix.runtime_os == 'win'
+        uses: ./.github/actions/build-cpu-ocr-patch
       - run: node tools/build-release.mjs
         if: github.event_name != 'workflow_dispatch'
         env:
@@ -150,6 +153,13 @@ jobs:
               fi
             )
             rm -rf "$pkg_dir"
+          done
+      - name: 校验 Windows 压缩包中的原生补丁
+        if: github.event_name != 'workflow_dispatch' && matrix.runtime_os == 'win'
+        shell: bash
+        run: |
+          for archive in dist/*.zip; do
+            python tools/build_maafw_cpu.py --verify-archive "$archive"
           done
       - uses: actions/upload-artifact@v7
         if: github.event_name != 'workflow_dispatch'
